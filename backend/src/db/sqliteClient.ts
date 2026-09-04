@@ -61,15 +61,16 @@ export class SQLiteKnowledgeClient {
   }
 
   public saveGraph(graph: GraphData): void {
+    const now = Date.now();
     const stmt = this.db.prepare(`
       INSERT INTO knowledge_graphs (id, topic, graph_data, updated_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      VALUES (?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         topic = excluded.topic,
         graph_data = excluded.graph_data,
-        updated_at = CURRENT_TIMESTAMP
+        updated_at = excluded.updated_at
     `);
-    stmt.run(graph.id, graph.topic, JSON.stringify(graph));
+    stmt.run(graph.id, graph.topic, JSON.stringify(graph), now);
   }
 
   public getGraph(id: string): GraphData | null {
@@ -84,6 +85,10 @@ export class SQLiteKnowledgeClient {
   }
 
   public getCurrentGraph(): GraphData | null {
+    // Ưu tiên đồ thị thanh toán chính nếu tồn tại
+    const mainGraph = this.getGraph('graph-payment-idempotency');
+    if (mainGraph) return mainGraph;
+
     const stmt = this.db.prepare('SELECT graph_data FROM knowledge_graphs ORDER BY updated_at DESC LIMIT 1');
     const row = stmt.get() as { graph_data: string } | undefined;
     if (!row) return null;
@@ -96,21 +101,25 @@ export class SQLiteKnowledgeClient {
 
   public addDeltaNodes(
     graphId: string,
-    parentNodeId: string,
+    parentNodeId: string | undefined | null,
     newNodes: NodeEntity[],
-    newEdges: EdgeEntity[]
+    newEdges: EdgeEntity[] = []
   ): GraphData | null {
     const graph = this.getGraph(graphId) || this.getCurrentGraph();
     if (!graph) return null;
 
-    const parent = graph.nodes.find(n => n.id === parentNodeId);
-    if (parent) {
-      parent.fully_explored = true;
+    if (parentNodeId) {
+      const parent = graph.nodes.find(n => n.id === parentNodeId);
+      if (parent) {
+        parent.fully_explored = true;
+      }
     }
 
     for (const node of newNodes) {
       if (!graph.nodes.some(n => n.id === node.id)) {
-        node.parent_id = parentNodeId;
+        if (parentNodeId) {
+          node.parent_id = parentNodeId;
+        }
         graph.nodes.push(node);
       }
     }

@@ -220,8 +220,8 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       tieu_de: 'Flash Sale mở bán chớp nhoáng',
       nhan_buoc: 'GIAO THOA // SÀN THƯƠNG MẠI',
       tom_tat: '10.000 khách tranh mua 1 món hàng: chung bản chất <u>Race Condition</u> ghi tồn kho.',
-      toa_do: { x: 1100, y: 100 },
-      tam: { x: 1210, y: 180 },
+      toa_do: { x: 1300, y: 100 },
+      tam: { x: 1410, y: 180 },
       hoat_hoa: {
         mau: 'giao_thoa_domain',
         tham_so: {

@@ -16,12 +16,20 @@ export const SvgGridCanvas: React.FC = () => {
     pan,
     zoom,
     setPan,
-    setZoom
+    setZoom,
+    spawnNode
   } = useGraphStore();
 
   const canvasRef = useRef<HTMLElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    clientX: number;
+    clientY: number;
+    graphX: number;
+    graphY: number;
+  } | null>(null);
 
   // Lọc danh sách node hiển thị theo cơ chế Thu gọn phân cấp đa tầng (Hierarchical Progressive Collapse)
   const visibleNodes = useMemo(() => {
@@ -128,8 +136,33 @@ export const SvgGridCanvas: React.FC = () => {
     ) {
       return;
     }
+    if (contextMenu) setContextMenu(null);
     setIsPanning(true);
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+    if (target.closest('.cum-thuc-the') || target.closest('button') || target.closest('.khung-thanh-cong-cu')) {
+      return;
+    }
+
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    const graphX = (clientX - rect.left - pan.x) / zoom;
+    const graphY = (clientY - rect.top - pan.y) / zoom;
+
+    setContextMenu({
+      visible: true,
+      clientX,
+      clientY,
+      graphX,
+      graphY
+    });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -180,6 +213,7 @@ export const SvgGridCanvas: React.FC = () => {
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onWheel={handleWheel}
+      onContextMenu={handleContextMenu}
     >
       {/* Thanh công cụ nổi được đóng gói bên trong Canvas, 100% không bao giờ đè lên Drawer */}
       <FloatingToolbar />
@@ -213,7 +247,7 @@ export const SvgGridCanvas: React.FC = () => {
             // Cụm Con: đạt ~12px khi zoom từ 35% trở lên
             let headerScale = 1.0;
             if (isOuterCluster || cluster.cap_do === 'doc_lap') {
-              headerScale = zoom < 0.92 ? Math.min(Math.max(1.0, 1.25 / zoom), 5.0) : 1.0;
+              headerScale = zoom < 0.92 ? Math.min(Math.max(1.0, 1.1 / zoom), 4.4) : 1.0;
             } else if (isSubCluster) {
               headerScale = zoom < 0.92 ? Math.min(Math.max(1.0, 0.92 / zoom), 2.8) : 1.0;
             }
@@ -406,6 +440,108 @@ export const SvgGridCanvas: React.FC = () => {
           ))}
         </svg>
       </div>
+
+      {/* Popup Menu tạo nhanh khi Click Chuột Phải lên vùng trống của Canvas */}
+      {contextMenu?.visible && (
+        <div
+          className="canvas-context-menu"
+          style={{
+            position: 'fixed',
+            left: `${contextMenu.clientX}px`,
+            top: `${contextMenu.clientY}px`,
+            zIndex: 9999,
+            background: '#FFFFFF',
+            border: '2px solid #1A1D24',
+            borderRadius: '8px',
+            boxShadow: '4px 4px 0px #1A1D24',
+            padding: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+            minWidth: '220px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            + Thêm Node Kiến Trúc
+          </div>
+          <button
+            onClick={() => {
+              spawnNode('ddos', { x: contextMenu.graphX, y: contextMenu.graphY });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>🛡️</span>
+            <span>Lá chắn WAF & Chống DDoS</span>
+          </button>
+          <button
+            onClick={() => {
+              spawnNode('cache', { x: contextMenu.graphX, y: contextMenu.graphY });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF3C7')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>⚡</span>
+            <span>Khóa phân tán Redis Cache</span>
+          </button>
+          <button
+            onClick={() => {
+              spawnNode('queue', { x: contextMenu.graphX, y: contextMenu.graphY });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF3C7')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>📥</span>
+            <span>Hàng đợi Message Queue</span>
+          </button>
+        </div>
+      )}
     </section>
   );
 };

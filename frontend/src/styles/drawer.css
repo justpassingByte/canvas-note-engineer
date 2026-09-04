@@ -267,7 +267,7 @@ u[data-tooltip]::after {
   white-space: normal;
   width: max-content;
   max-width: 260px;
-  z-index: 100;
+  z-index: 9999;
   pointer-events: none;
   opacity: 0;
   visibility: hidden;
@@ -280,6 +280,49 @@ u[data-tooltip]:hover::after {
   opacity: 1;
   visibility: visible;
   transform: translateX(-50%) translateY(0);
+}
+
+/* Tooltip trên Node Card (Canvas): Luôn hiển thị BÊN DƯỚI để 100% không bị Icon Pod che khuất */
+.the-nhan-duoi u[data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 10px);
+  transform: translateX(-50%) translateY(-4px);
+  z-index: 9999;
+}
+
+.the-nhan-duoi u[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Mũi tên chỉ hướng nhỏ phía trên tooltip khi rớt xuống dưới */
+.the-nhan-duoi u[data-tooltip]::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 5px 6px 5px;
+  border-style: solid;
+  border-color: transparent transparent #1A1D24 transparent;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.the-nhan-duoi u[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Nâng toàn bộ thẻ node lên lớp trên cùng khi hover thuật ngữ */
+.cum-thuc-the:hover,
+.cum-thuc-the:has(u:hover),
+.the-nhan-duoi:has(u:hover) {
+  z-index: 500 !important;
 }
 
 /* KHUNG HOẠT HỌA */

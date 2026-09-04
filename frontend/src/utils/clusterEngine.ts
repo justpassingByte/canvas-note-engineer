@@ -118,7 +118,25 @@ function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEntity>):
     };
   }
 
-  // 5. Nhóm Phòng Thủ Idempotency, Tranh Chấp & Khóa Phân Tán (Cụm con thuộc Hệ thống Idempotency)
+  // 5. Nhóm Phòng Thủ Biên & Chống DDoS / WAF (Cụm Độc Lập)
+  if (
+    text.includes('ddos') ||
+    text.includes('waf') ||
+    text.includes('rate limit') ||
+    text.includes('cloudflare') ||
+    node.id.includes('ddos')
+  ) {
+    return {
+      clusterId: 'cum-edge-waf',
+      ten_cum: 'LÁ CHẮN BIÊN & CHỐNG DDOS',
+      chu_de_phu: 'Phân hệ phòng thủ tầng mạng và WAF',
+      mau: '#4338CA', // Màu chàm phòng thủ biên
+      icon: 'khien_bao_ve',
+      cap_do: 'doc_lap'
+    };
+  }
+
+  // 6. Nhóm Phòng Thủ Idempotency, Tranh Chấp & Khóa Phân Tán (Cụm con thuộc Hệ thống Idempotency)
   if (
     node.bieu_tuong === 'khien_bao_ve' ||
     node.bieu_tuong === 'tranh_chap_phan_nhanh' ||

@@ -63,6 +63,21 @@ describe('Cluster Engine - Automated Architecture Topic Grouping (2-Tier Nested 
     expect(parentCluster?.cap_do).toBe('me');
   });
 
+  it('should classify DDoS Protection node into independent Edge WAF cluster', () => {
+    const nodes: NodeEntity[] = [
+      createMockNode('node-ddos-waf', 'khien_bao_ve', 100, -200, 'HẠ TẦNG PHÒNG THỦ BIÊN')
+    ];
+
+    const clusters = computeClusters(nodes);
+    expect(clusters.length).toBe(1);
+
+    const ddosCluster = clusters[0];
+    expect(ddosCluster.id).toBe('cum-edge-waf');
+    expect(ddosCluster.ten_cum).toBe('LÁ CHẮN BIÊN & CHỐNG DDOS');
+    expect(ddosCluster.cap_do).toBe('doc_lap');
+    expect(ddosCluster.mau).toBe('#4338CA');
+  });
+
   it('should compute padded bounding boxes and centroid coordinates for clusters', () => {
     const nodes: NodeEntity[] = [
       createMockNode('node-queue', 'hang_doi_message_queue', 200, 300),

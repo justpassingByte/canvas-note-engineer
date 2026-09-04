@@ -51,6 +51,14 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
   return sanitized;
 }
 
+export const MAX_GRAPH_NODES = 12;
+
+export interface SpawnPayload {
+  concept_type: string;
+  target_concept_slug?: string;
+  position?: { x: number; y: number };
+}
+
 export const toolHandlers = {
   /**
    * Tạo hoặc nạp đồ thị tri thức gốc (3-5 nodes)
@@ -62,10 +70,13 @@ export const toolHandlers = {
       return { graph: existing, from_cache: true };
     }
 
-    // Nạp đồ thị chuẩn ban đầu vào SQLite sau khi đã kiểm duyệt liên kết
-    const sanitizedEdges = validateAndSanitizeEdges(INITIAL_PAYMENT_GRAPH.nodes, INITIAL_PAYMENT_GRAPH.edges);
+    // Nạp đồ thị chuẩn ban đầu vào SQLite sau khi đã kiểm duyệt liên kết (deep copy tránh mutate)
+    const freshNodes = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.nodes));
+    const freshEdges = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.edges));
+    const sanitizedEdges = validateAndSanitizeEdges(freshNodes, freshEdges);
     const initialGraph: GraphData = {
       ...INITIAL_PAYMENT_GRAPH,
+      nodes: freshNodes,
       edges: sanitizedEdges
     };
 
@@ -79,6 +90,16 @@ export const toolHandlers = {
    */
   async expandConceptNode(payload: ExpandPayload): Promise<{ graph: GraphData; expanded: boolean; message: string }> {
     const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+
+    // Rào cản bão hòa toàn đồ thị (Anti-Hallucination Capacity Cap)
+    if (current.nodes.length >= MAX_GRAPH_NODES) {
+      return {
+        graph: current,
+        expanded: false,
+        message: `Đồ thị đã đạt ngưỡng trần an toàn (${MAX_GRAPH_NODES} nodes). Vui lòng thu gọn (collapse) hoặc xóa bớt nhánh thừa để tiếp tục.`
+      };
+    }
+
     const targetNode = current.nodes.find(n => n.id === payload.target_concept_slug);
 
     if (!targetNode) {
@@ -105,6 +126,160 @@ export const toolHandlers = {
       graph: updated || current,
       expanded: true,
       message: `Đã mở rộng thành công 2 node con nối từ '${targetNode.tieu_de}'!`
+    };
+  },
+
+  /**
+   * Spawn động một Node mới (ví dụ: Node Chống DDoS, Rate Limiter, WAF)
+   * Tự động nối dây thông minh (Smart-Attachment) vào node phù hợp và kiểm duyệt 3 lớp
+   */
+  async spawnConceptNode(payload: SpawnPayload): Promise<{ graph: GraphData; spawned: boolean; message: string; node?: NodeEntity }> {
+    const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+
+    // Rào cản bão hòa an toàn (Anti-Hallucination Capacity Cap)
+    if (current.nodes.length >= MAX_GRAPH_NODES) {
+      return {
+        graph: current,
+        spawned: false,
+        message: `Đồ thị đã đạt ngưỡng trần an toàn (${MAX_GRAPH_NODES} nodes). Vui lòng thu gọn (collapse) hoặc xóa bớt nhánh thừa để tiếp tục.`
+      };
+    }
+
+    const typeLower = (payload.concept_type || 'ddos').toLowerCase();
+
+    // Nếu người dùng chỉ định target cụ thể thì mới nối dây, nếu không thì tạo Node Độc Lập
+    const targetSlug = payload.target_concept_slug;
+    let targetNode: NodeEntity | undefined = undefined;
+
+    if (targetSlug) {
+      targetNode = current.nodes.find(n => n.id === targetSlug);
+      if (!targetNode) {
+        return { graph: current, spawned: false, message: `Node đích '${targetSlug}' không tồn tại trong đồ thị.` };
+      }
+
+      if (targetNode.fully_explored) {
+        return {
+          graph: current,
+          spawned: false,
+          message: `Node '${targetNode.tieu_de}' đã bão hòa và bị khóa (fully_explored: true). 0 token tiêu thụ.`
+        };
+      }
+    }
+
+    // Xây dựng Node Entity hoàn chỉnh
+    let newNode: NodeEntity;
+    const newEdges: EdgeEntity[] = [];
+
+    const spawnId = current.nodes.some(n => n.id === 'node-ddos-waf')
+      ? `node-ddos-${Date.now().toString().slice(-4)}`
+      : 'node-ddos-waf';
+
+    // Tọa độ ưu tiên vị trí click chuột của người dùng, hoặc đặt ở khu vực thoáng phía trên
+    const defaultX = payload.position?.x ?? (targetNode ? targetNode.toa_do.x - 260 : 100);
+    const defaultY = payload.position?.y ?? (targetNode ? targetNode.toa_do.y : -200);
+
+    if (typeLower.includes('ddos') || typeLower.includes('waf') || typeLower.includes('rate')) {
+      newNode = {
+        id: spawnId,
+        bieu_tuong: 'khien_bao_ve',
+        tieu_de: 'Lá chắn WAF & Chống DDoS',
+        nhan_buoc: 'HẠ TẦNG PHÒNG THỦ BIÊN',
+        tom_tat: 'Lọc lưu lượng bot độc hại, Rate Limiting trượt ngăn chặn bão request trước khi chạm hệ thống.',
+        toa_do: { x: defaultX, y: defaultY },
+        tam: { x: defaultX + 110, y: defaultY + 72 },
+        fully_explored: false,
+        hoat_hoa: { mau: '#4338CA', tham_so: { toc_do_xung: '2.5s' } },
+        chi_tiet: {
+          phan_loai: 'CỔNG BẢO VỆ BIÊN & CHỐNG DDOS',
+          tieu_de: 'Lá chắn WAF & Chống DDoS',
+          ban_chat: 'Sử dụng Cloudflare WAF và thuật toán Token Bucket / Sliding Window Counter để giới hạn tần suất gọi API tối đa 10 req/s mỗi IP, tự động dropping các gói tin bẩn trước khi phân luồng vào Gateway.',
+          chu_thich_so_do: 'Hạ tầng phòng thủ biên độc lập bảo vệ toàn bộ mạng lưới microservices',
+          ca_thuc_te: [
+            'Botnet gửi 50.000 request/giây giả lập lỗi mạng để ép máy chủ chi trả chạy song song',
+            'Tấn công Layer 7 HTTP Flood làm cạn kiệt Connection Pool của cơ sở dữ liệu'
+          ],
+          rui_ro: [
+            'False Positive: Chặn nhầm Webhook hợp lệ của đối tác ngân hàng trong đợt cao điểm',
+            'Độ trễ kiểm tra: Thêm 2-5ms cho mỗi yêu cầu đi qua bộ lọc WAF'
+          ]
+        },
+        trac_nghiem: {
+          cau_hoi: 'Thuật toán nào sau đây phù hợp nhất để Rate Limiting phân tán theo cửa sổ trượt?',
+          lua_chon: ['Sliding Window Counter / Token Bucket', 'Sequential File Lock'],
+          dung: 0,
+          giai_thich: 'Token Bucket và Sliding Window cho phép xử lý các đợt bùng nổ lưu lượng ngắn mà vẫn đảm bảo ngưỡng trung bình an toàn.'
+        }
+      };
+
+      if (targetNode) {
+        newEdges.push({
+          from: newNode.id,
+          to: targetNode.id,
+          nhan: 'Phân luồng an toàn',
+          kieu: 'duong-xung-em-ai',
+          loai_lien_ket: 'DEM_LOC'
+        });
+      }
+    } else {
+      // Concept mở rộng linh hoạt khác
+      const customId = `node-${typeLower.replace(/[^a-z0-9]/g, '-')}-${Date.now().toString().slice(-4)}`;
+      newNode = {
+        id: customId,
+        bieu_tuong: 'khien_bao_ve',
+        tieu_de: payload.concept_type.toUpperCase(),
+        nhan_buoc: 'HẠ TẦNG ĐỘC LẬP',
+        tom_tat: `Phân hệ kiến trúc ${payload.concept_type} được bổ sung độc lập vào hệ thống.`,
+        toa_do: { x: defaultX, y: defaultY },
+        tam: { x: defaultX + 110, y: defaultY + 72 },
+        fully_explored: false,
+        hoat_hoa: { mau: '#4F46E5', tham_so: {} },
+        chi_tiet: {
+          phan_loai: 'Phân hệ Độc lập',
+          tieu_de: payload.concept_type,
+          ban_chat: 'Phân hệ bổ sung theo yêu cầu kỹ thuật',
+          chu_thich_so_do: 'Sơ đồ nhánh độc lập',
+          ca_thuc_te: [],
+          rui_ro: []
+        },
+        trac_nghiem: {
+          cau_hoi: 'Mục tiêu chính của phân hệ này là gì?',
+          lua_chon: ['Tăng tính sẵn sàng và tin cậy', 'Tăng độ phức tạp'],
+          dung: 0,
+          giai_thich: 'Mỗi phân hệ thêm vào đều nhằm củng cố tính toàn vẹn hệ thống.'
+        }
+      };
+
+      if (targetNode) {
+        newEdges.push({
+          from: targetNode.id,
+          to: newNode.id,
+          nhan: 'Liên kết phân hệ',
+          kieu: 'duong-xung-em-ai',
+          loai_lien_ket: 'HOA_GIAI'
+        });
+      }
+    }
+
+    // Kiểm duyệt liên kết 3 lớp nếu có cạnh nối
+    const validatedEdges = newEdges.length > 0
+      ? validateAndSanitizeEdges([...current.nodes, newNode], newEdges)
+      : [];
+
+    // Lưu vào SQLite
+    const updated = sqliteClient.addDeltaNodes(
+      current.id,
+      targetSlug || null,
+      [newNode],
+      validatedEdges
+    );
+
+    return {
+      graph: updated || current,
+      spawned: true,
+      message: targetNode
+        ? `Đã spawn thành công node '${newNode.tieu_de}' nối với '${targetNode.tieu_de}'!`
+        : `Đã spawn thành công node độc lập '${newNode.tieu_de}' tại vị trí (${Math.round(defaultX)}, ${Math.round(defaultY)})!`,
+      node: newNode
     };
   },
 
@@ -149,7 +324,15 @@ export const toolHandlers = {
    * Khôi phục đồ thị về 5 node gốc ban đầu
    */
   async resetToRoot(): Promise<{ graph: GraphData; message: string }> {
-    sqliteClient.saveGraph(INITIAL_PAYMENT_GRAPH);
-    return { graph: INITIAL_PAYMENT_GRAPH, message: 'Đã khôi phục đồ thị về 5 node ban đầu (0 token).' };
+    const freshNodes = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.nodes));
+    const freshEdges = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.edges));
+    const sanitizedEdges = validateAndSanitizeEdges(freshNodes, freshEdges);
+    const initialGraph: GraphData = {
+      ...INITIAL_PAYMENT_GRAPH,
+      nodes: freshNodes,
+      edges: sanitizedEdges
+    };
+    sqliteClient.saveGraph(initialGraph);
+    return { graph: initialGraph, message: 'Đã khôi phục đồ thị về 5 node ban đầu (0 token).' };
   }
 };

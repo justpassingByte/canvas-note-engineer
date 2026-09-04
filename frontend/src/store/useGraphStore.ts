@@ -41,6 +41,7 @@ interface GraphState {
   zoomOut: () => void;
   resetView: () => void;
   fetchCurrentGraph: () => Promise<void>;
+  spawnNode: (conceptType: string, position?: { x: number; y: number }) => Promise<void>;
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
@@ -315,6 +316,39 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
     } catch (err) {
       console.error('Lỗi khi đặt lại đồ thị:', err);
+      set({ isLoading: false });
+    }
+  },
+
+  spawnNode: async (conceptType: string, position?: { x: number; y: number }) => {
+    set({ isLoading: true });
+    try {
+      const res = await fetch('/api/graph/spawn', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept_type: conceptType,
+          position
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.spawned) {
+          const safeNodes = resolveNodeCollisions(data.graph.nodes);
+          set({
+            graph: { ...data.graph, nodes: safeNodes },
+            selectedNodeId: data.node?.id || get().selectedNodeId,
+            isLoading: false,
+            isDrawerOpen: true
+          });
+        } else {
+          alert(data.message);
+          set({ isLoading: false });
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi spawn node:', err);
       set({ isLoading: false });
     }
   }

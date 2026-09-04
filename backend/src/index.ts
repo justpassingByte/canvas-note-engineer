@@ -53,6 +53,20 @@ app.post('/api/graph/expand', async (req, res) => {
   }
 });
 
+app.post('/api/graph/spawn', async (req, res) => {
+  try {
+    const { concept_type, target_concept_slug, position } = req.body;
+    const result = await toolHandlers.spawnConceptNode({
+      concept_type: concept_type || 'ddos',
+      target_concept_slug,
+      position
+    });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/graph/prune', async (req, res) => {
   try {
     const { node_id, action } = req.body;

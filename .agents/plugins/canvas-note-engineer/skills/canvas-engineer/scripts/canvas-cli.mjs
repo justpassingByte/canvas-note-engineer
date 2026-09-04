@@ -169,6 +169,34 @@ async function main() {
       break;
     }
 
+    case 'spawn':
+    case 'ddos': {
+      const concept = action === 'ddos' ? 'ddos' : (param || 'ddos');
+      console.log(`[Canvas Spawn] Đang yêu cầu tạo node '${concept}'...`);
+
+      if (!(await isServerAlive(BACKEND_URL))) {
+        console.error('[Lỗi] Backend chưa chạy tại http://localhost:3001. Vui lòng bật server để tạo node.');
+        process.exit(1);
+      }
+
+      const res = await fetch(`${BACKEND_URL}/api/graph/spawn`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          concept_type: concept
+        })
+      });
+
+      const body = await res.json();
+      if (body.spawned) {
+        console.log(`✓ ${body.message}`);
+        console.log(`Tổng số node hiện tại: ${body.graph?.nodes?.length}`);
+      } else {
+        console.log(`Thông báo: ${body.message}`);
+      }
+      break;
+    }
+
     case 'export': {
       const format = (param || 'mermaid').toLowerCase();
       const graph = await getCurrentGraph();
