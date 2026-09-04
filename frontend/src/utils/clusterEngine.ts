@@ -35,38 +35,16 @@ function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEntity>):
   mau: string;
   icon: string;
 } {
-  // 1. Kế thừa cụm từ node cha nếu là nhánh mở rộng từ [+]
-  if (node.parent_id && nodeMap.has(node.parent_id)) {
-    const parentNode = nodeMap.get(node.parent_id)!;
-    return determineClusterId(parentNode, nodeMap);
-  }
-
   const text = `${node.nhan_buoc} ${node.chi_tiet?.phan_loai || ''} ${node.tieu_de} ${node.id}`.toLowerCase();
 
-  // 2. Nhóm Cổng Thanh Toán & Sự Cố Webhook
-  if (text.includes('sự cố') || text.includes('webhook') || text.includes('gateway') || node.bieu_tuong === 'su_co_canh_bao') {
-    return {
-      clusterId: 'cum-webhook-gateway',
-      ten_cum: 'CỔNG THANH TOÁN & WEBHOOK',
-      chu_de_phu: 'Phân hệ tiếp nhận và xử lý sự cố mạng',
-      mau: '#DC2626', // Đỏ cảnh báo
-      icon: 'su_co_canh_bao'
-    };
-  }
-
-  // 3. Nhóm Phòng Thủ Idempotency, Tranh Chấp & Khóa Phân Tán
-  if (text.includes('idempotency') || text.includes('tranh chấp') || text.includes('khóa') || text.includes('phòng thủ') || node.bieu_tuong === 'khien_bao_ve' || node.bieu_tuong === 'tranh_chap_phan_nhanh') {
-    return {
-      clusterId: 'cum-idempotency-defense',
-      ten_cum: 'LÁ CHẮN PHÒNG THỦ IDEMPOTENCY',
-      chu_de_phu: 'Khử trùng lặp giao dịch & Race Condition',
-      mau: '#059669', // Xanh ngọc an toàn
-      icon: 'khien_bao_ve'
-    };
-  }
-
-  // 4. Nhóm Cơ Sở Dữ Liệu & Bảo Chứng ACID
-  if (text.includes('database') || text.includes('acid') || text.includes('unique') || text.includes('lưu trữ') || node.bieu_tuong === 'khoi_tru_database') {
+  // 1. Nhóm Cơ Sở Dữ Liệu & Bảo Chứng ACID (ưu tiên kiểm tra trước để không bị dính chữ 'khóa dòng')
+  if (
+    node.bieu_tuong === 'khoi_tru_database' ||
+    text.includes('database') ||
+    text.includes('acid') ||
+    text.includes('khoi_tru_database') ||
+    node.id === 'node-tru-db'
+  ) {
     return {
       clusterId: 'cum-database-acid',
       ten_cum: 'CƠ SỞ DỮ LIỆU & BẢO CHỨNG ACID',
@@ -76,8 +54,33 @@ function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEntity>):
     };
   }
 
-  // 5. Nhóm Sàn Thương Mại Điện Tử & Flash Sale
-  if (text.includes('tmdt') || text.includes('thương mại') || text.includes('flash sale') || node.bieu_tuong === 'hop_kien_hang_domain') {
+  // 2. Nhóm Hàng Đợi Message Queue & Bộ Nhớ Đệm Cache
+  if (
+    node.bieu_tuong === 'hang_doi_message_queue' ||
+    node.bieu_tuong === 'bo_nho_dem_cache' ||
+    text.includes('queue') ||
+    text.includes('redis') ||
+    text.includes('cache') ||
+    node.id === 'node-queue' ||
+    node.id === 'node-cache'
+  ) {
+    return {
+      clusterId: 'cum-async-buffer',
+      ten_cum: 'MESSAGE QUEUE & BỘ NHỚ ĐỆM',
+      chu_de_phu: 'Hạ tầng đệm giảm tải bất đồng bộ',
+      mau: '#D97706', // Vàng cam hạ tầng
+      icon: 'hang_doi_message_queue'
+    };
+  }
+
+  // 3. Nhóm Sàn Thương Mại Điện Tử & Flash Sale
+  if (
+    node.bieu_tuong === 'hop_kien_hang_domain' ||
+    text.includes('tmdt') ||
+    text.includes('thương mại') ||
+    text.includes('flash sale') ||
+    node.id === 'node-tmdt'
+  ) {
     return {
       clusterId: 'cum-tmdt-domain',
       ten_cum: 'MIỀN SÀN THƯƠNG MẠI (FLASH SALE)',
@@ -87,15 +90,46 @@ function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEntity>):
     };
   }
 
-  // 6. Nhóm Hàng Đợi Message Queue & Bộ Nhớ Đệm Cache
-  if (text.includes('queue') || text.includes('cache') || node.bieu_tuong === 'hang_doi_message_queue' || node.bieu_tuong === 'bo_nho_dem_cache') {
+  // 4. Nhóm Cổng Thanh Toán & Sự Cố Webhook
+  if (
+    node.bieu_tuong === 'su_co_canh_bao' ||
+    text.includes('sự cố') ||
+    text.includes('webhook') ||
+    text.includes('gateway') ||
+    node.id === 'node-su-co'
+  ) {
     return {
-      clusterId: 'cum-async-buffer',
-      ten_cum: 'MESSAGE QUEUE & BỘ NHỚ ĐỆM',
-      chu_de_phu: 'Hạ tầng đệm giảm tải bất đồng bộ',
-      mau: '#D97706', // Vàng cam hạ tầng
-      icon: 'hang_doi_message_queue'
+      clusterId: 'cum-webhook-gateway',
+      ten_cum: 'CỔNG THANH TOÁN & WEBHOOK',
+      chu_de_phu: 'Phân hệ tiếp nhận và xử lý sự cố mạng',
+      mau: '#DC2626', // Đỏ cảnh báo
+      icon: 'su_co_canh_bao'
     };
+  }
+
+  // 5. Nhóm Phòng Thủ Idempotency, Tranh Chấp & Khóa Phân Tán
+  if (
+    node.bieu_tuong === 'khien_bao_ve' ||
+    node.bieu_tuong === 'tranh_chap_phan_nhanh' ||
+    text.includes('idempotency') ||
+    text.includes('tranh chấp') ||
+    text.includes('phòng thủ') ||
+    node.id === 'node-khien-khoa' ||
+    node.id === 'node-tranh-chap'
+  ) {
+    return {
+      clusterId: 'cum-idempotency-defense',
+      ten_cum: 'LÁ CHẮN PHÒNG THỦ IDEMPOTENCY',
+      chu_de_phu: 'Khử trùng lặp giao dịch & Race Condition',
+      mau: '#059669', // Xanh ngọc an toàn
+      icon: 'khien_bao_ve'
+    };
+  }
+
+  // 6. Kế thừa cụm từ node cha nếu là nhánh mở rộng mới không thuộc phân loại trên
+  if (node.parent_id && nodeMap.has(node.parent_id)) {
+    const parentNode = nodeMap.get(node.parent_id)!;
+    return determineClusterId(parentNode, nodeMap);
   }
 
   // Mặc định: Phân hệ Kiến trúc mở rộng

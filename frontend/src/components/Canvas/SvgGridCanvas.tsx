@@ -23,24 +23,84 @@ export const SvgGridCanvas: React.FC = () => {
   const [isPanning, setIsPanning] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Lọc danh sách node hiển thị trong useMemo để tuân thủ quy tắc React Hooks
+  // Lọc danh sách node hiển thị theo cơ chế Thu gọn phân cấp đa tầng (Hierarchical Progressive Collapse)
   const visibleNodes = useMemo(() => {
     if (!graph) return [];
+    const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+
     return graph.nodes.filter(node => {
-      if (!node.parent_id) return true;
-      const parent = graph.nodes.find(n => n.id === node.parent_id);
-      return parent ? !parent.is_collapsed : true;
+      // Ẩn node TMĐT nếu công tắc liên kết miền đang TẮT
+      if (node.id === 'node-tmdt' && !isDomainLinkActive) {
+        return false;
+      }
+
+      // Thu gọn phân cấp: node chỉ hiển thị nếu toàn bộ chuỗi tổ tiên của nó đều KHÔNG bị thu gọn
+      let curr = node;
+      while (curr.parent_id) {
+        const parent = nodeMap.get(curr.parent_id);
+        if (!parent) break;
+        if (parent.is_collapsed) return false;
+        curr = parent;
+      }
+      return true;
     });
-  }, [graph]);
+  }, [graph, isDomainLinkActive]);
 
   // Tính toán Cụm Topic tự động (0 token AI)
   const clusters = useMemo(() => computeClusters(visibleNodes), [visibleNodes]);
   const isMacroView = zoom < 0.65;
 
-  if (!graph) return null;
+  const visibleNodeIds = useMemo(() => new Set(visibleNodes.map(n => n.id)), [visibleNodes]);
+  const nodeMap = useMemo(() => new Map(graph?.nodes.map(n => [n.id, n]) || []), [graph]);
 
-  const visibleNodeIds = new Set(visibleNodes.map(n => n.id));
-  const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+  // Lọc danh sách edge hiển thị
+  const visibleEdges = useMemo(() => {
+    if (!graph) return [];
+    return graph.edges.filter(edge => {
+      if (edge.from === 'node-tmdt' && !isDomainLinkActive) {
+        return false;
+      }
+      return visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to);
+    });
+  }, [graph, isDomainLinkActive, visibleNodeIds]);
+
+  // Tính toán trước tọa độ và hình học của từng đường nối để tách biệt các lớp SVG
+  const edgeGeometries = useMemo(() => {
+    if (!graph) return [];
+    return visibleEdges.map((edge, idx) => {
+      const fromNode = nodeMap.get(edge.from);
+      const toNode = nodeMap.get(edge.to);
+      if (!fromNode || !toNode) return null;
+
+      const { pathD, midX, midY } = calculateEdgePath(fromNode, toNode);
+      const isEdgeSelected = selectedEdge?.from === edge.from && selectedEdge?.to === edge.to;
+      const isCascadeEdge = isWhatBreaksActive && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+      const labelWidth = Math.max(edge.nhan.length * 8.2 + 26, 110);
+      const labelHeight = 24;
+
+      return {
+        edge,
+        key: `${edge.from}-${edge.to}-${idx}`,
+        pathD,
+        midX,
+        midY,
+        labelWidth,
+        labelHeight,
+        isEdgeSelected,
+        isCascadeEdge
+      };
+    }).filter(Boolean) as Array<{
+      edge: (typeof visibleEdges)[0];
+      key: string;
+      pathD: string;
+      midX: number;
+      midY: number;
+      labelWidth: number;
+      labelHeight: number;
+      isEdgeSelected: boolean;
+      isCascadeEdge: boolean;
+    }>;
+  }, [visibleEdges, nodeMap, selectedEdge, isWhatBreaksActive, selectedNodeId]);
 
   // Điều hướng Camera mượt mà bay vào tâm cụm khi click (Click-to-Focus)
   const focusCluster = (cluster: TopicCluster) => {
@@ -53,15 +113,6 @@ export const SvgGridCanvas: React.FC = () => {
     setPan({ x: newPanX, y: newPanY });
   };
 
-  // Lọc danh sách edge hiển thị
-  const visibleEdges = graph.edges.filter(edge => {
-    // Nếu là edge liên kết miền TMĐT mà toggle đang TẮT thì ẩn
-    if (edge.from === 'node-tmdt' && !isDomainLinkActive) {
-      return false;
-    }
-    return visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to);
-  });
-
   // Xử lý kéo rê chuột (Pan)
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
@@ -70,6 +121,7 @@ export const SvgGridCanvas: React.FC = () => {
     if (
       target.closest('.cum-thuc-the') ||
       target.closest('.nhom-duong-noi-svg') ||
+      target.closest('.nhom-nhan-svg') ||
       target.closest('button') ||
       target.closest('.the-tieu-de-cum')
     ) {
@@ -110,6 +162,8 @@ export const SvgGridCanvas: React.FC = () => {
     setPan({ x: newPanX, y: newPanY });
   };
 
+  if (!graph) return null;
+
   return (
     <section
       ref={canvasRef}
@@ -147,9 +201,9 @@ export const SvgGridCanvas: React.FC = () => {
         <div className="lop-cum-kien-truc" style={{ pointerEvents: 'none' }}>
           {clusters.map((cluster) => {
             const { bounds } = cluster;
-            // Giữ kích thước thẻ Tiêu đề ổn định vừa mắt trên màn hình (~1.0x chuẩn, không bị phình to)
-            const headerScale = zoom < 0.85 ? Math.min(1.05 / zoom, 2.0) : 1.0;
-            const borderWidth = Math.max(1.5, Math.min(2 / zoom, 3));
+            // Giữ kích thước thẻ Tiêu đề ổn định vừa mắt trên màn hình (chuẩn ~1.0, zoom out chỉ nhích nhẹ 1.15)
+            const headerScale = zoom < 0.7 ? 1.15 : 1.0;
+            const borderWidth = Math.max(1.5, Math.min(2 / zoom, 2.5));
 
             return (
               <div
@@ -249,76 +303,83 @@ export const SvgGridCanvas: React.FC = () => {
             </marker>
           </defs>
 
-          {visibleEdges.map((edge, idx) => {
-            const fromNode = nodeMap.get(edge.from);
-            const toNode = nodeMap.get(edge.to);
-            if (!fromNode || !toNode) return null;
-
-            // Tính toán cổng cắm và đường cong Cubic Bezier tự động 100%
-            const { pathD, midX, midY } = calculateEdgePath(fromNode, toNode);
-            const isEdgeSelected = selectedEdge?.from === edge.from && selectedEdge?.to === edge.to;
-            const isCascadeEdge = isWhatBreaksActive && (edge.from === selectedNodeId || edge.to === selectedNodeId);
-
-            return (
-              <g
-                key={`${edge.from}-${edge.to}-${idx}`}
-                onClick={() => selectEdge(edge)}
-                style={{ cursor: 'pointer' }}
-                className="nhom-duong-noi-svg"
-              >
-                {/* Vùng đệm bắt sự kiện click chuột rộng hơn (20px) */}
-                <path
-                  d={pathD}
-                  fill="none"
-                  stroke="transparent"
-                  strokeWidth={20}
-                />
-                {/* Đường nối nét đen chính */}
-                <path
-                  className="duong-noi-day"
-                  d={pathD}
-                  markerEnd={isEdgeSelected ? 'url(#mui-ten-vang)' : 'url(#mui-ten-den)'}
-                  style={{
-                    stroke: isEdgeSelected ? '#D97706' : (isCascadeEdge ? '#DC2626' : undefined),
-                    strokeWidth: isEdgeSelected || isCascadeEdge ? 3 : undefined
-                  }}
-                />
-                {/* Đường xung điện động nhịp thở 4.5s */}
-                <path className={edge.kieu} d={pathD} />
-                {/* Hộp nhãn giải thích luồng định vị chính xác tại tâm Bezier t=0.5 */}
-                <rect
-                  className="hop-nhan-svg"
-                  x={midX - 65}
-                  y={midY - 12}
-                  width={130}
-                  height={24}
-                  style={{
-                    stroke: isEdgeSelected ? '#D97706' : (isCascadeEdge ? '#DC2626' : undefined),
-                    strokeWidth: isEdgeSelected || isCascadeEdge ? 2 : 1
-                  }}
-                />
-                <text
-                  className="chu-nhan-svg"
-                  x={midX}
-                  y={midY + 2}
-                  style={{
-                    fill: isEdgeSelected ? '#D97706' : (isCascadeEdge ? '#DC2626' : undefined),
-                    fontWeight: isEdgeSelected || isCascadeEdge ? 600 : 500
-                  }}
-                >
-                  {edge.nhan}
-                </text>
-              </g>
-            );
-          })}
+          {edgeGeometries.map((item) => (
+            <g
+              key={item.key}
+              onClick={() => selectEdge(item.edge)}
+              style={{ cursor: 'pointer' }}
+              className="nhom-duong-noi-svg"
+            >
+              {/* Vùng đệm bắt sự kiện click chuột rộng hơn (20px) */}
+              <path
+                d={item.pathD}
+                fill="none"
+                stroke="transparent"
+                strokeWidth={20}
+              />
+              {/* Đường nối nét đen chính */}
+              <path
+                className="duong-noi-day"
+                d={item.pathD}
+                markerEnd={item.isEdgeSelected ? 'url(#mui-ten-vang)' : 'url(#mui-ten-den)'}
+                style={{
+                  stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                  strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 3 : undefined
+                }}
+              />
+              {/* Đường xung điện động nhịp thở 4.5s */}
+              <path className={item.edge.kieu} d={item.pathD} />
+            </g>
+          ))}
         </svg>
 
-        {/* Vùng chứa các node Concept */}
+        {/* Vùng chứa các node Concept (z-index: 5) */}
         <div className={`vung-chua-khoi ${isMacroView ? 'tam-nhin-macro' : ''}`} style={{ pointerEvents: 'none' }}>
           {visibleNodes.map(node => (
             <ConceptNode key={node.id} node={node} />
           ))}
         </div>
+
+        {/* Lớp Nhãn Mũi tên SVG Độc lập (z-index: 6) - 100% Nổi trên các Node và đường vẽ */}
+        <svg
+          className="lop-nhan-duong-noi"
+          id="svg-nhan-duong-noi"
+          style={{ width: '4000px', height: '4000px', overflow: 'visible', pointerEvents: 'none' }}
+        >
+          {edgeGeometries.map((item) => (
+            <g
+              key={`label-${item.key}`}
+              onClick={() => selectEdge(item.edge)}
+              style={{ cursor: 'pointer', pointerEvents: 'all' }}
+              className="nhom-nhan-svg"
+            >
+              {/* Hộp nhãn nền trắng đổ bóng co giãn tự động theo độ dài chữ */}
+              <rect
+                className="hop-nhan-svg"
+                x={item.midX - item.labelWidth / 2}
+                y={item.midY - item.labelHeight / 2}
+                width={item.labelWidth}
+                height={item.labelHeight}
+                rx={6}
+                style={{
+                  stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                  strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 2 : 1.3
+                }}
+              />
+              <text
+                className="chu-nhan-svg"
+                x={item.midX}
+                y={item.midY}
+                style={{
+                  fill: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                  fontWeight: item.isEdgeSelected || item.isCascadeEdge ? 700 : 600
+                }}
+              >
+                {item.edge.nhan}
+              </text>
+            </g>
+          ))}
+        </svg>
       </div>
     </section>
   );

@@ -1,6 +1,7 @@
 {
   "name": "canvas-note-engineer",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "description": "Interactive Engineering Knowledge Graph & Canvas Notebook Plugin for DeepSeek Harness",
   "repository": {
@@ -15,9 +16,17 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "npm run --prefix frontend build",
     "build:backend": "npm run --prefix backend build",
-    "start": "npm run --prefix backend start"
+    "start": "npm run --prefix backend start",
+    "test": "vitest run",
+    "test:unit": "vitest run frontend/src/utils/__tests__",
+    "test:integration": "vitest run backend/src/__tests__",
+    "test:e2e": "playwright test",
+    "test:all": "vitest run && playwright test"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "@playwright/test": "^1.62.1",
+    "concurrently": "^9.1.2",
+    "playwright": "^1.62.1",
+    "vitest": "^5.0.0"
   }
 }

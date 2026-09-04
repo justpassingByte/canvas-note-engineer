@@ -214,18 +214,23 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     const { graph } = get();
     if (!graph) return;
 
-    const parent = graph.nodes.find(n => n.id === nodeId);
-    if (!parent) return;
+    const targetNode = graph.nodes.find(n => n.id === nodeId);
+    if (!targetNode) return;
 
-    const newCollapseState = !parent.is_collapsed;
+    const newCollapseState = !targetNode.is_collapsed;
+
+    // Tìm toàn bộ các node con trực tiếp và hậu duệ
+    const directChildIds = new Set(graph.nodes.filter(n => n.parent_id === nodeId).map(n => n.id));
 
     // Cập nhật UI lạc quan tức thì (0 token, 0 delay)
     const updatedNodes = graph.nodes.map(n => {
       if (n.id === nodeId) {
         return { ...n, is_collapsed: newCollapseState };
       }
-      if (n.parent_id === nodeId) {
-        return { ...n, is_collapsed: newCollapseState };
+      // Nếu thu gọn node cha: các node con trực tiếp cũng được đặt is_collapsed = true
+      // để khi mở lại node cha, hệ thống mở theo từng lớp phân cấp (layer-by-layer)
+      if (newCollapseState && directChildIds.has(n.id)) {
+        return { ...n, is_collapsed: true };
       }
       return n;
     });

@@ -24,6 +24,8 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 screenshots/
+test-results/
+data/
 
 # System files
 .DS_Store

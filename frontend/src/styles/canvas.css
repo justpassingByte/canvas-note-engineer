@@ -247,14 +247,13 @@ svg.lop-duong-noi {
   width: 100%;
   height: 100%;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
 }
 
 svg.lop-duong-noi .nhom-duong-noi-svg {
   pointer-events: all;
   cursor: pointer;
 }
-
 
 .duong-noi-day {
   stroke: #1A1D24;
@@ -292,22 +291,6 @@ svg.lop-duong-noi .nhom-duong-noi-svg {
   to { stroke-dashoffset: 0; }
 }
 
-.hop-nhan-svg {
-  fill: #FFFFFF;
-  stroke: #1A1D24;
-  stroke-width: 1.5;
-  rx: 4px;
-}
-
-.chu-nhan-svg {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
-  font-weight: 800;
-  fill: #1A1D24;
-  text-anchor: middle;
-  dominant-baseline: central;
-}
-
 .vung-chua-khoi {
   position: absolute;
   top: 0;
@@ -315,6 +298,48 @@ svg.lop-duong-noi .nhom-duong-noi-svg {
   width: 100%;
   height: 100%;
   z-index: 5;
+}
+
+/* LỚP NHÃN MŨI TÊN SVG NỔI ĐỘC LẬP TRÊN CÙNG (Z-INDEX: 6) */
+svg.lop-nhan-duong-noi {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 6;
+}
+
+svg.lop-nhan-duong-noi .nhom-nhan-svg {
+  pointer-events: all;
+  cursor: pointer;
+}
+
+.hop-nhan-svg {
+  fill: #FFFFFF !important;
+  stroke: #1A1D24;
+  stroke-width: 1.5;
+  rx: 6px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.14));
+  transition: stroke 0.15s ease, stroke-width 0.15s ease, filter 0.15s ease;
+}
+
+.nhom-nhan-svg:hover .hop-nhan-svg {
+  stroke: #D97706;
+  stroke-width: 2;
+  filter: drop-shadow(0 3px 8px rgba(217, 119, 6, 0.28));
+}
+
+.chu-nhan-svg {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: #1A1D24;
+  text-anchor: middle;
+  dominant-baseline: central;
+  user-select: none;
+  pointer-events: none;
 }
 
 /* LỚP VÙNG CỤM KIẾN TRÚC & TOPIC HEADERS (0-TOKEN CLUSTERING) */

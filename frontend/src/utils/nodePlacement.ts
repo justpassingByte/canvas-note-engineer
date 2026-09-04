@@ -2,8 +2,8 @@ import { NodeEntity } from '../types/graphTypes.js';
 
 export const CARD_WIDTH = 220;
 export const CARD_HEIGHT = 145;
-export const BUFFER_X = 65;
-export const BUFFER_Y = 55;
+export const BUFFER_X = 80;
+export const BUFFER_Y = 70;
 
 /**
  * Kiểm tra xem hình chữ nhật bao quanh vị trí (x, y) có va chạm với bất kỳ node nào khác không

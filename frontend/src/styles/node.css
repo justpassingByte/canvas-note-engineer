@@ -182,6 +182,16 @@
   transform: scale(1.08);
 }
 
+.badge-thu-gon.dang-dong {
+  background: #D97706;
+  border-color: #FEF3C7;
+  color: #FFFFFF;
+}
+
+.badge-thu-gon.dang-dong:hover {
+  background: #B45309;
+}
+
 /* Thẻ nhãn giải thích bên dưới */
 .the-nhan-duoi {
   background: #FFFFFF;

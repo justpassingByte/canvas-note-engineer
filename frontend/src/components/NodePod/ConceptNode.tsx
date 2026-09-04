@@ -40,9 +40,19 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
   // Chế độ ôn tập: ẩn tiêu đề thành [ ? ] nếu chưa mở
   const isMaskedInRecall = isRecallMode && !revealedRecallNodes.includes(node.id);
 
-  // Kiểm tra xem node này có node con không
-  const childNodes = graph?.nodes.filter(n => n.parent_id === node.id) || [];
-  const hasChildren = childNodes.length > 0;
+  // Đếm toàn bộ số lượng node hậu duệ phân cấp (0 token)
+  const countAllDescendants = (nodeId: string): number => {
+    if (!graph) return 0;
+    const directChildren = graph.nodes.filter(n => n.parent_id === nodeId);
+    let count = directChildren.length;
+    for (const child of directChildren) {
+      count += countAllDescendants(child.id);
+    }
+    return count;
+  };
+
+  const totalDescendants = countAllDescendants(node.id);
+  const hasChildren = totalDescendants > 0;
   const isCollapsed = node.is_collapsed || false;
 
   const handleNodeClick = () => {
@@ -97,19 +107,23 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
         <button
           className={`nut-mo-rong-pod ${node.fully_explored ? 'da-kham-pha' : ''}`}
           onClick={handleExpandClick}
-          title={node.fully_explored ? 'Đã khai phá toàn bộ (0 token)' : 'Mở rộng nhánh mới bằng AI'}
+          title={node.fully_explored ? 'Đã khai phá toàn bộ' : 'Mở rộng nhánh mới bằng AI'}
         >
           {node.fully_explored ? '✓' : '+'}
         </button>
 
-        {/* Huy hiệu Thu gọn / Bung ra nếu node có nhánh con (0 token) */}
+        {/* Huy hiệu Thu gọn / Bung ra nếu node có nhánh con */}
         {hasChildren && (
           <button
-            className="badge-thu-gon"
+            className={`badge-thu-gon ${isCollapsed ? 'dang-dong' : ''}`}
             onClick={handleCollapseClick}
-            title={isCollapsed ? 'Bung các nhánh con ra (0 token)' : 'Thu gọn các nhánh con để dọn sạch canvas (0 token)'}
+            title={
+              isCollapsed
+                ? `Bung mở lớp tiếp theo (+${totalDescendants} nodes)`
+                : `Thu gọn toàn bộ nhánh hậu duệ (-${totalDescendants} nodes)`
+            }
           >
-            {isCollapsed ? `+${childNodes.length}` : `-${childNodes.length}`}
+            {isCollapsed ? `+${totalDescendants}` : `-${totalDescendants}`}
           </button>
         )}
       </div>
