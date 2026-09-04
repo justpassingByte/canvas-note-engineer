@@ -49,6 +49,7 @@ export const SvgGridCanvas: React.FC = () => {
   // Tính toán Cụm Topic tự động (0 token AI)
   const clusters = useMemo(() => computeClusters(visibleNodes), [visibleNodes]);
   const isMacroView = zoom < 0.65;
+  const isDeepOverview = zoom < 0.35;
 
   const visibleNodeIds = useMemo(() => new Set(visibleNodes.map(n => n.id)), [visibleNodes]);
   const nodeMap = useMemo(() => new Map(graph?.nodes.map(n => [n.id, n]) || []), [graph]);
@@ -201,14 +202,27 @@ export const SvgGridCanvas: React.FC = () => {
         <div className="lop-cum-kien-truc" style={{ pointerEvents: 'none' }}>
           {clusters.map((cluster) => {
             const { bounds } = cluster;
-            // Bù trừ động mượt mà cho Tiêu đề Cụm: tự phóng to vừa phải (~1.25x - 1.45x) khi zoom-out xa
-            const headerScale = zoom < 0.95 ? Math.min(1.05 / Math.sqrt(zoom), 1.45) : 1.0;
+            const isOuterCluster = cluster.cap_do === 'me';
+            const isSubCluster = cluster.cap_do === 'con';
+
+            // Ẩn tiêu đề cụm con khi zoom out sâu (< 35%) để góc nhìn toàn cảnh thoáng đãng
+            const showHeader = !isDeepOverview || !isSubCluster;
+
+            // Bù trừ động giữ kích thước chữ trên màn hình mắt người:
+            // Cụm Lớn (Mẹ hoặc Độc lập): luôn đạt ~16.5px - 18px trên màn hình
+            // Cụm Con: đạt ~12px khi zoom từ 35% trở lên
+            let headerScale = 1.0;
+            if (isOuterCluster || cluster.cap_do === 'doc_lap') {
+              headerScale = zoom < 0.92 ? Math.min(Math.max(1.0, 1.25 / zoom), 5.0) : 1.0;
+            } else if (isSubCluster) {
+              headerScale = zoom < 0.92 ? Math.min(Math.max(1.0, 0.92 / zoom), 2.8) : 1.0;
+            }
             const borderWidth = Math.max(1.5, Math.min(2 / zoom, 2.5));
 
             return (
               <div
                 key={cluster.id}
-                className={`khung-cum-chu-de ${isMacroView ? 'che-do-macro' : ''}`}
+                className={`khung-cum-chu-de ${isOuterCluster ? 'khung-cum-me' : isSubCluster ? 'khung-cum-con' : 'khung-cum-doc-lap'} ${isMacroView ? 'che-do-macro' : ''} ${isDeepOverview && isSubCluster ? 'tam-nhin-sau' : ''}`}
                 style={{
                   position: 'absolute',
                   left: `${bounds.minX}px`,
@@ -216,35 +230,46 @@ export const SvgGridCanvas: React.FC = () => {
                   width: `${bounds.width}px`,
                   height: `${bounds.height}px`,
                   borderColor: cluster.mau,
-                  borderWidth: `${borderWidth}px`,
-                  backgroundColor: isMacroView ? `${cluster.mau}10` : `${cluster.mau}06`,
-                  pointerEvents: isMacroView ? 'all' : 'none'
+                  borderWidth: isOuterCluster ? `${Math.max(2, Math.min(2.5 / zoom, 3))}px` : `${borderWidth}px`,
+                  borderStyle: 'dashed',
+                  backgroundColor: isOuterCluster
+                    ? (isMacroView ? `${cluster.mau}0A` : `${cluster.mau}04`)
+                    : (isMacroView ? `${cluster.mau}10` : `${cluster.mau}06`),
+                  pointerEvents: isMacroView ? 'all' : 'none',
+                  zIndex: isOuterCluster ? 1 : 2
                 }}
                 onClick={() => isMacroView && focusCluster(cluster)}
                 title={isMacroView ? `Bấm để phóng to vào cụm ${cluster.ten_cum}` : undefined}
               >
                 {/* Thẻ Tiêu đề Cụm Topic */}
-                <div
-                  className="the-tieu-de-cum"
-                  style={{
-                    borderColor: cluster.mau,
-                    transform: `scale(${headerScale})`,
-                    transformOrigin: 'top left',
-                    pointerEvents: 'all'
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    focusCluster(cluster);
-                  }}
-                  title={`Bấm để phóng to vào cụm ${cluster.ten_cum}`}
-                >
-                  <div className="cham-mau-cum" style={{ backgroundColor: cluster.mau }}></div>
-                  <div className="noi-dung-chu-cum">
-                    <span className="ten-topic-cum">{cluster.ten_cum}</span>
-                    <span className="mo-ta-phu-cum">{cluster.chu_de_phu}</span>
+                {showHeader && (
+                  <div
+                    className={`the-tieu-de-cum ${isOuterCluster ? 'tieu-de-cum-me' : isSubCluster ? 'tieu-de-cum-con' : 'tieu-de-cum-doc-lap'}`}
+                    style={{
+                      left: `${cluster.headerOffsetLeft || 16}px`,
+                      borderColor: cluster.mau,
+                      transform: `scale(${headerScale})`,
+                      transformOrigin: 'top left',
+                      pointerEvents: 'all'
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      focusCluster(cluster);
+                    }}
+                    title={`Bấm để phóng to vào ${cluster.ten_cum}`}
+                  >
+                    <div className="cham-mau-cum" style={{ backgroundColor: cluster.mau }}></div>
+                    <div className="noi-dung-chu-cum">
+                      <span className="ten-topic-cum">{cluster.ten_cum}</span>
+                      {!isMacroView && (
+                        <span className="mo-ta-phu-cum">{cluster.chu_de_phu}</span>
+                      )}
+                    </div>
+                    {!isDeepOverview && (
+                      <span className="dem-node-cum">{cluster.nodeIds.length} Nodes</span>
+                    )}
                   </div>
-                  <span className="dem-node-cum">{cluster.nodeIds.length} Nodes</span>
-                </div>
+                )}
               </div>
             );
           })}

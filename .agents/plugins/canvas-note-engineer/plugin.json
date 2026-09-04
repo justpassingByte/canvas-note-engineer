@@ -1,0 +1,9 @@
+{
+  "name": "canvas-note-engineer",
+  "version": "1.0.0",
+  "description": "Interactive Engineering Notebook & Dynamic Architecture Knowledge Graph for Antigravity & DeepSeek Harness with shared SQLite WAL caching.",
+  "author": "justpassingByte & Antigravity",
+  "skills": [
+    "canvas-engineer"
+  ]
+}

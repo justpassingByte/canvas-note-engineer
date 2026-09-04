@@ -60,7 +60,9 @@
             ],
             "dung": 0,
             "giai_thich": "Nếu thiếu Idempotency, server coi gói retry như một lệnh mới và xử lý tiếp, dẫn đến trừ hoặc cộng tiền 2 lần."
-          }
+          },
+          "is_collapsed": false,
+          "collapsed_count": 1
         },
         {
           "id": "node-tranh-chap",
@@ -118,7 +120,9 @@
             ],
             "dung": 0,
             "giai_thich": "Hai luồng cùng đọc tại cùng một mili-giây nên cùng thấy số dư 10 triệu hợp lệ và cùng duyệt chi."
-          }
+          },
+          "is_collapsed": false,
+          "collapsed_count": 2
         },
         {
           "id": "node-khien-khoa",
@@ -178,7 +182,9 @@
             ],
             "dung": 0,
             "giai_thich": "Idempotency Key đóng vai trò định danh duy nhất cho một ý định giao dịch, đảm bảo n lần gửi chỉ thực thi đúng 1 lần."
-          }
+          },
+          "is_collapsed": true,
+          "collapsed_count": 3
         },
         {
           "id": "node-tru-db",
@@ -234,7 +240,8 @@
             ],
             "dung": 0,
             "giai_thich": "Cơ sở dữ liệu với Unique Index và ACID là bảo chứng kiên cố nhất phòng ngừa mọi trường hợp tầng cache bị fail."
-          }
+          },
+          "is_collapsed": true
         },
         {
           "id": "node-tmdt",
@@ -289,12 +296,13 @@
             ],
             "dung": 0,
             "giai_thich": "Thiếu khóa đồng thời khiến nhiều transaction cùng đọc thấy còn hàng và cùng trừ tồn kho xuống số âm."
-          }
+          },
+          "is_collapsed": true
         },
         {
           "id": "node-queue",
           "parent_id": "node-khien-khoa",
-          "fully_explored": false,
+          "fully_explored": true,
           "bieu_tuong": "hang_doi_message_queue",
           "tieu_de": "Hàng đợi Message Queue",
           "nhan_buoc": "BƯỚC 3.1 // BĂNG CHUYỀN",
@@ -345,12 +353,13 @@
             ],
             "dung": 0,
             "giai_thich": "Message Queue đóng vai trò đệm và điều tiết tốc độ, ngăn chặn Database bị quá tải khi có bão request."
-          }
+          },
+          "is_collapsed": true
         },
         {
           "id": "node-cache",
           "parent_id": "node-khien-khoa",
-          "fully_explored": false,
+          "fully_explored": true,
           "bieu_tuong": "bo_nho_dem_cache",
           "tieu_de": "Khóa phân tán Redis Cache",
           "nhan_buoc": "BƯỚC 2.1 // KHÓA NHANH RAM",
@@ -400,7 +409,8 @@
             ],
             "dung": 0,
             "giai_thich": "SETNX thực thi atomic trên RAM đơn luồng của Redis nên không bao giờ xảy ra Race Condition khi giành khóa."
-          }
+          },
+          "is_collapsed": true
         }
       ],
       "edges": [

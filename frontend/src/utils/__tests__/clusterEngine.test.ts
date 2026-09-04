@@ -30,13 +30,13 @@ function createMockNode(id: string, icon: any, x: number, y: number, label: stri
   };
 }
 
-describe('Cluster Engine - Automated Architecture Topic Grouping', () => {
+describe('Cluster Engine - Automated Architecture Topic Grouping (2-Tier Nested Clusters)', () => {
   it('should return empty array when nodes array is empty', () => {
     const clusters = computeClusters([]);
     expect(clusters).toEqual([]);
   });
 
-  it('should classify nodes into proper technical clusters', () => {
+  it('should classify nodes into proper technical clusters and generate parent container', () => {
     const nodes: NodeEntity[] = [
       createMockNode('node-tru-db', 'khoi_tru_database', 100, 100),
       createMockNode('node-queue', 'hang_doi_message_queue', 400, 100),
@@ -47,14 +47,20 @@ describe('Cluster Engine - Automated Architecture Topic Grouping', () => {
 
     const clusters = computeClusters(nodes);
 
-    expect(clusters.length).toBe(5);
+    // 1 Parent Cluster (cum-idempotency-system) + 5 Sub-clusters/Independent clusters = 6 total
+    expect(clusters.length).toBe(6);
 
     const clusterIds = clusters.map(c => c.id);
+    expect(clusterIds).toContain('cum-idempotency-system');
     expect(clusterIds).toContain('cum-database-acid');
     expect(clusterIds).toContain('cum-async-buffer');
     expect(clusterIds).toContain('cum-tmdt-domain');
     expect(clusterIds).toContain('cum-webhook-gateway');
-    expect(clusterIds).toContain('cum-idempotency-defense');
+    expect(clusterIds).toContain('cum-idempotency-app');
+
+    // Verify parent cluster metadata
+    const parentCluster = clusters.find(c => c.id === 'cum-idempotency-system');
+    expect(parentCluster?.cap_do).toBe('me');
   });
 
   it('should compute padded bounding boxes and centroid coordinates for clusters', () => {
@@ -64,24 +70,25 @@ describe('Cluster Engine - Automated Architecture Topic Grouping', () => {
     ];
 
     const clusters = computeClusters(nodes);
-    expect(clusters.length).toBe(1); // Both belong to cum-async-buffer
+    // Both belong to cum-async-buffer and are wrapped in parent cum-idempotency-system
+    expect(clusters.length).toBe(2);
 
-    const cluster = clusters[0];
-    expect(cluster.id).toBe('cum-async-buffer');
-    expect(cluster.nodeIds).toHaveLength(2);
+    const subCluster = clusters.find(c => c.id === 'cum-async-buffer');
+    expect(subCluster).toBeDefined();
+    expect(subCluster?.nodeIds).toHaveLength(2);
 
-    // Bounding box calculation:
+    // Bounding box calculation for sub-cluster:
     // minX = 200, maxX = 500 + 220 = 720
     // minY = 300, maxY = 300 + 145 = 445
-    // PADDING = 38, HEADER PADDING = 24
-    expect(cluster.bounds.minX).toBe(200 - 38);
-    expect(cluster.bounds.maxX).toBe(720 + 38);
-    expect(cluster.bounds.minY).toBe(300 - 38 - 24);
-    expect(cluster.bounds.maxY).toBe(445 + 38);
+    // PADDING = 34, HEADER PADDING = 20
+    expect(subCluster!.bounds.minX).toBe(200 - 34);
+    expect(subCluster!.bounds.maxX).toBe(720 + 34);
+    expect(subCluster!.bounds.minY).toBe(300 - 34 - 20);
+    expect(subCluster!.bounds.maxY).toBe(445 + 34);
 
-    expect(cluster.bounds.width).toBe((720 + 38) - (200 - 38));
-    expect(cluster.bounds.height).toBe((445 + 38) - (300 - 38 - 24));
-    expect(cluster.bounds.centerX).toBe(cluster.bounds.minX + cluster.bounds.width / 2);
-    expect(cluster.bounds.centerY).toBe(cluster.bounds.minY + cluster.bounds.height / 2);
+    expect(subCluster!.bounds.width).toBe((720 + 34) - (200 - 34));
+    expect(subCluster!.bounds.height).toBe((445 + 34) - (300 - 34 - 20));
+    expect(subCluster!.bounds.centerX).toBe(subCluster!.bounds.minX + subCluster!.bounds.width / 2);
+    expect(subCluster!.bounds.centerY).toBe(subCluster!.bounds.minY + subCluster!.bounds.height / 2);
   });
 });

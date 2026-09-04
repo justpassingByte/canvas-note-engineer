@@ -1,4 +1,4 @@
-﻿---
+---
 description: Custom Slash Command Router for Antigravity developer shortcuts
 trigger: always_on
 ---
@@ -16,3 +16,4 @@ When the user starts a message with any of the following slash commands, immedia
 - `/conflict [args]`: Invoke skill `git-assistant` to resolve merge conflicts.
 - `/bundle [args]`: Invoke skill `bundle-inspector` to audit dist/assets size and package dependencies.
 - `/memory [args]`: Invoke MCP server `memory` to read or store knowledge graph entities.
+- `/canvas [args]`: Invoke skill `canvas-engineer` to manage, open, query, expand, or export the Engineering Notebook architecture canvas.
