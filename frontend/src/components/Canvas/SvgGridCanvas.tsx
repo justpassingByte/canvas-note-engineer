@@ -201,8 +201,8 @@ export const SvgGridCanvas: React.FC = () => {
         <div className="lop-cum-kien-truc" style={{ pointerEvents: 'none' }}>
           {clusters.map((cluster) => {
             const { bounds } = cluster;
-            // Giữ kích thước thẻ Tiêu đề ổn định vừa mắt trên màn hình (chuẩn ~1.0, zoom out chỉ nhích nhẹ 1.15)
-            const headerScale = zoom < 0.7 ? 1.15 : 1.0;
+            // Bù trừ động mượt mà cho Tiêu đề Cụm: tự phóng to vừa phải (~1.25x - 1.45x) khi zoom-out xa
+            const headerScale = zoom < 0.95 ? Math.min(1.05 / Math.sqrt(zoom), 1.45) : 1.0;
             const borderWidth = Math.max(1.5, Math.min(2 / zoom, 2.5));
 
             return (

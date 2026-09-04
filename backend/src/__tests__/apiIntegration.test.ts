@@ -7,7 +7,7 @@ describe('Live Backend REST API Integration Tests', () => {
     const res = await fetch(`${BACKEND_URL}/api/health`);
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.status).toBe('ok');
     expect(body.plugin).toBe('interactive_knowledge_graph');
     expect(body.cache).toBe('sqlite_wal');
@@ -17,7 +17,7 @@ describe('Live Backend REST API Integration Tests', () => {
     const res = await fetch(`${BACKEND_URL}/api/graph/current`);
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as any;
     const graph = body.graph || body;
 
     expect(graph).toBeDefined();
@@ -47,7 +47,7 @@ describe('Live Backend REST API Integration Tests', () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
 
     expect(body.expanded).toBe(true);
     expect(body.graph.nodes.length).toBe(7); // 5 initial + 2 delta nodes
@@ -65,7 +65,7 @@ describe('Live Backend REST API Integration Tests', () => {
     });
 
     expect(collapseRes.status).toBe(200);
-    const collapseBody = await collapseRes.json();
+    const collapseBody = (await collapseRes.json()) as any;
     expect(collapseBody.success).toBe(true);
 
     const targetNode = collapseBody.graph.nodes.find((n: any) => n.id === 'node-khien-khoa');
@@ -79,7 +79,7 @@ describe('Live Backend REST API Integration Tests', () => {
     });
 
     expect(expandRes.status).toBe(200);
-    const expandBody = await expandRes.json();
+    const expandBody = (await expandRes.json()) as any;
     expect(expandBody.success).toBe(true);
 
     const restoredNode = expandBody.graph.nodes.find((n: any) => n.id === 'node-khien-khoa');
@@ -90,7 +90,7 @@ describe('Live Backend REST API Integration Tests', () => {
     const res = await fetch(`${BACKEND_URL}/api/graph/reset`, { method: 'POST' });
     expect(res.status).toBe(200);
 
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.graph.nodes).toHaveLength(5);
   });
 });

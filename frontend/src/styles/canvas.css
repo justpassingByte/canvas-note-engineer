@@ -444,7 +444,7 @@ svg.lop-nhan-duong-noi .nhom-nhan-svg {
 
 /* SEMANTIC ZOOM (LEVEL OF DETAIL - LOD) KHI ZOOM-OUT XA (< 65%) */
 .vung-chua-khoi.tam-nhin-macro .cum-thuc-the {
-  opacity: 0.92;
+  opacity: 0.95;
   transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
@@ -457,7 +457,22 @@ svg.lop-nhan-duong-noi .nhom-nhan-svg {
 }
 
 .vung-chua-khoi.tam-nhin-macro .cum-thuc-the .the-nhan-duoi {
-  padding: 6px 10px;
+  padding: 10px 12px;
   min-height: auto;
+  border-width: 2.2px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.vung-chua-khoi.tam-nhin-macro .cum-thuc-the .nhan-tieu-de-khoi {
+  font-size: 15.5px !important;
+  font-weight: 800 !important;
+  color: #111827 !important;
+  line-height: 1.35 !important;
+  margin-bottom: 2px !important;
+}
+
+.vung-chua-khoi.tam-nhin-macro .cum-thuc-the .nhan-buoc {
+  font-size: 10px !important;
+  letter-spacing: 0.5px;
 }
 

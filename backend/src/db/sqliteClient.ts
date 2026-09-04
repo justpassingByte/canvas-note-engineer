@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import Database from 'better-sqlite3';
 import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -7,58 +8,93 @@ if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-const CACHE_FILE = path.join(DATA_DIR, 'knowledge_cache.json');
+const DEFAULT_DB_PATH = path.join(DATA_DIR, 'knowledge.db');
 
-interface CacheStore {
-  graphs: Record<string, GraphData>;
-  latestGraphId?: string;
-}
+export class SQLiteKnowledgeClient {
+  private db: Database.Database;
+  private dbPath: string;
 
-function readStore(): CacheStore {
-  try {
-    if (fs.existsSync(CACHE_FILE)) {
-      const raw = fs.readFileSync(CACHE_FILE, 'utf-8');
-      return JSON.parse(raw);
+  constructor(customPath?: string) {
+    this.dbPath = customPath || process.env.SQLITE_DB_PATH || DEFAULT_DB_PATH;
+    const dir = path.dirname(this.dbPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
     }
-  } catch (err) {
-    console.error('Không thể đọc cache, khởi tạo mới:', err);
+
+    this.db = new Database(this.dbPath);
+    this.initializeSchema();
   }
-  return { graphs: {} };
-}
 
-function writeStore(store: CacheStore): void {
-  try {
-    const tempFile = `${CACHE_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(store, null, 2), 'utf-8');
-    fs.renameSync(tempFile, CACHE_FILE);
-  } catch (err) {
-    console.error('Lỗi khi ghi cache cục bộ:', err);
+  private initializeSchema(): void {
+    // Kích hoạt chế độ WAL (Write-Ahead Logging) cho hiệu năng cao và an toàn đồng thời
+    this.db.pragma('journal_mode = WAL');
+    this.db.pragma('synchronous = NORMAL');
+    this.db.pragma('foreign_keys = ON');
+
+    // Bảng lưu trữ đồ thị tri thức kỹ thuật
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS knowledge_graphs (
+        id TEXT PRIMARY KEY,
+        topic TEXT NOT NULL,
+        graph_data TEXT NOT NULL,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS idempotency_keys (
+        key TEXT PRIMARY KEY,
+        status TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_graphs_updated_at ON knowledge_graphs(updated_at DESC);
+    `);
   }
-}
 
-export const sqliteClient = {
-  saveGraph(graph: GraphData): void {
-    const store = readStore();
-    store.graphs[graph.id] = graph;
-    store.latestGraphId = graph.id;
-    writeStore(store);
-  },
+  public getRawDb(): Database.Database {
+    return this.db;
+  }
 
-  getGraph(id: string): GraphData | null {
-    const store = readStore();
-    return store.graphs[id] || null;
-  },
-
-  getCurrentGraph(): GraphData | null {
-    const store = readStore();
-    if (store.latestGraphId && store.graphs[store.latestGraphId]) {
-      return store.graphs[store.latestGraphId];
+  public close(): void {
+    if (this.db.open) {
+      this.db.close();
     }
-    const all = Object.values(store.graphs);
-    return all.length > 0 ? all[0] : null;
-  },
+  }
 
-  addDeltaNodes(
+  public saveGraph(graph: GraphData): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO knowledge_graphs (id, topic, graph_data, updated_at)
+      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        topic = excluded.topic,
+        graph_data = excluded.graph_data,
+        updated_at = CURRENT_TIMESTAMP
+    `);
+    stmt.run(graph.id, graph.topic, JSON.stringify(graph));
+  }
+
+  public getGraph(id: string): GraphData | null {
+    const stmt = this.db.prepare('SELECT graph_data FROM knowledge_graphs WHERE id = ?');
+    const row = stmt.get(id) as { graph_data: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.graph_data);
+    } catch {
+      return null;
+    }
+  }
+
+  public getCurrentGraph(): GraphData | null {
+    const stmt = this.db.prepare('SELECT graph_data FROM knowledge_graphs ORDER BY updated_at DESC LIMIT 1');
+    const row = stmt.get() as { graph_data: string } | undefined;
+    if (!row) return null;
+    try {
+      return JSON.parse(row.graph_data);
+    } catch {
+      return null;
+    }
+  }
+
+  public addDeltaNodes(
     graphId: string,
     parentNodeId: string,
     newNodes: NodeEntity[],
@@ -67,13 +103,11 @@ export const sqliteClient = {
     const graph = this.getGraph(graphId) || this.getCurrentGraph();
     if (!graph) return null;
 
-    // Đánh dấu node cha đã khai phá hoàn tất (Saturation Lock)
     const parent = graph.nodes.find(n => n.id === parentNodeId);
     if (parent) {
       parent.fully_explored = true;
     }
 
-    // Thêm các node mới (tránh trùng lặp id)
     for (const node of newNodes) {
       if (!graph.nodes.some(n => n.id === node.id)) {
         node.parent_id = parentNodeId;
@@ -81,7 +115,6 @@ export const sqliteClient = {
       }
     }
 
-    // Thêm các edge mới
     for (const edge of newEdges) {
       if (!graph.edges.some(e => e.from === edge.from && e.to === edge.to)) {
         graph.edges.push(edge);
@@ -90,9 +123,9 @@ export const sqliteClient = {
 
     this.saveGraph(graph);
     return graph;
-  },
+  }
 
-  updateNodeCollapse(
+  public updateNodeCollapse(
     graphId: string,
     nodeId: string,
     isCollapsed: boolean
@@ -103,7 +136,6 @@ export const sqliteClient = {
     const parent = graph.nodes.find(n => n.id === nodeId);
     if (!parent) return graph;
 
-    // Tìm tất cả các node con của node này
     const childNodes = graph.nodes.filter(n => n.parent_id === nodeId);
     parent.is_collapsed = isCollapsed;
     parent.collapsed_count = childNodes.length;
@@ -114,16 +146,15 @@ export const sqliteClient = {
 
     this.saveGraph(graph);
     return graph;
-  },
+  }
 
-  deleteNodePermanently(
+  public deleteNodePermanently(
     graphId: string,
     nodeId: string
   ): GraphData | null {
     const graph = this.getGraph(graphId) || this.getCurrentGraph();
     if (!graph) return null;
 
-    // Thu thập danh sách ID cần xóa (node này và tất cả con cháu của nó)
     const idsToDelete = new Set<string>([nodeId]);
     let added = true;
     while (added) {
@@ -136,13 +167,9 @@ export const sqliteClient = {
       }
     }
 
-    // Lọc bỏ các node
     graph.nodes = graph.nodes.filter(n => !idsToDelete.has(n.id));
-
-    // Lọc bỏ các đường nối liên quan
     graph.edges = graph.edges.filter(e => !idsToDelete.has(e.from) && !idsToDelete.has(e.to));
 
-    // Nếu xóa node con, mở lại khóa bão hòa của node cha nếu không còn con nào
     for (const parent of graph.nodes) {
       const remainingChildren = graph.nodes.filter(n => n.parent_id === parent.id);
       if (remainingChildren.length === 0 && parent.fully_explored && parent.id === 'node-khien-khoa') {
@@ -155,4 +182,21 @@ export const sqliteClient = {
     this.saveGraph(graph);
     return graph;
   }
-};
+
+  /**
+   * Khóa Idempotency & chống Race Condition cấp độ SQLite
+   */
+  public recordIdempotencyKey(key: string, status: string = 'SUCCESS'): void {
+    const stmt = this.db.prepare('INSERT INTO idempotency_keys (key, status) VALUES (?, ?)');
+    stmt.run(key, status);
+  }
+
+  public getIdempotencyKey(key: string): { key: string; status: string; created_at: string } | null {
+    const stmt = this.db.prepare('SELECT key, status, created_at FROM idempotency_keys WHERE key = ?');
+    const row = stmt.get(key);
+    return (row as any) || null;
+  }
+}
+
+// Singleton client cho toàn bộ runtime backend
+export const sqliteClient = new SQLiteKnowledgeClient();
