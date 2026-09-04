@@ -1,0 +1,219 @@
+.cum-thuc-the {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  transition: transform 0.15s ease;
+}
+
+.cum-thuc-the.dang-chon .the-nhan-duoi {
+  border: 2px solid #059669;
+  box-shadow: 3px 4px 0px #059669;
+}
+
+.cum-thuc-the.dang-chon .hop-icon-pod {
+  border-color: #059669;
+}
+
+.cum-thuc-the.mo-nhat {
+  opacity: 0.25;
+  filter: grayscale(0.7);
+  transition: opacity 0.2s ease, filter 0.2s ease;
+}
+
+.cum-thuc-the.khop-tim-kiem .the-nhan-duoi {
+  border-color: var(--vang-ky-thuat);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.25), 3px 4px 0px var(--vang-ky-thuat);
+}
+
+.cum-thuc-the.canh-bao-sup-do .the-nhan-duoi {
+  border-color: #DC2626 !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.3), 3px 4px 0px #DC2626 !important;
+  animation: nhap-nhay-canh-bao 1.8s infinite;
+}
+
+.cum-thuc-the.canh-bao-sup-do .hop-icon-pod {
+  border-color: #DC2626 !important;
+}
+
+@keyframes nhap-nhay-canh-bao {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+
+/* Vỏ bọc Icon Pod để đính nút mở rộng [+] và badge thu gọn */
+.hop-icon-pod-wrap {
+  position: relative;
+  margin-bottom: -14px;
+  z-index: 2;
+}
+
+/* Vòng tròn biểu tượng Icon Pod */
+.hop-icon-pod {
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 2.5px solid #1A1D24;
+  box-shadow: var(--do-bong-icon);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #FFFFFF;
+}
+
+.lucide-icon {
+  width: 30px;
+  height: 30px;
+  stroke-width: 2.2;
+}
+
+.lucide-icon-sm {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.2;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+/* Màu sắc theo từng loại biểu tượng kỹ thuật */
+.hop-icon-pod.su-co {
+  background: var(--mau-su-co-nen);
+  color: var(--mau-su-co);
+}
+
+.hop-icon-pod.tranh-chap {
+  background: var(--mau-tranh-chap-nen);
+  color: var(--mau-tranh-chap);
+}
+
+.hop-icon-pod.khien {
+  background: var(--mau-khien-nen);
+  color: var(--mau-khien-khoa);
+}
+
+.hop-icon-pod.database {
+  background: var(--mau-tru-nen);
+  color: var(--mau-tru-db);
+}
+
+.hop-icon-pod.tmdt {
+  background: var(--mau-san-nen);
+  color: var(--mau-san-tmdt);
+}
+
+.hop-icon-pod.hang-doi {
+  background: var(--mau-hang-doi-nen);
+  color: var(--mau-hang-doi);
+}
+
+.hop-icon-pod.cache {
+  background: var(--mau-bo-nho-nen);
+  color: var(--mau-bo-nho-cache);
+}
+
+/* Nút mở rộng nhánh [+] đính trên góc Icon Pod */
+.nut-mo-rong-pod {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #1A1D24;
+  background: #ECFDF5;
+  color: #059669;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 1.5px 1.5px 0px #1A1D24;
+  transition: all 0.12s ease;
+  z-index: 10;
+  line-height: 1;
+  padding: 0;
+}
+
+.nut-mo-rong-pod:hover:not(.da-kham-pha) {
+  background: #059669;
+  color: #FFFFFF;
+  transform: scale(1.12);
+}
+
+.nut-mo-rong-pod.da-kham-pha {
+  background: #E5E7EB;
+  color: #059669;
+  border-color: #9CA3AF;
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+/* Badge số đếm khi nhánh con bị thu gọn (Collapse) */
+.badge-thu-gon {
+  position: absolute;
+  bottom: -2px;
+  right: -6px;
+  background: #1A1D24;
+  color: #FAF7F0;
+  border: 1.5px solid #FAF7F0;
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+  transition: all 0.12s ease;
+  z-index: 11;
+  white-space: nowrap;
+}
+
+.badge-thu-gon:hover {
+  background: #059669;
+  transform: scale(1.08);
+}
+
+/* Thẻ nhãn giải thích bên dưới */
+.the-nhan-duoi {
+  background: #FFFFFF;
+  border: 2px solid #1A1D24;
+  border-radius: 8px;
+  padding: 18px 14px 10px 14px;
+  box-shadow: var(--do-bong-the);
+  text-align: center;
+  width: 215px;
+  z-index: 1;
+}
+
+.nhan-buoc {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  color: var(--net-muc-phu);
+}
+
+.nhan-tieu-de-khoi {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--net-muc-chinh);
+  line-height: 1.3;
+  margin-bottom: 4px;
+}
+
+.nhan-tom-tat {
+  font-size: 11px;
+  color: var(--net-muc-phu);
+  line-height: 1.4;
+}

@@ -1,0 +1,3 @@
+﻿[command]
+description = "Phân tích dung lượng build dist/assets và audit package dependencies"
+prompt = "Sử dụng skill bundle-inspector để phân tích dung lượng build và kiểm tra dependency rác: {{args}}"

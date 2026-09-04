@@ -1,0 +1,55 @@
+:root {
+  /* Bảng màu: Sổ tay kẻ ca-rô & Mực kỹ thuật */
+  --bg-ban-lam-viec: #EBE5DA;
+  --bg-giay-caro: #FAF7F0;
+  --vien-caro: rgba(44, 48, 56, 0.08);
+  --net-muc-chinh: #1A1D24;
+  --net-muc-phu: #4B5563;
+  --net-muc-mo: #6B7280;
+  
+  /* Bảng màu nhận diện Icon Vector Kỹ thuật */
+  --mau-su-co: #DC2626;
+  --mau-su-co-nen: #FEF2F2;
+  --mau-tranh-chap: #D97706;
+  --mau-tranh-chap-nen: #FFFBEB;
+  --mau-khien-khoa: #059669;
+  --mau-khien-nen: #ECFDF5;
+  --mau-tru-db: #2563EB;
+  --mau-tru-nen: #EFF6FF;
+  --mau-san-tmdt: #7C3AED;
+  --mau-san-nen: #F5F3FF;
+  --mau-hang-doi: #0284C7;
+  --mau-hang-doi-nen: #E0F2FE;
+  --mau-bo-nho-cache: #EA580C;
+  --mau-bo-nho-nen: #FFEDD5;
+
+  --do-bong-icon: 2px 3px 0px #1A1D24;
+  --do-bong-the: 3px 4px 0px #1A1D24;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--bg-ban-lam-viec);
+  color: var(--net-muc-chinh);
+  height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+main.khong-gian-lam-viec {
+  flex: 1;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}

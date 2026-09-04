@@ -1,0 +1,3 @@
+﻿[command]
+description = "Tự soi git diff và sinh commit message chuẩn Conventional Commits"
+prompt = "Sử dụng skill git-assistant để kiểm tra git diff các thay đổi hiện tại, tự động sinh commit message chuẩn Conventional Commits và tạo commit: {{args}}"

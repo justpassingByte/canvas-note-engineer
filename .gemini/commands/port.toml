@@ -1,0 +1,3 @@
+﻿[command]
+description = "Tự động phát hiện và giải phóng port bị chiếm (EADDRINUSE 5173, 3000...)"
+prompt = "Sử dụng skill port-manager để kiểm tra tiến trình đang chiếm port {{args}} và giải phóng port ngay lập tức."

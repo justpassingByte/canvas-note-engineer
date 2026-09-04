@@ -1,0 +1,90 @@
+{
+  "name": "canvas_note_engineer",
+  "version": "1.0.0",
+  "displayName": "Canvas Note Engineer — Sổ tay Kỹ sư",
+  "description": "Interactive Engineering Notebook & Dynamic Architecture Knowledge Graph for DeepSeek Harness with Zero-Token caching, instant Drawer inspection, and smart pruning.",
+  "author": "justpassingByte & Antigravity",
+  "entrypoint": "frontend/dist/index.html",
+  "ui": {
+    "type": "webview",
+    "title": "Sổ tay Kỹ sư (Engineering Notebook)",
+    "icon": "book-open",
+    "theme": "light",
+    "defaultWidth": 1200,
+    "defaultHeight": 850
+  },
+  "capabilities": {
+    "zero_token_cache": true,
+    "local_storage": "sqlite",
+    "delta_expansion": true,
+    "branch_pruning": true
+  },
+  "tools": [
+    {
+      "name": "create_knowledge_graph",
+      "description": "Generates the initial 3-5 node root knowledge graph for a real-world software engineering problem, race condition, or architecture failure mode.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "topic": {
+            "type": "string",
+            "description": "The technical domain or failure scenario (e.g., 'Idempotency in Distributed Payment Systems')"
+          },
+          "root_problem": {
+            "type": "string",
+            "description": "The catastrophic failure mode under high concurrency or network timeout"
+          },
+          "constraints": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Technical constraints (e.g., ACID, Latency < 5ms, Zero Data Loss)"
+          }
+        },
+        "required": ["topic", "root_problem"]
+      }
+    },
+    {
+      "name": "expand_concept_node",
+      "description": "Expands 1 or 2 new connected delta nodes from an existing concept node in the knowledge graph using minimal context payload (< 350 tokens).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "target_concept_slug": {
+            "type": "string",
+            "description": "The slug ID of the node to expand (e.g. 'node-khien-khoa')"
+          },
+          "existing_node_slugs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Array of already existing node slugs to ensure zero duplication"
+          },
+          "expansion_intent": {
+            "type": "string",
+            "enum": ["buffer_queue", "cache_lock", "fallback_circuit", "audit_log"],
+            "description": "The architectural direction for the expansion"
+          }
+        },
+        "required": ["target_concept_slug", "existing_node_slugs"]
+      }
+    },
+    {
+      "name": "prune_knowledge_graph",
+      "description": "Prunes or collapses a branch/node from the knowledge graph to prevent canvas clutter with zero token cost.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "description": "The node ID to collapse or delete"
+          },
+          "action": {
+            "type": "string",
+            "enum": ["collapse", "expand", "delete_permanently"],
+            "description": "Action to perform on the node/branch"
+          }
+        },
+        "required": ["node_id", "action"]
+      }
+    }
+  ]
+}

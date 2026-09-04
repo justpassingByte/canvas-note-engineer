@@ -1,0 +1,3 @@
+﻿[command]
+description = "Tự động sinh và chạy toàn diện Unit & Integration Test (Vitest/Jest/Playwright) với vòng lặp Self-Healing"
+prompt = "Sử dụng skill e2e-test-engine để kiểm tra, tự động sinh test case (Happy path, Edge cases, Boundary) và chạy toàn bộ test cho: {{args}}. Nếu test fail, tự động phân tích và sửa lỗi cho đến khi 100% Pass."

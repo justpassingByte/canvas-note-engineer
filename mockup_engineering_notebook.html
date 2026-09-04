@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sổ tay Kỹ sư — Lược đồ Kiến trúc & Đồ thị Tri thức Động</title>
+  
+  <!-- Phông chữ kỹ thuật chuẩn -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Bảng màu: Sổ tay kẻ ca-rô & Mực kỹ thuật */
+      --bg-ban-lam-viec: #EBE5DA;
+      --bg-giay-caro: #FAF7F0;
+      --vien-caro: rgba(44, 48, 56, 0.08);
+      --net-muc-chinh: #1A1D24;
+      --net-muc-phu: #4B5563;
+      --net-muc-mo: #6B7280;
+      
+      /* Bảng màu nhận diện Icon Vector Kỹ thuật */
+      --mau-su-co: #DC2626;
+      --mau-su-co-nen: #FEF2F2;
+      --mau-tranh-chap: #D97706;
+      --mau-tranh-chap-nen: #FFFBEB;
+      --mau-khien-khoa: #059669;
+      --mau-khien-nen: #ECFDF5;
+      --mau-tru-db: #2563EB;
+      --mau-tru-nen: #EFF6FF;
+      --mau-san-tmdt: #7C3AED;
+      --mau-san-nen: #F5F3FF;
+      --mau-hang-doi: #0284C7;
+      --mau-hang-doi-nen: #E0F2FE;
+      --mau-bo-nho-cache: #EA580C;
+      --mau-bo-nho-nen: #FFEDD5;
+
+      --do-bong-icon: 2px 3px 0px #1A1D24;
+      --do-bong-the: 3px 4px 0px #1A1D24;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-ban-lam-viec);
+      color: var(--net-muc-chinh);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ========================================================
+       KHÔNG GIAN LÀM VIỆC: TOÀN MÀN HÌNH MẶT GIẤY CA-RÔ + DRAWER 520PX
+       ======================================================== */
+    main.khong-gian-lam-viec {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Mặt giấy kẻ ca-rô */
+    .mat-giay-caro {
+      flex: 1;
+      background-color: var(--bg-giay-caro);
+      background-image: 
+        linear-gradient(var(--vien-caro) 1px, transparent 1px),
+        linear-gradient(90deg, var(--vien-caro) 1px, transparent 1px);
+      background-size: 26px 26px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+    }
+
+    /* ========================================================
+       THANH CÔNG CỤ NỔI TRÊN MẶT GIẤY (FLOATING TOOLBAR)
+       ======================================================== */
+    .thanh-cong-cu-noi {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      z-index: 30;
+      background: #FFFFFF;
+      border: 2px solid var(--net-muc-chinh);
+      border-radius: 8px;
+      box-shadow: 3px 3px 0px var(--net-muc-chinh);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 12px;
+      user-select: none;
+    }
+
+    .nhom-tieu-de-noi {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-so-tay {
+      display: flex;
+      align-items: center;
+      color: var(--net-muc-chinh);
+    }
+
+    .chu-tieu-de-noi {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--net-muc-chinh);
+      letter-spacing: -0.2px;
+    }
+
+    .nhan-dem-node {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      background: #F3F4F6;
+      color: #4B5563;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.12);
+    }
+
+    .vach-ngan-thanh {
+      width: 1px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.12);
+    }
+
+    .nut-thao-tac-noi {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.12s ease;
+    }
+
+    .nut-thao-tac-noi.nut-sinh-node {
+      background: #ECFDF5;
+      border: 1.5px solid #059669;
+      color: #065F46;
+    }
+
+    .nut-thao-tac-noi.nut-sinh-node:hover {
+      background: #059669;
+      color: #FFFFFF;
+    }
+
+    .nut-thao-tac-noi.nut-lien-ket {
+      background: #F5F3FF;
+      border: 1.5px solid var(--mau-san-tmdt);
+      color: var(--mau-san-tmdt);
+    }
+
+    .nut-thao-tac-noi.nut-lien-ket:hover {
+      background: var(--mau-san-tmdt);
+      color: #FFFFFF;
+    }
+
+    .nut-icon-phu {
+      background: #FFFFFF;
+      border: 1.5px solid var(--net-muc-chinh);
+      border-radius: 6px;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--net-muc-chinh);
+      transition: all 0.12s ease;
+    }
+
+    .nut-icon-phu:hover {
+      background: #F3F4F6;
+    }
+
+    /* LỚP VẼ ĐƯỜNG NỐI SVG (CHUYỂN ĐỘNG CHẬM, ÊM DỊU) */
+    svg.lop-duong-noi {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .duong-noi-day {
+      stroke: #1A1D24;
+      stroke-width: 2.2;
+      fill: none;
+      stroke-linecap: round;
+    }
+
+    .duong-xung-em-ai {
+      stroke: #059669;
+      stroke-width: 2.2;
+      stroke-dasharray: 6 8;
+      fill: none;
+      animation: dong-chay-cham 4.5s linear infinite;
+    }
+
+    .duong-xung-su-co {
+      stroke: #DC2626;
+      stroke-width: 2.2;
+      stroke-dasharray: 6 8;
+      fill: none;
+      animation: dong-chay-cham 4.5s linear infinite;
+    }
+
+    .duong-xung-tmdt {
+      stroke: #7C3AED;
+      stroke-width: 2.2;
+      stroke-dasharray: 6 8;
+      fill: none;
+      animation: dong-chay-cham 5s linear infinite;
+    }
+
+    @keyframes dong-chay-cham {
+      from { stroke-dashoffset: 28; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    .hop-nhan-svg {
+      fill: #FFFFFF;
+      stroke: #1A1D24;
+      stroke-width: 1.5;
+      rx: 4px;
+    }
+
+    .chu-nhan-svg {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      fill: #1A1D24;
+    }
+
+    /* ========================================================
+       CÁC NODE DẠNG HUY HIỆU ICON KỸ THUẬT CHUẨN
+       ======================================================== */
+    .vung-chua-khoi {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+    }
+
+    .cum-thuc-the {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .cum-thuc-the.dang-chon .the-nhan-duoi {
+      border: 2px solid #059669;
+      box-shadow: 3px 4px 0px #059669;
+    }
+
+    .cum-thuc-the.dang-chon .hop-icon-pod {
+      border-color: #059669;
+    }
+
+    /* Vỏ bọc Icon Pod để đính nút mở rộng [+] */
+    .hop-icon-pod-wrap {
+      position: relative;
+      margin-bottom: -14px;
+      z-index: 2;
+    }
+
+    /* Vòng tròn biểu tượng Icon Pod */
+    .hop-icon-pod {
+      width: 66px;
+      height: 66px;
+      border-radius: 50%;
+      border: 2.5px solid #1A1D24;
+      box-shadow: var(--do-bong-icon);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      background: #FFFFFF;
+    }
+
+    /* Nút mở rộng nhánh nhỏ đính trên góc Icon Pod (0 token khi đã khám phá) */
+    .nut-mo-rong-pod {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #1A1D24;
+      background: #ECFDF5;
+      color: #059669;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 1.5px 1.5px 0px #1A1D24;
+      transition: all 0.12s ease;
+      z-index: 10;
+      line-height: 1;
+      padding: 0;
+    }
+
+    .nut-mo-rong-pod:hover:not(.da-kham-pha) {
+      background: #059669;
+      color: #FFFFFF;
+      transform: scale(1.12);
+    }
+
+    .nut-mo-rong-pod.da-kham-pha {
+      background: #E5E7EB;
+      color: #059669;
+      border-color: #9CA3AF;
+      cursor: default;
+      transform: none;
+      box-shadow: none;
+      font-size: 11px;
+    }
+
+    .lucide-icon {
+      width: 30px;
+      height: 30px;
+      stroke-width: 2.2;
+    }
+
+    .lucide-icon-sm {
+      width: 15px;
+      height: 15px;
+      stroke-width: 2.2;
+      vertical-align: middle;
+      display: inline-block;
+    }
+
+    /* Màu sắc theo từng loại biểu tượng kỹ thuật */
+    .hop-icon-pod.su-co {
+      background: var(--mau-su-co-nen);
+      color: var(--mau-su-co);
+    }
+
+    .hop-icon-pod.tranh-chap {
+      background: var(--mau-tranh-chap-nen);
+      color: var(--mau-tranh-chap);
+    }
+
+    .hop-icon-pod.khien {
+      background: var(--mau-khien-nen);
+      color: var(--mau-khien-khoa);
+    }
+
+    .hop-icon-pod.database {
+      background: var(--mau-tru-nen);
+      color: var(--mau-tru-db);
+    }
+
+    .hop-icon-pod.tmdt {
+      background: var(--mau-san-nen);
+      color: var(--mau-san-tmdt);
+    }
+
+    .hop-icon-pod.hang-doi {
+      background: var(--mau-hang-doi-nen);
+      color: var(--mau-hang-doi);
+    }
+
+    .hop-icon-pod.cache {
+      background: var(--mau-bo-nho-nen);
+      color: var(--mau-bo-nho-cache);
+    }
+
+    /* Thẻ nhãn giải thích bên dưới */
+    .the-nhan-duoi {
+      background: #FFFFFF;
+      border: 2px solid #1A1D24;
+      border-radius: 8px;
+      padding: 18px 14px 10px 14px;
+      box-shadow: var(--do-bong-the);
+      text-align: center;
+      width: 215px;
+      z-index: 1;
+    }
+
+    .nhan-buoc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .nhan-tieu-de-khoi {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--net-muc-chinh);
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .nhan-tom-tat {
+      font-size: 11px;
+      color: var(--net-muc-phu);
+      line-height: 1.4;
+    }
+
+    /* ========================================================
+       TRANG SỔ GHI CHÉP CHI TIẾT (520PX) — TINH GỌN, DÙNG ICON CHUẨN
+       ======================================================== */
+    aside.trang-so-ghi-chep {
+      width: 520px;
+      background: #FFFFFF;
+      border-left: 2px solid var(--net-muc-chinh);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+      box-shadow: -4px 0 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .noi-dung-ghi-chep {
+      padding: 22px 24px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .dau-trang-chi-tiet {
+      border: 2px solid var(--net-muc-chinh);
+      background: #FAFAF8;
+      padding: 12px 14px;
+      border-radius: 8px;
+      box-shadow: 2px 2px 0px var(--net-muc-chinh);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .dau-trang-ben-trai {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .dau-trang-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #FFFFFF;
+      border: 2px solid #1A1D24;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dau-trang-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .the-phan-loai-dau {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+      color: var(--net-muc-phu);
+    }
+
+    .tieu-de-chi-tiet {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 900;
+      color: var(--net-muc-chinh);
+      line-height: 1.25;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Nút mở rộng nhánh trong Drawer Header */
+    .nut-mo-rong-drawer {
+      background: #ECFDF5;
+      color: #065F46;
+      border: 1.5px solid #059669;
+      border-radius: 6px;
+      padding: 6px 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 2px 2px 0px #1A1D24;
+      transition: all 0.12s ease;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .nut-mo-rong-drawer:hover:not(:disabled) {
+      background: #059669;
+      color: #FFFFFF;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px #1A1D24;
+    }
+
+    .nut-mo-rong-drawer:disabled,
+    .nut-mo-rong-drawer.da-kham-pha {
+      background: #F3F4F6;
+      color: #6B7280;
+      border-color: #D1D5DB;
+      box-shadow: none;
+      cursor: default;
+      opacity: 0.9;
+      transform: none;
+    }
+
+    /* Các khối nội dung có icon chuẩn kỹ thuật */
+    .khoi-noi-dung {
+      background: #FAFAF8;
+      border: 1.5px solid var(--net-muc-chinh);
+      border-radius: 8px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .tieu-de-khoi {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--net-muc-chinh);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+      padding-bottom: 6px;
+    }
+
+    .tieu-de-khoi svg {
+      width: 15px;
+      height: 15px;
+      stroke-width: 2.2;
+    }
+
+    .van-ban-chinh {
+      font-size: 12.5px;
+      line-height: 1.55;
+      color: #2D333B;
+    }
+
+    u {
+      text-decoration: none;
+      border-bottom: 1.5px dashed var(--net-muc-chinh);
+      font-weight: 600;
+      color: var(--net-muc-chinh);
+      cursor: help;
+      position: relative;
+      display: inline-block;
+      transition: all 0.15s ease;
+    }
+
+    u:hover {
+      background-color: rgba(5, 150, 105, 0.08);
+      border-bottom-style: solid;
+      border-bottom-color: #059669;
+    }
+
+    u[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      background: #1A1D24;
+      color: #FAF7F0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      line-height: 1.4;
+      padding: 6px 10px;
+      border-radius: 5px;
+      white-space: normal;
+      width: max-content;
+      max-width: 250px;
+      box-shadow: 2px 3px 0px rgba(0,0,0,0.25);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 100;
+      text-align: left;
+    }
+
+    u[data-tooltip]::before {
+      content: "";
+      position: absolute;
+      bottom: calc(100% + 1px);
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: #1A1D24;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease;
+      z-index: 100;
+    }
+
+    u[data-tooltip]:hover::after {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    u[data-tooltip]:hover::before {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    strong {
+      font-weight: 800;
+    }
+
+    /* Lược đồ hoạt họa SVG */
+    .khung-luoc-do-dong {
+      background: #FFFFFF;
+      border: 1.5px solid var(--net-muc-chinh);
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .luoc-do-svg-box {
+      width: 100%;
+      height: 125px;
+      background: #FAF7F0;
+      border: 1px solid rgba(0,0,0,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .chu-thich-luoc-do {
+      font-size: 11.5px;
+      color: #4B5563;
+      line-height: 1.45;
+      background: #F3F4F6;
+      padding: 6px 10px;
+      border-radius: 4px;
+      border-left: 3px solid #059669;
+    }
+
+    /* Danh sách chi tiết dùng icon thay vì bullet thô */
+    .danh-sach-chi-tiet {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .dong-chi-tiet {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .dong-chi-tiet svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.2;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .dong-chi-tiet.su-co svg {
+      color: #DC2626;
+    }
+
+    .dong-chi-tiet.rui-ro svg {
+      color: #D97706;
+    }
+
+    .chan-trang-thao-tac {
+      border-top: 1.5px solid var(--net-muc-chinh);
+      padding: 12px 24px;
+      background: #FAF7F0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .nut-kiem-tra {
+      background: var(--net-muc-chinh);
+      color: #FFFFFF;
+      border: 2px solid var(--net-muc-chinh);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 9px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 2px 2px 0px #000;
+      transition: all 0.12s ease;
+    }
+
+    .nut-kiem-tra:hover {
+      background: #059669;
+      border-color: #059669;
+    }
+
+    /* Khối kiểm tra phản xạ kỹ sư (Reflex Quiz - 0 Token) */
+    .khoi-quiz-phan-xa {
+      background: #FFFFFF;
+      border: 2px solid var(--net-muc-chinh);
+      border-radius: 8px;
+      padding: 13px 15px;
+      box-shadow: 2px 2px 0px var(--net-muc-chinh);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      animation: hien-thi-quiz 0.2s ease-out;
+    }
+
+    @keyframes hien-thi-quiz {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .quiz-cau-hoi {
+      font-size: 12.5px;
+      font-weight: 700;
+      color: var(--net-muc-chinh);
+      line-height: 1.45;
+    }
+
+    .quiz-danh-sach-lua-chon {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .quiz-lua-chon {
+      background: #FAFAF8;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 11.5px;
+      color: #374151;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      text-align: left;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .quiz-lua-chon:hover:not(:disabled) {
+      background: #F3F4F6;
+      border-color: #1A1D24;
+    }
+
+    .quiz-lua-chon.dung {
+      background: #ECFDF5;
+      border-color: #059669;
+      color: #065F46;
+      font-weight: 700;
+    }
+
+    .quiz-lua-chon.sai {
+      background: #FEF2F2;
+      border-color: #DC2626;
+      color: #991B1B;
+    }
+
+    .quiz-giai-thich {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      line-height: 1.4;
+      padding: 8px 10px;
+      background: #F9FAFB;
+      border-radius: 4px;
+      border-left: 3px solid #059669;
+      color: #1F2937;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ========================================================
+       KHÔNG GIAN LÀM VIỆC: MẶT GIẤY CA-RÔ + NỘI DUNG 520PX
+       ======================================================== -->
+  <main class="khong-gian-lam-viec">
+
+    <!-- MẶT GIẤY KẺ CA-RÔ -->
+    <section class="mat-giay-caro" id="mat-giay">
+
+      <!-- THANH CÔNG CỤ NỔI TRÊN MẶT GIẤY (FLOATING TOOLBAR) -->
+      <nav class="thanh-cong-cu-noi">
+        <div class="nhom-tieu-de-noi">
+          <span class="icon-so-tay" id="icon-compass-container"></span>
+          <span class="chu-tieu-de-noi">Sổ tay Kỹ sư</span>
+          <span class="nhan-dem-node" id="nhan-dem-node">5 Nodes</span>
+        </div>
+
+        <div class="vach-ngan-thanh"></div>
+
+        <button class="nut-thao-tac-noi nut-sinh-node" id="nut-gia-lap-ai">
+          <span class="icon-thao-tac" id="icon-sparkles-container"></span>
+          <span>Mở rộng thêm: Queue & Cache</span>
+        </button>
+
+        <button class="nut-thao-tac-noi nut-lien-ket" id="nut-cau-noi">
+          <span class="icon-thao-tac" id="icon-merge-container"></span>
+          <span>Liên kết miền: BẬT</span>
+        </button>
+
+        <div class="vach-ngan-thanh"></div>
+
+        <button class="nut-icon-phu" id="nut-dat-lai" title="Chọn lại node đầu tiên">
+          <span id="icon-rotate-container"></span>
+        </button>
+      </nav>
+
+      <!-- LỚP ĐƯỜNG NỐI SVG ĐƯỢC VẼ TỰ ĐỘNG BẰNG JS -->
+      <svg class="lop-duong-noi" id="svg-duong-noi" viewBox="0 0 1200 900">
+        <defs>
+          <marker id="mui-ten-den" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#1A1D24"/>
+          </marker>
+          <marker id="mui-ten-xanh" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#059669"/>
+          </marker>
+          <marker id="mui-ten-tim" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#7C3AED"/>
+          </marker>
+        </defs>
+      </svg>
+
+      <!-- VÙNG CHỨA CÁC NODE HUY HIỆU ICON (JS RENDER ĐỘNG) -->
+      <div class="vung-chua-khoi" id="vung-chua-khoi"></div>
+
+    </section>
+
+    <!-- BẢNG GHI CHÉP CHI TIẾT (520PX) — HOẠT HỌA & NỘI DUNG SINH ĐỘNG -->
+    <aside class="trang-so-ghi-chep" id="panel-chi-tiet">
+      <div class="noi-dung-ghi-chep" id="noi-dung-chi-tiet"></div>
+
+      <footer class="chan-trang-thao-tac">
+        <button class="nut-kiem-tra" id="nut-kiem-tra">
+          <span id="icon-help-container"></span>
+          <span>Kiểm tra kiến thức phản xạ</span>
+        </button>
+      </footer>
+    </aside>
+
+  </main>
+
+  <!-- ========================================================
+       JAVASCRIPT: HỆ THỐNG TEMPLATE BIỂU TƯỢNG VÀ HOẠT HỌA ĐỘNG
+       ======================================================== -->
+  <script>
+    /* ----------------------------------------------------
+       1. BỘ ICON VECTOR CHUẨN KỸ THUẬT (LUCIDE SVG)
+       ---------------------------------------------------- */
+    const ICON_LUCIDE = {
+      alertTriangle: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+          <path d="M12 9v4"/>
+          <path d="M12 17h.01"/>
+        </svg>
+      `,
+      gitFork: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="18" r="3"/>
+          <circle cx="6" cy="6" r="3"/>
+          <circle cx="18" cy="6" r="3"/>
+          <path d="M18 9v1a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V9"/>
+          <path d="M12 12v3"/>
+        </svg>
+      `,
+      shieldCheck: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+      `,
+      database: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <ellipse cx="12" cy="5" rx="9" ry="3"/>
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+          <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/>
+        </svg>
+      `,
+      shoppingBag: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+      `,
+      layers: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+      `,
+      cpu: `
+        <svg class="lucide-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="16" height="16" x="4" y="4" rx="2"/>
+          <rect width="6" height="6" x="9" y="9" rx="1"/>
+          <path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/>
+          <path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/>
+        </svg>
+      `,
+      // Các icon phụ cho Drawer và Floating Toolbar
+      compass: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+        </svg>
+      `,
+      sparkles: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>
+        </svg>
+      `,
+      gitMerge: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="18" r="3"/>
+          <circle cx="6" cy="6" r="3"/>
+          <path d="M6 21V9a9 9 0 0 0 9 9"/>
+        </svg>
+      `,
+      rotateCcw: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+        </svg>
+      `,
+      bookOpen: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+        </svg>
+      `,
+      activity: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      `,
+      shieldAlert: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+          <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      `,
+      chevronRight: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      `,
+      alertCircle: `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+      `,
+      helpCircle: `
+        <svg class="lucide-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      `
+    };
+
+    // Đặt icon tĩnh vào Toolbar và Chân trang
+    document.getElementById("icon-compass-container").innerHTML = ICON_LUCIDE.compass;
+    document.getElementById("icon-sparkles-container").innerHTML = ICON_LUCIDE.sparkles;
+    document.getElementById("icon-merge-container").innerHTML = ICON_LUCIDE.gitMerge;
+    document.getElementById("icon-rotate-container").innerHTML = ICON_LUCIDE.rotateCcw;
+    document.getElementById("icon-help-container").innerHTML = ICON_LUCIDE.helpCircle;
+
+    /* ----------------------------------------------------
+       BÁCH KHOA TOÀN THƯ THUẬT NGỮ CỤC BỘ (LOCAL DICTIONARY - 0 TOKEN)
+       Tự động gắn Tooltip cho các từ khóa kỹ thuật chuẩn
+       giúp DeepSeek không cần sinh data-tooltip thủ công, tiết kiệm tối đa token.
+       ---------------------------------------------------- */
+    const TU_DIEN_THUAT_NGU = {
+      "webhook": "Cơ chế HTTP callback tự động gửi gói tin JSON từ cổng thanh toán/đối tác sang máy chủ khi phát sinh sự kiện.",
+      "automatic retry": "Cơ chế tự động phát lại gói tin khi phát hiện timeout hoặc chập chờn kết nối mạng.",
+      "idempotency": "Tính lũy thừa: Thực thi nhiều lần vẫn sinh ra đúng kết quả của 1 lần duy nhất (f(f(x)) = f(x)), bảo toàn dữ liệu.",
+      "idempotency key": "Chuỗi UUID duy nhất đính kèm HTTP Header để máy chủ nhận diện và chặn các lệnh chi tiền trùng lặp.",
+      "uuid v4": "Chuỗi định danh ngẫu nhiên 128-bit độc nhất toàn cầu, xác suất trùng lặp gần như bằng 0.",
+      "unique index": "Cấu trúc B-Tree trên đĩa cứng cơ sở dữ liệu chặn đứng 100% bản ghi trùng lặp ở cấp độ bảng.",
+      "race condition": "Xung đột đồng thời khi 2 tiến trình cùng đọc/ghi một tài nguyên trong cùng một mili-giây.",
+      "setnx": "Lệnh Redis 'SET if Not eXists' - chỉ lưu giá trị nếu key chưa tồn tại, tạo khóa phân tán siêu tốc 1ms trên RAM.",
+      "distributed lock": "Cơ chế khóa đồng bộ tài nguyên dùng chung giữa nhiều máy chủ qua Redis hoặc Zookeeper.",
+      "ttl": "Time-To-Live: Thời hạn tự động giải phóng khóa trên RAM để chống rơi vào bẫy Deadlock.",
+      "redlock": "Thuật toán khóa phân tán trên cụm nhiều node Redis độc lập đảm bảo an toàn tuyệt đối.",
+      "row lock": "Khóa dòng dữ liệu (SELECT FOR UPDATE) buộc các transaction sau phải xếp hàng chờ.",
+      "overselling": "Sự cố bán vượt quá tồn kho thực tế do nhiều khách hàng cùng thanh toán món hàng cuối cùng.",
+      "message queue": "Hàng đợi tin nhắn (Kafka/RabbitMQ) đệm và san phẳng lưu lượng truy cập cao điểm.",
+      "worker pool": "Nhóm tiến trình thợ chạy ngầm rút từng gói tác vụ trong hàng đợi ra xử lý tuần tự.",
+      "acid": "4 thuộc tính cốt lõi của giao dịch cơ sở dữ liệu: Nguyên tử, Nhất quán, Cô lập và Bền vững.",
+      "deadlock": "Tình huống hai transaction cùng giữ khóa của nhau và chờ nhau vô tận, làm tê liệt hệ thống.",
+      "retry storm": "Cơn bão gửi lại yêu cầu ồ ạt từ hàng triệu client khi hệ thống chập chờn, đánh sập hoàn toàn backend."
+    };
+
+    function ganTooltipTuDong(vanBanHtml) {
+      if (!vanBanHtml) return "";
+      return vanBanHtml.replace(/<u(?:\s+data-tooltip="([^"]*)")?>(.*?)<\/u>/gi, (match, existTooltip, noiDung) => {
+        if (existTooltip) {
+          return match;
+        }
+        const key = noiDung.trim().toLowerCase();
+        const nghia = TU_DIEN_THUAT_NGU[key];
+        if (nghia) {
+          return `<u data-tooltip="${nghia}">${noiDung}</u>`;
+        }
+        return match;
+      });
+    }
+
+    /* ----------------------------------------------------
+       2. BỘ ĐỘNG CƠ TẠO HOẠT HỌA LAI (HYBRID ANIMATION TEMPLATE ENGINE)
+       Kết hợp giữa Mẫu bố cục chuẩn và Tham số tùy biến do AI DeepSeek sinh!
+       ---------------------------------------------------- */
+    const DONG_CO_HOAT_HOA = {
+      // Mẫu 1: Luồng chặn lọc qua Khiên (Barrier Lock)
+      chan_loc_khien: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <!-- Actor Trái -->
+          <rect x="20" y="32" width="75" height="58" rx="4" fill="#F3F4F6" stroke="#1A1D24" stroke-width="1.8"/>
+          <text x="32" y="56" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="800">${p.nguon || 'CLIENT'}</text>
+          <text x="28" y="72" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#6B7280">${p.chu_nguon || 'Gửi lệnh'}</text>
+
+          <!-- Luồng 1 (Hợp lệ qua khiên) -->
+          <path d="M 95 48 L 220 48" stroke="#059669" stroke-width="1.8" stroke-dasharray="4 4"/>
+          <rect x="95" y="40" width="52" height="16" rx="3" fill="#059669">
+            <animate attributeName="x" values="95;220;220" keyTimes="0;0.5;1" dur="4s" repeatCount="indefinite"/>
+          </rect>
+          <text x="100" y="52" font-family="'JetBrains Mono', monospace" font-size="8" fill="#FFF" font-weight="800">
+            ${p.goi_1 || 'GÓI 1'}
+            <animate attributeName="x" values="100;225;225" keyTimes="0;0.5;1" dur="4s" repeatCount="indefinite"/>
+          </text>
+
+          <!-- Luồng 2 (Trùng lặp bị dội ngược) -->
+          <path d="M 95 78 L 220 78" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="4 4"/>
+          <rect x="95" y="70" width="52" height="16" rx="3" fill="#DC2626">
+            <animate attributeName="x" values="95;220;140;140" keyTimes="0;0.5;0.75;1" dur="4s" repeatCount="indefinite"/>
+          </rect>
+          <text x="100" y="82" font-family="'JetBrains Mono', monospace" font-size="8" fill="#FFF" font-weight="800">
+            ${p.goi_2 || 'GÓI 2'}
+            <animate attributeName="x" values="100;225;145;145" keyTimes="0;0.5;0.75;1" dur="4s" repeatCount="indefinite"/>
+          </text>
+
+          <!-- Khiên Chắn ở giữa -->
+          <path d="M 230 28 L 290 28 L 290 75 Q 260 105 230 75 Z" fill="#D1FAE5" stroke="#059669" stroke-width="2"/>
+          <text x="242" y="54" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#065F46">${p.vat_can || 'KHIÊN'}</text>
+          <text x="238" y="68" font-family="'JetBrains Mono', monospace" font-size="8" font-weight="700" fill="#047857">${p.chu_vat_can || 'LOCK'}</text>
+
+          <!-- Actor Đích Phải -->
+          <path d="M 290 52 L 350 52" stroke="#2563EB" stroke-width="2" marker-end="url(#mui-ten-den)"/>
+          <rect x="350" y="32" width="80" height="58" rx="4" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.8"/>
+          <text x="360" y="56" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#1E40AF">${p.dich || 'DATABASE'}</text>
+          <text x="356" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#059669" font-weight="800">${p.ket_qua || 'GHI 1 LẦN'}</text>
+        </svg>
+      `,
+
+      // Mẫu 2: Phân luồng xung đột va chạm (Race Condition Collision)
+      va_cham_song_song: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="20" y="18" width="80" height="34" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.8"/>
+          <text x="28" y="39" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#92400E">${p.luong_1 || 'LUỒNG A'}</text>
+
+          <rect x="20" y="72" width="80" height="34" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="1.8"/>
+          <text x="28" y="93" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#92400E">${p.luong_2 || 'LUỒNG B'}</text>
+
+          <path d="M 100 35 L 220 54" stroke="#D97706" stroke-width="1.8" stroke-dasharray="4 4"/>
+          <path d="M 100 89 L 220 70" stroke="#D97706" stroke-width="1.8" stroke-dasharray="4 4"/>
+
+          <circle r="6" fill="#D97706">
+            <animateMotion path="M 100 35 L 220 54" dur="4.5s" repeatCount="indefinite"/>
+          </circle>
+          <circle r="6" fill="#DC2626">
+            <animateMotion path="M 100 89 L 220 70" dur="4.5s" repeatCount="indefinite"/>
+          </circle>
+
+          <polygon points="230,42 250,52 240,62 260,67 235,77 240,62 225,57" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.8"/>
+          <text x="200" y="98" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="800" fill="#DC2626">${p.diem_va_cham || 'VA CHẠM GHI SỐ DƯ'}</text>
+
+          <rect x="325" y="36" width="105" height="50" rx="4" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.8"/>
+          <text x="336" y="58" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#1E40AF">${p.tai_nguyen || 'SỐ DƯ: 10TR'}</text>
+          <text x="332" y="74" font-family="'JetBrains Mono', monospace" font-size="8" fill="#DC2626" font-weight="800">${p.canh_bao || 'RÚT QUÁ MỨC'}</text>
+        </svg>
+      `,
+
+      // Mẫu 3: Lặp sự cố mạng (Incident Retry Storm)
+      lap_su_co: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="20" y="32" width="85" height="55" rx="4" fill="#FEE2E2" stroke="#DC2626" stroke-width="1.8"/>
+          <text x="27" y="54" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#991B1B">${p.nguon || 'GATEWAY'}</text>
+          <text x="27" y="70" font-family="'JetBrains Mono', monospace" font-size="8" fill="#DC2626">${p.loi || 'Timeout 1.2s'}</text>
+
+          <path d="M 105 48 L 320 48" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="4 4"/>
+          <path d="M 105 72 L 320 72" stroke="#DC2626" stroke-width="1.8" stroke-dasharray="4 4"/>
+
+          <circle cx="120" cy="48" r="5" fill="#DC2626">
+            <animate attributeName="cx" values="105;320" dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="120" cy="72" r="5" fill="#DC2626">
+            <animate attributeName="cx" values="105;320" dur="3s" begin="1s" repeatCount="indefinite"/>
+          </circle>
+
+          <text x="160" y="42" font-family="'JetBrains Mono', monospace" font-size="8" fill="#DC2626" font-weight="700">${p.nhan_1 || 'Gói tin 1'}</text>
+          <text x="160" y="86" font-family="'JetBrains Mono', monospace" font-size="8" fill="#DC2626" font-weight="700">${p.nhan_2 || 'Gói Retry 2'}</text>
+
+          <rect x="320" y="32" width="95" height="55" rx="4" fill="#F3F4F6" stroke="#1A1D24" stroke-width="1.8"/>
+          <text x="345" y="54" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="800">${p.dich || 'SERVER'}</text>
+          <text x="330" y="70" font-family="'JetBrains Mono', monospace" font-size="8" fill="#DC2626" font-weight="800">${p.ket_qua || 'NHÂN BẢN LỆNH'}</text>
+        </svg>
+      `,
+
+      // Mẫu 4: Ghi lưu đĩa cứng / ACID Commit (Database Storage)
+      luu_tru_acid: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="30" y="36" width="85" height="48" rx="4" fill="#F3F4F6" stroke="#1A1D24" stroke-width="1.8"/>
+          <text x="43" y="58" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800">${p.lenh || 'TX WRITE'}</text>
+          <text x="38" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#6B7280">${p.chu_lenh || 'Ghi dữ liệu'}</text>
+
+          <path d="M 115 60 L 250 60" stroke="#2563EB" stroke-width="2" marker-end="url(#mui-ten-den)"/>
+          <rect x="135" y="52" width="40" height="16" rx="3" fill="#2563EB">
+            <animate attributeName="x" values="115;245" dur="2.5s" repeatCount="indefinite"/>
+          </rect>
+
+          <g transform="translate(280, 26)">
+            <ellipse cx="55" cy="14" rx="50" ry="12" fill="#BFDBFE" stroke="#1E40AF" stroke-width="1.8"/>
+            <path d="M 5 14 v 42 a 50 12 0 0 0 100 0 v -42" fill="#DBEAFE" stroke="#1E40AF" stroke-width="1.8"/>
+            <text x="30" y="40" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#1E40AF">${p.chi_muc || 'UNIQUE INDEX'}</text>
+            <text x="27" y="54" font-family="'JetBrains Mono', monospace" font-size="8" font-weight="700" fill="#059669">${p.ket_qua || 'ATOMIC COMMIT'}</text>
+          </g>
+        </svg>
+      `,
+
+      // Mẫu 5: Băng chuyền điều tiết (Message Queue Buffer)
+      hang_doi_dieu_tiet: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="15" y="36" width="70" height="48" rx="4" fill="#F3F4F6" stroke="#1A1D24" stroke-width="1.8"/>
+          <text x="23" y="58" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="800">${p.dau_vao || 'PRODUCER'}</text>
+          <text x="21" y="72" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#DC2626">${p.tai_cao || '10k req/s'}</text>
+
+          <rect x="130" y="32" width="180" height="56" rx="28" fill="#E0F2FE" stroke="#0284C7" stroke-width="2"/>
+          <text x="180" y="48" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="800" fill="#0369A1">${p.vung_dem || 'QUEUE BUFFER'}</text>
+
+          <circle cx="160" cy="65" r="6" fill="#0284C7">
+            <animate attributeName="cx" values="160;200;240;280" dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="200" cy="65" r="6" fill="#0284C7">
+            <animate attributeName="cx" values="200;240;280;320" dur="3s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="240" cy="65" r="6" fill="#0284C7">
+            <animate attributeName="cx" values="240;280;320;360" dur="3s" repeatCount="indefinite"/>
+          </circle>
+
+          <rect x="355" y="36" width="75" height="48" rx="4" fill="#ECFDF5" stroke="#059669" stroke-width="1.8"/>
+          <text x="368" y="58" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#065F46">${p.tho || 'WORKER'}</text>
+          <text x="364" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#059669">${p.dieu_tiet || '100 req/s'}</text>
+        </svg>
+      `,
+
+      // Mẫu 6: Đọc bộ nhớ đệm Cache-Aside
+      doc_cache_nhanh: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="20" y="36" width="70" height="48" rx="4" fill="#F3F4F6" stroke="#1A1D24" stroke-width="1.8"/>
+          <text x="30" y="58" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800">${p.yeu_cau || 'REQUEST'}</text>
+
+          <path d="M 90 60 L 175 60" stroke="#EA580C" stroke-width="2" marker-end="url(#mui-ten-den)"/>
+          <rect x="175" y="32" width="105" height="56" rx="6" fill="#FFEDD5" stroke="#EA580C" stroke-width="2"/>
+          <text x="188" y="54" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="800" fill="#C2410C">${p.cache || 'REDIS CACHE'}</text>
+          <text x="192" y="70" font-family="'JetBrains Mono', monospace" font-size="8" fill="#EA580C">${p.toc_do || 'RAM: 1ms'}</text>
+
+          <path d="M 280 60 L 355 60" stroke="#2563EB" stroke-width="1.8" stroke-dasharray="4 4"/>
+          <rect x="355" y="36" width="75" height="48" rx="4" fill="#EFF6FF" stroke="#2563EB" stroke-width="1.8"/>
+          <text x="368" y="58" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#1E40AF">${p.dia_cung || 'DB DISK'}</text>
+          <text x="362" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#6B7280">${p.trang_thai_db || 'Bỏ qua đĩa'}</text>
+        </svg>
+      `,
+
+      // Mẫu Giao thoa Sàn TMĐT
+      giao_thoa_domain: (p) => `
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="35" y="32" width="125" height="56" rx="6" fill="#F5F3FF" stroke="#7C3AED" stroke-width="1.8"/>
+          <text x="45" y="56" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="800" fill="#6D28D9">${p.domain || 'FLASH SALE'}</text>
+          <text x="43" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#7C3AED">${p.ap_luc || '10.000 khách tranh mua'}</text>
+
+          <path d="M 160 60 L 275 60" stroke="#7C3AED" stroke-width="2" marker-end="url(#mui-ten-tim)"/>
+
+          <rect x="275" y="32" width="135" height="56" rx="6" fill="#FEF3C7" stroke="#D97706" stroke-width="1.8"/>
+          <text x="286" y="56" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="800" fill="#92400E">${p.giao_diem || 'ĐIỂM TRANH CHẤP'}</text>
+          <text x="290" y="72" font-family="'JetBrains Mono', monospace" font-size="8" fill="#B45309">${p.nguyen_ly || 'Chung cốt lõi Payout'}</text>
+        </svg>
+      `
+    };
+
+    // Hàm tổng hợp Hybrid: Chọn mẫu và truyền tham số do AI sinh
+    function sinhHoatHoa(hoatHoaData) {
+      if (!hoatHoaData) return DONG_CO_HOAT_HOA.chan_loc_khien({});
+      const fn = DONG_CO_HOAT_HOA[hoatHoaData.mau] || DONG_CO_HOAT_HOA.chan_loc_khien;
+      return fn(hoatHoaData.tham_so || {});
+    }
+
+    /* ----------------------------------------------------
+       3. TEMPLATE RENDERER CHO CÁC KHỐI NODE TRÊN CANVAS
+       ---------------------------------------------------- */
+    const THU_VIEN_TEMPLATE = {
+      su_co_canh_bao: (d) => `<div class="hop-icon-pod su-co">${ICON_LUCIDE.alertTriangle}</div>`,
+      tranh_chap_phan_nhanh: (d) => `<div class="hop-icon-pod tranh-chap">${ICON_LUCIDE.gitFork}</div>`,
+      khien_bao_ve: (d) => `<div class="hop-icon-pod khien">${ICON_LUCIDE.shieldCheck}</div>`,
+      khoi_tru_database: (d) => `<div class="hop-icon-pod database">${ICON_LUCIDE.database}</div>`,
+      hop_kien_hang_domain: (d) => `<div class="hop-icon-pod tmdt">${ICON_LUCIDE.shoppingBag}</div>`,
+      hang_doi_message_queue: (d) => `<div class="hop-icon-pod hang-doi">${ICON_LUCIDE.layers}</div>`,
+      bo_nho_dem_cache: (d) => `<div class="hop-icon-pod cache">${ICON_LUCIDE.cpu}</div>`
+    };
+
+    /* ----------------------------------------------------
+       4. DỮ LIỆU ĐỒ THỊ CHUẨN KÈM THAM SỐ HOẠT HỌA LAI
+       Có cờ fully_explored và trac_nghiem sẵn trong payload node
+       ---------------------------------------------------- */
+    let DU_LIEU_DO_THI = {
+      nodes: [
+        {
+          id: "node-su-co",
+          fully_explored: true,
+          bieu_tuong: "su_co_canh_bao",
+          icon_svg: ICON_LUCIDE.alertTriangle,
+          tieu_de: "Lặp Webhook trừ tiền 2 lần",
+          nhan_buoc: "BƯỚC 1 // SỰ CỐ VẬN HÀNH",
+          tom_tat: "Cổng thanh toán tự động gửi lại <u>Webhook</u> do timeout làm **trừ tiền 2 lần**!",
+          toa_do: { x: 80, y: 80 },
+          tam: { x: 190, y: 160 },
+          hoat_hoa: {
+            mau: "lap_su_co",
+            tham_so: {
+              nguon: "GATEWAY",
+              loi: "Timeout 1.2s",
+              nhan_1: "Gói tin 1",
+              nhan_2: "Gói Retry 2",
+              dich: "SERVER",
+              ket_qua: "NHÂN BẢN LỆNH"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "SỰ CỐ VẬN HÀNH THỰC TẾ",
+            tieu_de: "Sự cố gửi lặp Webhook rút tiền",
+            ban_chat: "Khi cổng thanh toán gặp nghẽn mạng tạm thời (**timeout 1.2s**), cơ chế tự động gửi lại (<u>automatic retry</u>) sẽ phát gói tin Webhook lần 2. Nếu máy chủ xử lý song song mà thiếu <u>Idempotency</u>, tài khoản sẽ bị **cộng tiền 2 lần liên tiếp**.",
+            chu_thich_so_do: "Mô phỏng: Cổng thanh toán gửi Webhook lần 1 gặp timeout giả định, phát tiếp Webhook lần 2 làm **nhân bản lệnh chi tiền**!",
+            ca_thuc_te: [
+              "Cổng thanh toán quốc tế gửi Webhook báo đơn chi tiền **10 triệu đồng**.",
+              "Mạng chập chờn đúng **1.2 giây** kích hoạt cơ chế retry tự động.",
+              "Hai tiến trình nền cùng chạy song song, đọc thấy đủ số dư và **chi tiền 2 lần**!",
+              "Giải pháp sống còn: Khóa <u>Idempotency Key</u> kèm <u>Unique Index</u>."
+            ],
+            rui_ro: [
+              "Thất thoát tài chính trực tiếp, cực kỳ khó thu hồi từ tài khoản người nhận.",
+              "Tạo ra các bút toán chênh lệch số dư kế toán nghiêm trọng."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Khi cổng thanh toán gặp timeout 1.2s và tự động phát lại (retry) Webhook, điều gì xảy ra nếu server thiếu Idempotency?",
+            lua_chon: [
+              "Hai tiến trình nền cùng xử lý song song và trừ/cộng tiền 2 lần",
+              "Cổng thanh toán tự nhận biết lỗi mạng và hủy giao dịch thứ 2"
+            ],
+            dung: 0,
+            giai_thich: "Nếu thiếu Idempotency, server coi gói retry như một lệnh mới và xử lý tiếp, dẫn đến trừ hoặc cộng tiền 2 lần."
+          }
+        },
+        {
+          id: "node-tranh-chap",
+          fully_explored: true,
+          bieu_tuong: "tranh_chap_phan_nhanh",
+          icon_svg: ICON_LUCIDE.gitFork,
+          tieu_de: "Tranh chấp khi kiểm tra số dư",
+          nhan_buoc: "BƯỚC 2 // XUNG ĐỘT GHI",
+          tom_tat: "Hai luồng cùng đọc một số dư trước khi kịp trừ: **rút 16 triệu từ ví 10 triệu**!",
+          toa_do: { x: 80, y: 400 },
+          tam: { x: 190, y: 480 },
+          hoat_hoa: {
+            mau: "va_cham_song_song",
+            tham_so: {
+              luong_1: "LUỒNG A",
+              luong_2: "LUỒNG B",
+              diem_va_cham: "VA CHẠM GHI SỐ DƯ",
+              tai_nguyen: "SỐ DƯ: 10TR",
+              canh_bao: "CÙNG RÚT 8TR"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "PHÂN LUỒNG XUNG ĐỘT ĐỒNG THỜI",
+            tieu_de: "Tranh chấp ghi khi kiểm tra số dư (Race Condition)",
+            ban_chat: "<u>Race Condition</u> xảy ra khi hai luồng xử lý cùng đọc số dư tại cùng một mili-giây. Cả hai đều thấy số dư còn **10 triệu** nên cùng phê duyệt lệnh chi, khiến số dư thực tế bị **âm 6 triệu** sau khi hoàn tất.",
+            chu_thich_so_do: "Mô phỏng: Luồng A và Luồng B cùng lao vào đọc số dư 10 triệu cùng lúc. Cả 2 đều tưởng tiền còn nguyên vẹn nên đều duyệt chi!",
+            ca_thuc_te: [
+              "Hai lệnh rút **8 triệu** gửi tới tài khoản có **10 triệu** cùng một tích tắc.",
+              "Luồng A đọc: còn **10 triệu** → Hợp lệ.",
+              "Luồng B đọc: còn **10 triệu** → Hợp lệ.",
+              "Cả hai cùng trừ: Tài khoản bị **rút 16 triệu**, số dư âm **-6 triệu**!"
+            ],
+            rui_ro: [
+              "Số dư tài khoản bị âm, phá vỡ tính toàn vẹn <u>ACID</u> của hệ thống.",
+              "Giao dịch không thể rollback an toàn nếu tiền mặt đã ra khỏi cổng ngân hàng."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Vì sao hai luồng cùng rút 8 triệu từ tài khoản 10 triệu lại rút được tổng cộng 16 triệu?",
+            lua_chon: [
+              "Do Race Condition: Cả 2 luồng đọc số dư 10 triệu cùng lúc trước khi luồng kia kịp ghi trừ tiền",
+              "Do tài khoản ngân hàng được cấp hạn mức thấu chi ngầm tự động"
+            ],
+            dung: 0,
+            giai_thich: "Hai luồng cùng đọc tại cùng một mili-giây nên cùng thấy số dư 10 triệu hợp lệ và cùng duyệt chi."
+          }
+        },
+        {
+          id: "node-khien-khoa",
+          fully_explored: false, // Node này còn có thể mở rộng tiếp Queue & Cache!
+          bieu_tuong: "khien_bao_ve",
+          icon_svg: ICON_LUCIDE.shieldCheck,
+          tieu_de: "Mẫu khóa Idempotency Key",
+          nhan_buoc: "BƯỚC 3 // HÓA GIẢI BẰNG KHIÊN",
+          tom_tat: "Gắn <u>UUID v4</u> duy nhất: 100 lần gửi lại vẫn **chỉ trừ tiền duy nhất 1 lần**!",
+          toa_do: { x: 480, y: 400 },
+          tam: { x: 590, y: 480 },
+          hoat_hoa: {
+            mau: "chan_loc_khien",
+            tham_so: {
+              nguon: "CLIENT",
+              chu_nguon: "Gửi lệnh",
+              vat_can: "KHIÊN",
+              chu_vat_can: "LOCK",
+              dich: "DATABASE",
+              ket_qua: "LƯU VÉ 1",
+              goi_1: "GÓI 1",
+              goi_2: "GÓI 2"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "CƠ CHẾ KHIÊN BẢO VỆ",
+            tieu_de: "Mẫu khóa định danh Idempotency",
+            ban_chat: "<u>Idempotency</u> là nguyên lý vàng của kỹ sư thanh toán: Thực thi nhiều lần vẫn chỉ sinh ra kết quả của một lần duy nhất. Mỗi giao dịch được cấp một tấm vé <u>UUID v4</u> qua Header `Idempotency-Key`. Máy chủ kiểm tra vé trước khi chi tiền: nếu vé đã dùng, hoàn trả kết quả cũ mà **không trừ tiền lần 2**.",
+            chu_thich_so_do: "Mô phỏng: Gói 1 được Khiên cho ghi vào DB. Gói 2 (gửi lặp) đụng mặt Khiên bị dội ngược ra, **bảo toàn 100% số dư ví tiền**!",
+            ca_thuc_te: [
+              "Cổng thanh toán gửi Webhook kèm `Idempotency-Key: req_9b1deb4d`.",
+              "Gói tin 1 đến trước: Khóa Khiên mở cho ghi vào Database và chi tiền.",
+              "Gói tin 2 đến sau **1.5s**: Đụng mặt Khóa Khiên → Bị chặn dội ngược ra, trả kết quả cũ thành công mà **không trừ tiền thêm**!"
+            ],
+            rui_ro: [
+              "Khách hàng bấm nút chi trả 2 lần bị **trừ tiền 2 lần**.",
+              "Message Queue thử lại tự động nhân bản giao dịch âm thầm."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Cơ chế nào giúp Mẫu khóa Idempotency Key bảo vệ số dư khi gói tin thứ 2 đụng mặt Khiên?",
+            lua_chon: [
+              "Tra cứu vé UUID v4 đã dùng và hoàn trả kết quả cũ mà không thực thi trừ tiền lần 2",
+              "Xóa sạch toàn bộ giao dịch trước đó và bắt đầu lại từ đầu"
+            ],
+            dung: 0,
+            giai_thich: "Idempotency kiểm tra vé: Nếu vé đã qua cổng, trả ngay kết quả thành công trước đó mà không đụng vào số dư."
+          }
+        },
+        {
+          id: "node-tru-db",
+          fully_explored: true,
+          bieu_tuong: "khoi_tru_database",
+          icon_svg: ICON_LUCIDE.database,
+          tieu_de: "Chỉ mục duy nhất (Unique Index)",
+          nhan_buoc: "BƯỚC 4 // PHÒNG THỦ TẦNG CƠ SỞ DỮ LIỆU",
+          tom_tat: "Ràng buộc <u>Unique Index</u> trên ổ đĩa: chốt chặn phòng thủ vật lý **từ chối 100% lệnh trùng**.",
+          toa_do: { x: 480, y: 700 },
+          tam: { x: 590, y: 780 },
+          hoat_hoa: {
+            mau: "luu_tru_acid",
+            tham_so: {
+              lenh: "TX WRITE",
+              chu_lenh: "Ghi dữ liệu",
+              chi_muc: "UNIQUE INDEX",
+              ket_qua: "ATOMIC COMMIT"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "RÀO CHẮN LƯU TRỮ CƠ SỞ DỮ LIỆU",
+            tieu_de: "Ràng buộc chỉ mục duy nhất (Unique Index)",
+            ban_chat: "Đây là chốt chặn phòng thủ tầng sâu cuối cùng. Ngay cả khi tầng ứng dụng (App server) gặp lỗi lọt gói tin, câu lệnh `INSERT` khóa trùng lặp sẽ bị cơ sở dữ liệu từ chối ở cấp độ <u>ACID</u> vật lý trên đĩa cứng.",
+            chu_thich_so_do: "Mô phỏng: Dữ liệu giao dịch được lưu và xác nhận Atomic Commit xuống đĩa cứng, chỉ mục duy nhất từ chối mọi nỗ lực chèn trùng lặp.",
+            ca_thuc_te: [
+              "Thiết lập ràng buộc <u>Unique Index</u> trên cột khóa idempotency trong bảng giao dịch.",
+              "Bảo đảm **100% không bao giờ có 2 dòng trùng khóa** được ghi nhận thành công."
+            ],
+            rui_ro: [
+              "Nếu thiếu chỉ mục này, thảm họa lọt request vẫn có thể xảy ra khi hệ thống chịu tải cao đột biến."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Vai trò của chỉ mục Unique Index (UNIQUE KEY) trên bảng cơ sở dữ liệu là gì?",
+            lua_chon: [
+              "Chốt chặn vật lý tầng sâu: từ chối ghi ở cấp độ đĩa cứng nếu trùng khóa, ngay cả khi App Server lọt lệnh",
+              "Tăng tốc độ truy vấn SELECT mà không có tính năng ngăn chặn dữ liệu trùng"
+            ],
+            dung: 0,
+            giai_thich: "Unique Index là rào chắn vật lý cuối cùng đảm bảo không bao giờ có 2 bản ghi trùng khóa được ghi nhận."
+          }
+        },
+        {
+          id: "node-tmdt",
+          fully_explored: true,
+          bieu_tuong: "hop_kien_hang_domain",
+          icon_svg: ICON_LUCIDE.shoppingBag,
+          tieu_de: "Flash Sale mở bán chớp nhoáng",
+          nhan_buoc: "GIAO THOA // SÀN THƯƠNG MẠI",
+          tom_tat: "10.000 khách tranh mua 1 món hàng: chung bản chất <u>Race Condition</u> ghi tồn kho.",
+          toa_do: { x: 580, y: 100 },
+          tam: { x: 690, y: 180 },
+          hoat_hoa: {
+            mau: "giao_thoa_domain",
+            tham_so: {
+              domain: "FLASH SALE",
+              ap_luc: "10.000 khách tranh mua",
+              giao_diem: "ĐIỂM TRANH CHẤP",
+              nguyen_ly: "Chung cốt lõi Payout"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "SÀN THƯƠNG MẠI ĐIỆN TỬ",
+            tieu_de: "Khóa tồn kho mở bán Flash Sale",
+            ban_chat: "Hàng nghìn người cùng bấm thanh toán một chiếc điện thoại duy nhất lúc 0h. Về bản chất kỹ thuật, bài toán này hệt như bài toán số dư chi trả: đều là <u>Race Condition</u> trên một tài nguyên có hạn.",
+            chu_thich_so_do: "Mô phỏng: 10.000 khách đặt lệnh Flash Sale cùng lúc dẫn vào điểm tranh chấp ghi tồn kho giống hệt kiến trúc thanh toán.",
+            ca_thuc_te: [
+              "Mở bán **100 chiếc vé** ca nhạc trong vòng **10 giây**.",
+              "Nếu thiếu <u>Row Lock</u> và <u>Idempotency</u>, hệ thống sẽ bán thành công cho **120 người** gây thiếu hàng."
+            ],
+            rui_ro: [
+              "Bán vượt số lượng tồn kho (<u>Overselling</u>).",
+              "Chi phí bồi thường và khủng hoảng niềm tin từ khách hàng."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Hiện tượng Overselling (bán âm kho) trong sự kiện flash-sale thường do nguyên nhân cốt lõi nào?",
+            lua_chon: [
+              "Nhiều đơn hàng thanh toán đồng thời mà thiếu khóa dòng (Row Lock) hoặc khóa phân tán",
+              "Do khách hàng cố tình tạo nhiều tài khoản ảo cùng lúc"
+            ],
+            dung: 0,
+            giai_thich: "Thiếu khóa đồng thời khiến nhiều transaction cùng đọc thấy còn hàng và cùng trừ tồn kho xuống số âm."
+          }
+        }
+      ],
+      edges: [
+        {
+          from: "node-su-co",
+          to: "node-tranh-chap",
+          tu: { x: 190, y: 220 },
+          den: { x: 190, y: 400 },
+          nhan: "1. Kích hoạt sự cố",
+          kieu: "duong-xung-su-co"
+        },
+        {
+          from: "node-tranh-chap",
+          to: "node-khien-khoa",
+          tu: { x: 300, y: 470 },
+          den: { x: 480, y: 470 },
+          nhan: "2. Chặn bằng Khiên",
+          kieu: "duong-xung-em-ai"
+        },
+        {
+          from: "node-khien-khoa",
+          to: "node-tru-db",
+          tu: { x: 590, y: 540 },
+          den: { x: 590, y: 700 },
+          nhan: "3. Ghi vào Trụ DB",
+          kieu: "duong-xung-em-ai"
+        },
+        {
+          from: "node-tmdt",
+          to: "node-tranh-chap",
+          tu: { x: 580, y: 180 },
+          den: { x: 290, y: 420 },
+          nhan: "Cầu nối: Cùng xung đột",
+          kieu: "duong-xung-tmdt"
+        }
+      ]
+    };
+
+    let nodeDangChonId = "node-khien-khoa";
+
+    /* ----------------------------------------------------
+       5. HÀM RENDER ĐỒ THỊ TRÊN CANVAS
+       Tách biệt tuyệt đối:
+       - Click node: 100% CHỈ mở Drawer đọc chi tiết (0 token)
+       - Click nút [+]: MỚI gọi DeepSeek mở rộng nhánh mới (tốn token)
+       ---------------------------------------------------- */
+    function renderDoThi() {
+      const vungChua = document.getElementById("vung-chua-khoi");
+      const svgDuong = document.getElementById("svg-duong-noi");
+      
+      vungChua.innerHTML = "";
+      const defs = svgDuong.querySelector("defs").outerHTML;
+      svgDuong.innerHTML = defs;
+
+      // Cập nhật số đếm node trên Toolbar
+      document.getElementById("nhan-dem-node").textContent = `${DU_LIEU_DO_THI.nodes.length} Nodes`;
+
+      // Render đường nối SVG
+      DU_LIEU_DO_THI.edges.forEach((edge) => {
+        const pathD = `M ${edge.tu.x} ${edge.tu.y} L ${edge.den.x} ${edge.den.y}`;
+        
+        const pathDay = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        pathDay.setAttribute("class", "duong-noi-day");
+        pathDay.setAttribute("d", pathD);
+        pathDay.setAttribute("marker-end", "url(#mui-ten-den)");
+        svgDuong.appendChild(pathDay);
+
+        const pathXung = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        pathXung.setAttribute("class", edge.kieu);
+        pathXung.setAttribute("d", pathD);
+        svgDuong.appendChild(pathXung);
+
+        const midX = (edge.tu.x + edge.den.x) / 2;
+        const midY = (edge.tu.y + edge.den.y) / 2;
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("class", "hop-nhan-svg");
+        rect.setAttribute("x", midX - 60);
+        rect.setAttribute("y", midY - 11);
+        rect.setAttribute("width", 120);
+        rect.setAttribute("height", 22);
+        svgDuong.appendChild(rect);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", "chu-nhan-svg");
+        text.setAttribute("x", midX - 52);
+        text.setAttribute("y", midY + 4);
+        text.textContent = edge.nhan;
+        svgDuong.appendChild(text);
+      });
+
+      // Render các node bằng Template
+      DU_LIEU_DO_THI.nodes.forEach((node) => {
+        const templateFn = THU_VIEN_TEMPLATE[node.bieu_tuong] || THU_VIEN_TEMPLATE.khien_bao_ve;
+        const htmlIconPod = templateFn(node);
+        const daKhamPha = node.fully_explored === true;
+
+        const divCum = document.createElement("div");
+        divCum.className = `cum-thuc-the ${node.id === nodeDangChonId ? "dang-chon" : ""}`;
+        divCum.style.top = `${node.toa_do.y}px`;
+        divCum.style.left = `${node.toa_do.x}px`;
+
+        divCum.innerHTML = `
+          <div class="hop-icon-pod-wrap">
+            ${htmlIconPod}
+            <button class="nut-mo-rong-pod ${daKhamPha ? 'da-kham-pha' : ''}" 
+                    data-node-id="${node.id}" 
+                    title="${daKhamPha ? 'Đã khai phá toàn bộ (0 token)' : 'Mở rộng nhánh mới (AI)'}">
+              ${daKhamPha ? '✓' : '+'}
+            </button>
+          </div>
+          <div class="the-nhan-duoi">
+            <div class="nhan-buoc">${node.nhan_buoc}</div>
+            <div class="nhan-tieu-de-khoi">${node.tieu_de}</div>
+            <div class="nhan-tom-tat">${ganTooltipTuDong(node.tom_tat)}</div>
+          </div>
+        `;
+
+        // 1. Click vào nút [+]: MỚI gọi mở rộng nhánh (Dừng propagation, KHÔNG mở Drawer)
+        const btnPod = divCum.querySelector(".nut-mo-rong-pod");
+        btnPod.addEventListener("click", (e) => {
+          e.stopPropagation(); // QUAN TRỌNG: Không lan ra thẻ divCum
+          if (node.fully_explored) {
+            alert("Node này đã được khai phá toàn bộ. Không tốn thêm token!");
+            return;
+          }
+          thucHienMoRongNode(node.id);
+        });
+
+        // 2. Click vào thân node: 100% CHỈ mở Drawer để đọc chi tiết (0 token, 0 độ trễ)
+        divCum.addEventListener("click", () => {
+          if (nodeDangChonId === node.id) return;
+          nodeDangChonId = node.id;
+          document.querySelectorAll(".cum-thuc-the").forEach(el => el.classList.remove("dang-chon"));
+          divCum.classList.add("dang-chon");
+          renderChiTiet(node);
+        });
+
+        vungChua.appendChild(divCum);
+      });
+
+      const nodeHienTai = DU_LIEU_DO_THI.nodes.find(n => n.id === nodeDangChonId) || DU_LIEU_DO_THI.nodes[0];
+      renderChiTiet(nodeHienTai);
+    }
+
+    /* ----------------------------------------------------
+       6. HÀM RENDER TRANG GHI CHÉP CHI TIẾT (DRAWER)
+       Hoàn toàn dùng Icon Lucide, tích hợp nút Mở rộng ở Header
+       và tự động gắn Tooltip kỹ thuật (0 token)
+       ---------------------------------------------------- */
+    function renderChiTiet(node) {
+      const c = node.chi_tiet;
+      const vungNoiDung = document.getElementById("noi-dung-chi-tiet");
+
+      // Sinh hoạt họa bằng bộ động cơ lai
+      const svgHoatHoa = sinhHoatHoa(node.hoat_hoa);
+
+      vungNoiDung.innerHTML = `
+        <!-- Đầu trang chi tiết có Icon Pod thanh mảnh + Nút Mở rộng Nhánh -->
+        <div class="dau-trang-chi-tiet">
+          <div class="dau-trang-ben-trai">
+            <div class="dau-trang-icon">${node.icon_svg}</div>
+            <div class="dau-trang-chu">
+              <div class="the-phan-loai-dau">${c.phan_loai}</div>
+              <h2 class="tieu-de-chi-tiet">${c.tieu_de}</h2>
+            </div>
+          </div>
+          <button class="nut-mo-rong-drawer ${node.fully_explored ? 'da-kham-pha' : ''}" 
+                  id="nut-mo-rong-drawer" 
+                  ${node.fully_explored ? 'disabled' : ''} 
+                  title="${node.fully_explored ? 'Đã khai phá toàn bộ nhánh (0 token)' : 'Gọi DeepSeek mở rộng kiến thức nhánh này'}">
+            ${node.fully_explored 
+              ? '<span>✓ Đã khai phá (0 token)</span>' 
+              : `<span style="display:inline-flex;align-items:center;gap:5px;">${ICON_LUCIDE.sparkles} <span>+ Mở rộng nhánh</span></span>`}
+          </button>
+        </div>
+
+        <!-- Khối 1: Bản chất cốt lõi có icon BookOpen -->
+        <div class="khoi-noi-dung">
+          <div class="tieu-de-khoi">
+            ${ICON_LUCIDE.bookOpen}
+            <span>BẢN CHẤT KỸ THUẬT CỐT LÕI</span>
+          </div>
+          <p class="van-ban-chinh">${ganTooltipTuDong(c.ban_chat)}</p>
+        </div>
+
+        <!-- Khối 2: Lược đồ hoạt họa sinh theo Template lai có icon Activity -->
+        <div class="khoi-noi-dung">
+          <div class="tieu-de-khoi">
+            ${ICON_LUCIDE.activity}
+            <span>LƯỢC ĐỒ MÔ PHỎNG HOẠT ĐỘNG</span>
+          </div>
+          <div class="khung-luoc-do-dong">
+            <div class="luoc-do-svg-box">
+              ${svgHoatHoa}
+            </div>
+            <div class="chu-thich-luoc-do">
+              ${c.chu_thich_so_do || 'Mô phỏng luồng chuyển động thực tế của dữ liệu trong hệ thống.'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Khối 3: Ca sự cố thực chiến có icon AlertTriangle + ChevronRight từng dòng -->
+        <div class="khoi-noi-dung">
+          <div class="tieu-de-khoi" style="color: #DC2626;">
+            ${ICON_LUCIDE.alertTriangle}
+            <span>TÌNH HUỐNG SỰ CỐ THỰC CHIẾN</span>
+          </div>
+          <ul class="danh-sach-chi-tiet">
+            ${c.ca_thuc_te.map(item => `
+              <li class="dong-chi-tiet su-co">
+                ${ICON_LUCIDE.chevronRight}
+                <span>${ganTooltipTuDong(item)}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+
+        <!-- Khối 4: Rủi ro sụp đổ nếu thiếu có icon ShieldAlert + AlertCircle từng dòng -->
+        <div class="khoi-noi-dung">
+          <div class="tieu-de-khoi" style="color: #D97706;">
+            ${ICON_LUCIDE.shieldAlert}
+            <span>RỦI RO NẾU THIẾU THÀNH PHẦN NÀY</span>
+          </div>
+          <ul class="danh-sach-chi-tiet">
+            ${c.rui_ro.map(item => `
+              <li class="dong-chi-tiet rui-ro">
+                ${ICON_LUCIDE.alertCircle}
+                <span>${ganTooltipTuDong(item)}</span>
+              </li>
+            `).join("")}
+          </ul>
+        </div>
+      `;
+
+      // Gắn sự kiện cho nút [+ Mở rộng nhánh] trong Header của Drawer
+      const btnMoRongDrawer = document.getElementById("nut-mo-rong-drawer");
+      if (btnMoRongDrawer && !node.fully_explored) {
+        btnMoRongDrawer.addEventListener("click", () => {
+          thucHienMoRongNode(node.id);
+        });
+      }
+    }
+
+    /* ----------------------------------------------------
+       7. CƠ CHẾ MỞ RỘNG NHÁNH BẰNG AI (DEEPSEEK DELTA PAYLOAD)
+       Được gọi từ nút [+] trên Canvas hoặc nút trong Drawer Header
+       ---------------------------------------------------- */
+    let daThemNode = false;
+
+    function thucHienMoRongNode(nodeId) {
+      const nodeMucTieu = DU_LIEU_DO_THI.nodes.find(n => n.id === nodeId);
+      if (!nodeMucTieu) return;
+
+      if (nodeMucTieu.fully_explored) {
+        alert("Node này đã được khai phá hoàn chỉnh (0 token).");
+        return;
+      }
+
+      // Giả lập DeepSeek nhận Delta payload siêu tinh gọn và sinh 2 node nhánh mới
+      if (!daThemNode) {
+        const nodeMoi1 = {
+          id: "node-queue",
+          fully_explored: false,
+          bieu_tuong: "hang_doi_message_queue",
+          icon_svg: ICON_LUCIDE.layers,
+          tieu_de: "Hàng đợi Message Queue",
+          nhan_buoc: "BƯỚC 3.1 // BĂNG CHUYỀN",
+          tom_tat: "Điều tiết **10.000 req/s** thành **100 req/s** êm ái qua <u>Message Queue</u>.",
+          toa_do: { x: 480, y: 220 },
+          tam: { x: 590, y: 300 },
+          hoat_hoa: {
+            mau: "hang_doi_dieu_tiet",
+            tham_so: {
+              dau_vao: "PRODUCER",
+              tai_cao: "10k req/s",
+              vung_dem: "QUEUE BUFFER",
+              tho: "WORKER",
+              dieu_tiet: "100 req/s"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "MÔ HÌNH BĂNG CHUYỀN HÀNG ĐỢI",
+            tieu_de: "Hàng đợi tin nhắn (Message Queue)",
+            ban_chat: "Thay vì xử lý trực tiếp gây sập cơ sở dữ liệu, yêu cầu được đưa vào hàng đợi tin nhắn (<u>Message Queue</u>) để nhóm tiến trình thợ (<u>Worker Pool</u>) rút ra xử lý tuần tự từng gói một.",
+            chu_thich_so_do: "Mô phỏng: Client gửi dồn dập **10.000 req/s** vào Queue Buffer. Worker phía sau rút ra êm ả **100 req/s**, bảo vệ hệ thống không bao giờ nghẽn.",
+            ca_thuc_te: [
+              "**10.000 yêu cầu rút tiền** dồn vào cùng 1 giây khi có sự kiện mở cổng.",
+              "Queue đệm các lệnh lại và điều tiết nhóm thợ rút **100 lệnh/giây**.",
+              "Hệ thống vận hành êm ả, **không bao giờ nghẽn kết nối database**."
+            ],
+            rui_ro: [
+              "Nếu Queue bị sập mà không bật cơ chế lưu đĩa (Persistence), giao dịch sẽ bị thất lạc hoàn toàn."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Vai trò lớn nhất của Message Queue (Kafka / RabbitMQ) trong hệ thống chịu tải cao là gì?",
+            lua_chon: [
+              "San phẳng đỉnh tải (Rate Limiting / Buffering) để bảo vệ database phía sau",
+              "Thay thế hoàn toàn cơ sở dữ liệu đĩa cứng để lưu trữ vĩnh viễn"
+            ],
+            dung: 0,
+            giai_thich: "Message Queue đóng vai trò đệm và điều tiết tốc độ, ngăn chặn Database bị quá tải khi có bão request."
+          }
+        };
+
+        const nodeMoi2 = {
+          id: "node-cache",
+          fully_explored: false,
+          bieu_tuong: "bo_nho_dem_cache",
+          icon_svg: ICON_LUCIDE.cpu,
+          tieu_de: "Khóa phân tán Redis Cache",
+          nhan_buoc: "BƯỚC 2.1 // KHÓA NHANH RAM",
+          tom_tat: "Khóa nhanh bằng lệnh <u>SETNX</u> trên RAM Redis chỉ mất **1ms** trước khi gọi DB.",
+          toa_do: { x: 260, y: 240 },
+          tam: { x: 370, y: 320 },
+          hoat_hoa: {
+            mau: "doc_cache_nhanh",
+            tham_so: {
+              yeu_cau: "REQUEST",
+              cache: "REDIS CACHE",
+              toc_do: "RAM: 1ms",
+              dia_cung: "DB DISK",
+              trang_thai_db: "Bỏ qua đĩa"
+            }
+          },
+          chi_tiet: {
+            phan_loai: "BỘ NHỚ ĐỆM TỐC ĐỘ CAO",
+            tieu_de: "Khóa phân tán Redis (Distributed Lock)",
+            ban_chat: "Sử dụng lệnh <u>SETNX</u> trên Redis để tạo <u>Distributed Lock</u> trong vài mili-giây. Tiến trình nào giành được khóa mới được quyền kiểm tra số dư và trừ tiền.",
+            chu_thich_so_do: "Mô phỏng: Request đọc và khóa trực tiếp trên RAM Redis chỉ mất **1ms**, không chạm xuống đĩa cứng DB.",
+            ca_thuc_te: [
+              "Dùng thuật toán <u>Redlock</u> đảm bảo an toàn giữa cụm Redis đa node.",
+              "Tự động giải phóng khóa qua <u>TTL</u> nếu tiến trình thợ bị treo giữa chừng."
+            ],
+            rui_ro: [
+              "Nếu quên đặt thời gian sống <u>TTL</u>, hệ thống sẽ rơi vào kẹt khóa vĩnh viễn (<u>Deadlock</u>)."
+            ]
+          },
+          trac_nghiem: {
+            cau_hoi: "Tại sao lệnh SETNX trên Redis lại được dùng phổ biến để tạo Distributed Lock?",
+            lua_chon: [
+              "Xử lý đơn luồng trên RAM cực nhanh (~1ms) và đảm bảo tính nguyên tử (Atomic)",
+              "Tự động đồng bộ sang mọi Database quan hệ mà không cần lập trình"
+            ],
+            dung: 0,
+            giai_thich: "SETNX thực thi atomic trên RAM đơn luồng của Redis nên không bao giờ xảy ra Race Condition khi giành khóa."
+          }
+        };
+
+        DU_LIEU_DO_THI.nodes.push(nodeMoi1, nodeMoi2);
+
+        DU_LIEU_DO_THI.edges.push({
+          from: "node-khien-khoa",
+          to: "node-queue",
+          tu: { x: 590, y: 400 },
+          den: { x: 590, y: 330 },
+          nhan: "Đẩy vào Queue",
+          kieu: "duong-xung-em-ai"
+        });
+
+        DU_LIEU_DO_THI.edges.push({
+          from: "node-tranh-chap",
+          to: "node-cache",
+          tu: { x: 190, y: 400 },
+          den: { x: 310, y: 350 },
+          nhan: "Khóa trên RAM",
+          kieu: "duong-xung-em-ai"
+        });
+
+        daThemNode = true;
+        nodeMucTieu.fully_explored = true;
+
+        document.getElementById("nut-gia-lap-ai").innerHTML = `<span>Đã thêm Queue & Cache</span>`;
+        document.getElementById("nut-gia-lap-ai").style.borderColor = "#9CA3AF";
+        document.getElementById("nut-gia-lap-ai").style.color = "#6B7280";
+
+        renderDoThi();
+        renderChiTiet(nodeMucTieu);
+      }
+    }
+
+    // Nút trên Floating Toolbar cũng gọi hàm thucHienMoRongNode
+    document.getElementById("nut-gia-lap-ai").addEventListener("click", () => {
+      if (daThemNode) {
+        alert("Đã thêm các node mô phỏng vào đồ thị (0 token phát sinh thêm)!");
+        return;
+      }
+      thucHienMoRongNode("node-khien-khoa");
+    });
+
+    /* ----------------------------------------------------
+       8. CƠ CHẾ KIỂM TRA PHẢN XẠ KỸ SƯ (REFLEX QUIZ - 0 TOKEN)
+       Sử dụng câu trắc nghiệm được sinh sẵn trong payload node
+       hoạt động 100% cục bộ trên client, 0 token, 0 độ trễ.
+       ---------------------------------------------------- */
+    function batTatQuiz(node) {
+      const vungNoiDung = document.getElementById("noi-dung-chi-tiet");
+      const existingQuiz = document.getElementById("khoi-quiz-container");
+      if (existingQuiz) {
+        existingQuiz.remove();
+        return;
+      }
+
+      const q = node.trac_nghiem;
+      if (!q) return;
+
+      const quizEl = document.createElement("div");
+      quizEl.id = "khoi-quiz-container";
+      quizEl.className = "khoi-quiz-phan-xa";
+      quizEl.innerHTML = `
+        <div class="tieu-de-khoi" style="color: #059669;">
+          ${ICON_LUCIDE.helpCircle}
+          <span>THỬ THÁCH PHẢN XẠ KỸ SƯ (0 TOKEN)</span>
+        </div>
+        <div class="quiz-cau-hoi">${q.cau_hoi}</div>
+        <div class="quiz-danh-sach-lua-chon">
+          ${q.lua_chon.map((ans, idx) => `
+            <button class="quiz-lua-chon" data-idx="${idx}">
+              <span style="font-family:'JetBrains Mono', monospace; font-weight:800; color:var(--net-muc-phu);">${idx === 0 ? 'A.' : 'B.'}</span>
+              <span>${ans}</span>
+            </button>
+          `).join('')}
+        </div>
+        <div class="quiz-giai-thich" id="quiz-giai-thich" style="display:none;"></div>
+      `;
+
+      quizEl.querySelectorAll(".quiz-lua-chon").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-idx"));
+          const isCorrect = idx === q.dung;
+          quizEl.querySelectorAll(".quiz-lua-chon").forEach(b => b.disabled = true);
+          if (isCorrect) {
+            btn.classList.add("dung");
+          } else {
+            btn.classList.add("sai");
+            const correctBtn = quizEl.querySelector(`.quiz-lua-chon[data-idx="${q.dung}"]`);
+            if (correctBtn) correctBtn.classList.add("dung");
+          }
+          const boxGt = quizEl.querySelector("#quiz-giai-thich");
+          boxGt.style.display = "block";
+          boxGt.innerHTML = `<strong>${isCorrect ? '✅ Chuẩn xác!' : '⚠️ Cần lưu ý:'}</strong> ${q.giai_thich}`;
+        });
+      });
+
+      vungNoiDung.appendChild(quizEl);
+      quizEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    // Gắn sự kiện cho nút footer "Kiểm tra kiến thức phản xạ"
+    document.getElementById("nut-kiem-tra").addEventListener("click", () => {
+      const nodeHienTai = DU_LIEU_DO_THI.nodes.find(n => n.id === nodeDangChonId);
+      if (nodeHienTai) {
+        batTatQuiz(nodeHienTai);
+      }
+    });
+
+    // Nút đặt lại về node đầu tiên
+    document.getElementById("nut-dat-lai").addEventListener("click", () => {
+      if (nodeDangChonId === "node-su-co") return;
+      nodeDangChonId = "node-su-co";
+      document.querySelectorAll(".cum-thuc-the").forEach(el => el.classList.remove("dang-chon"));
+      const firstNodeEl = document.querySelector(".cum-thuc-the");
+      if (firstNodeEl) firstNodeEl.classList.add("dang-chon");
+      renderChiTiet(DU_LIEU_DO_THI.nodes[0]);
+    });
+
+    // Khởi chạy ban đầu
+    renderDoThi();
+  </script>
+
+</body>
+</html>

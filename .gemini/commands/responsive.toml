@@ -1,0 +1,3 @@
+﻿[command]
+description = "Kiểm tra và audit layout Responsive đa màn hình (Mobile 375px, Tablet 768px, Desktop 1440px)"
+prompt = "Sử dụng skill responsive-tester để kiểm tra layout, toolbar, drawer và chụp ảnh đa màn hình: {{args}}"

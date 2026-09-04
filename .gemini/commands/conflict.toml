@@ -1,0 +1,3 @@
+﻿[command]
+description = "Giải quyết merge conflict tự động theo ngữ cảnh logic của cả 2 nhánh"
+prompt = "Sử dụng skill git-assistant để kiểm tra các file bị conflict, phân tích cả 2 nhánh và giải quyết triệt để: {{args}}"

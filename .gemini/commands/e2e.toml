@@ -1,0 +1,3 @@
+﻿[command]
+description = "Chạy và tự động sinh test E2E với Playwright & Real DB (Self-Healing Loop)"
+prompt = "Sử dụng skill e2e-test-engine để tự động sinh và chạy E2E Playwright tests hoặc integration test với DB thật cho tính năng sau: {{args}}"

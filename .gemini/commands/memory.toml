@@ -1,0 +1,3 @@
+﻿[command]
+description = "Đọc, tìm kiếm hoặc lưu trữ kiến thức vào MCP Knowledge Graph Memory"
+prompt = "Sử dụng MCP server memory để lưu trữ hoặc tra cứu thông tin kiến thức dự án: {{args}}"

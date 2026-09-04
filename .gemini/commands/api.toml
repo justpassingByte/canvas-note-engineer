@@ -1,0 +1,3 @@
+﻿[command]
+description = "Bắn request test REST API endpoint (đo latency, HTTP status, JSON response)"
+prompt = "Sử dụng skill http-client để gửi request kiểm thử endpoint: {{args}}"
