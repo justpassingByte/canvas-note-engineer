@@ -9,7 +9,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       fully_explored: true,
       bieu_tuong: 'su_co_canh_bao',
       tieu_de: 'Lặp Webhook trừ tiền 2 lần',
-      nhan_buoc: 'BƯỚC 1 // SỰ CỐ VẬN HÀNH',
+      nhan_buoc: 'GATEWAY / INGRESS',
       tom_tat: 'Cổng thanh toán tự động gửi lại <u>Webhook</u> do timeout làm **trừ tiền 2 lần**!',
       toa_do: { x: 100, y: 100 },
       tam: { x: 210, y: 180 },
@@ -62,7 +62,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       fully_explored: true,
       bieu_tuong: 'tranh_chap_phan_nhanh',
       tieu_de: 'Tranh chấp khi kiểm tra số dư',
-      nhan_buoc: 'BƯỚC 2 // XUNG ĐỘT GHI',
+      nhan_buoc: 'COMPUTE / CONCURRENCY',
       tom_tat: 'Hai luồng cùng đọc một số dư trước khi kịp trừ: **rút 16 triệu từ ví 10 triệu**!',
       toa_do: { x: 100, y: 520 },
       tam: { x: 210, y: 600 },
@@ -114,7 +114,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       fully_explored: false,
       bieu_tuong: 'khien_bao_ve',
       tieu_de: 'Cơ chế Khóa Idempotency Key',
-      nhan_buoc: 'BƯỚC 3 // HÓA GIẢI BẰNG KHIÊN',
+      nhan_buoc: 'SECURITY / IDEMPOTENCY',
       tom_tat: 'Gắn <u>UUID v4</u> duy nhất: 100 lần gửi lại vẫn **chỉ trừ tiền duy nhất 1 lần**!',
       toa_do: { x: 600, y: 520 },
       tam: { x: 710, y: 600 },
@@ -168,7 +168,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       fully_explored: true,
       bieu_tuong: 'khoi_tru_database',
       tieu_de: 'Bảo chứng ACID & Khóa dòng',
-      nhan_buoc: 'BƯỚC 4 // CHỐNG SỤP ĐỔ DATABASE',
+      nhan_buoc: 'STORAGE / ACID DB',
       tom_tat: 'Dùng <u>Row Lock</u> & <u>Unique Constraint</u>: chốt chặn cuối cùng ngăn số dư âm.',
       toa_do: { x: 600, y: 940 },
       tam: { x: 710, y: 1020 },
@@ -218,7 +218,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
       fully_explored: true,
       bieu_tuong: 'hop_kien_hang_domain',
       tieu_de: 'Flash Sale mở bán chớp nhoáng',
-      nhan_buoc: 'GIAO THOA // SÀN THƯƠNG MẠI',
+      nhan_buoc: 'DOMAIN / E-COMMERCE',
       tom_tat: '10.000 khách tranh mua 1 món hàng: chung bản chất <u>Race Condition</u> ghi tồn kho.',
       toa_do: { x: 1300, y: 100 },
       tam: { x: 1410, y: 180 },
@@ -266,7 +266,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     {
       from: 'node-su-co',
       to: 'node-tranh-chap',
-      nhan: '1. Kích hoạt sự cố',
+      nhan: 'Webhook Timeout Retry',
       kieu: 'duong-xung-su-co',
       loai_lien_ket: 'KICH_HOAT',
       giai_thich: 'Webhook bị gửi lặp do timeout mạng (1.2s) khiến 2 luồng xử lý cùng chạy song song, trực tiếp kích hoạt Race Condition khi kiểm tra số dư ví.'
@@ -274,7 +274,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     {
       from: 'node-tranh-chap',
       to: 'node-khien-khoa',
-      nhan: '2. Chặn bằng Khiên',
+      nhan: 'Atomic Lock Check',
       kieu: 'duong-xung-em-ai',
       loai_lien_ket: 'HOA_GIAI',
       giai_thich: 'Để triệt tiêu Race Condition từ nguồn, Idempotency Key đóng vai trò lá chắn khóa chặn mọi yêu cầu trùng lặp trước khi đụng vào số dư.'
@@ -282,7 +282,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     {
       from: 'node-khien-khoa',
       to: 'node-tru-db',
-      nhan: '3. Ghi vào Trụ DB',
+      nhan: 'ACID Write / Unique Index',
       kieu: 'duong-xung-em-ai',
       loai_lien_ket: 'LUU_TRU',
       giai_thich: 'Khiên Idempotency bắt buộc phải được neo chặt bởi Unique Constraint và ACID Transaction ở tầng Database để đảm bảo an toàn tuyệt đối ngay cả khi máy chủ crash.'
@@ -290,7 +290,7 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     {
       from: 'node-tmdt',
       to: 'node-tranh-chap',
-      nhan: 'Cầu nối: Cùng xung đột',
+      nhan: 'Flash Sale Race Condition',
       kieu: 'duong-xung-tmdt',
       loai_lien_ket: 'GIAO_THOA',
       giai_thich: 'Dù ở domain Sàn Thương Mại (Flash Sale), việc 10.000 khách tranh mua 1 món hàng chia sẻ chung 100% bản chất kỹ thuật với bài toán Race Condition kiểm tra số dư ví.'
@@ -307,7 +307,7 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
       fully_explored: false,
       bieu_tuong: 'hang_doi_message_queue',
       tieu_de: 'Hàng đợi Message Queue',
-      nhan_buoc: 'BƯỚC 3.1 // BĂNG CHUYỀN',
+      nhan_buoc: 'ASYNC / QUEUE BUFFER',
       tom_tat: 'Điều tiết **10.000 req/s** thành **100 req/s** êm ái qua <u>Message Queue</u>.',
       toa_do: { x: 1100, y: 380 },
       tam: { x: 1210, y: 460 },
@@ -357,7 +357,7 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
       fully_explored: false,
       bieu_tuong: 'bo_nho_dem_cache',
       tieu_de: 'Khóa phân tán Redis Cache',
-      nhan_buoc: 'BƯỚC 2.1 // KHÓA NHANH RAM',
+      nhan_buoc: 'CACHE / DISTRIBUTED LOCK',
       tom_tat: 'Khóa nhanh bằng lệnh <u>SETNX</u> trên RAM Redis chỉ mất **1ms** trước khi gọi DB.',
       toa_do: { x: 1100, y: 680 },
       tam: { x: 1210, y: 760 },
@@ -405,7 +405,7 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
     {
       from: 'node-khien-khoa',
       to: 'node-queue',
-      nhan: 'Đẩy vào Queue',
+      nhan: 'Async Event Produce',
       kieu: 'duong-xung-em-ai',
       loai_lien_ket: 'DEM_LOC',
       giai_thich: 'Sau khi kiểm tra Idempotency hợp lệ, gói tin được đẩy vào Message Queue để điều tiết tốc độ xử lý, bảo vệ database phía sau.'
@@ -413,7 +413,7 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
     {
       from: 'node-khien-khoa',
       to: 'node-cache',
-      nhan: 'Khóa nhanh RAM',
+      nhan: 'Distributed Lock Acquire',
       kieu: 'duong-xung-em-ai',
       loai_lien_ket: 'HOA_GIAI',
       giai_thich: 'Thay vì để các luồng tranh chấp tranh nhau khóa đĩa cứng, Distributed Lock trên RAM Redis chặn xung đột ở tốc độ 1ms.'

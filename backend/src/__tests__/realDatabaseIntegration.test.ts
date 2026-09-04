@@ -190,7 +190,8 @@ describe('Real SQLite Database Integration Tests (Zero-Mock)', () => {
     client.updateNodeCollapse('graph-collapse-del', 'node-khien-khoa', true);
     let current = client.getGraph('graph-collapse-del');
     expect(current?.nodes.find(n => n.id === 'node-khien-khoa')?.is_collapsed).toBe(true);
-    expect(current?.nodes.find(n => n.id === 'child-del-1')?.is_collapsed).toBe(true);
+    expect(current?.nodes.find(n => n.id === 'node-khien-khoa')?.collapsed_count).toBe(1);
+    expect(current?.nodes.find(n => n.id === 'child-del-1')?.is_collapsed).toBeFalsy(); // DAG-Safe: child preserved in DB
 
     // 2. Test Delete child
     client.deleteNodePermanently('graph-collapse-del', 'child-del-1');

@@ -78,16 +78,16 @@ export function findAvailableSlot(
     const candidateX = preferredX + offset.dx;
     const candidateY = preferredY + offset.dy;
 
-    // Không để node rơi vào tọa độ âm
-    if (candidateX < 40 || candidateY < 40) continue;
-
+    // Cho phép tọa độ âm hợp lệ trong không gian 2D Canvas vô tận
     if (!isNodeColliding(candidateX, candidateY, existingNodes, ignoreNodeId)) {
       return { x: Math.round(candidateX), y: Math.round(candidateY) };
     }
   }
 
   // Fallback an toàn: Dịch sang phía ngoài cùng bên phải của đồ thị
-  const maxRightX = Math.max(...existingNodes.map(n => n.toa_do.x + CARD_WIDTH), 800);
+  const maxRightX = existingNodes.length > 0
+    ? Math.max(...existingNodes.map(n => n.toa_do.x + CARD_WIDTH))
+    : 800;
   return {
     x: Math.round(maxRightX + BUFFER_X + 40),
     y: Math.round(preferredY)
@@ -96,28 +96,56 @@ export function findAvailableSlot(
 
 /**
  * Quét và giải quyết triệt để mọi va chạm trong đồ thị.
- * Tự động sắp xếp vị trí an toàn cho các node con mở rộng từ node cha.
+ * Tự động sắp xếp vị trí hình nan quạt (Fanout) có trật tự cho các node con mở rộng từ node cha.
  */
 export function resolveNodeCollisions(nodes: NodeEntity[]): NodeEntity[] {
   const result: NodeEntity[] = [];
   const nodeMap = new Map(nodes.map(n => [n.id, n]));
 
+  // Đếm số lượng con của từng cha để tính offset phân nhánh đều
+  const childIndexMap = new Map<string, { current: number; total: number }>();
+  for (const node of nodes) {
+    if (node.parent_id && nodeMap.has(node.parent_id)) {
+      const info = childIndexMap.get(node.parent_id) || { current: 0, total: 0 };
+      info.total += 1;
+      childIndexMap.set(node.parent_id, info);
+    }
+  }
+
   for (const node of nodes) {
     let targetX = node.toa_do.x;
     let targetY = node.toa_do.y;
 
-    // Nếu node có parent, kiểm tra xem nó có đang bị va chạm với các node đã xếp không
+    // Nếu node có parent, sắp xếp theo nan quạt đối xứng sang bên phải của node cha
     if (node.parent_id && nodeMap.has(node.parent_id)) {
       const parent = nodeMap.get(node.parent_id)!;
-      // Vị trí mặc định ưu tiên mở nhánh sang bên phải của node cha
-      const defaultChildX = parent.toa_do.x + CARD_WIDTH + 80;
-      const defaultChildY = parent.toa_do.y;
+      const childInfo = childIndexMap.get(node.parent_id)!;
+      const idx = childInfo.current;
+      childInfo.current += 1;
 
-      // Nếu vị trí hiện tại bị va chạm, tìm ô trống mới
+      // Tính toán độ lệch Y đối xứng (Fanout Offset)
+      let offsetY = 0;
+      if (childInfo.total === 1) {
+        offsetY = 0;
+      } else if (childInfo.total === 2) {
+        offsetY = idx === 0 ? -65 : 75;
+      } else {
+        offsetY = (idx - (childInfo.total - 1) / 2) * (CARD_HEIGHT + 35);
+      }
+
+      const fanoutChildX = parent.toa_do.x + CARD_WIDTH + 80;
+      const fanoutChildY = parent.toa_do.y + offsetY;
+
+      // Nếu vị trí hiện tại bị va chạm hoặc là node mới chưa có tọa độ chuẩn, dùng vị trí nan quạt
       if (isNodeColliding(targetX, targetY, result, node.id)) {
-        const slot = findAvailableSlot(defaultChildX, defaultChildY, result, node.id);
-        targetX = slot.x;
-        targetY = slot.y;
+        if (!isNodeColliding(fanoutChildX, fanoutChildY, result, node.id)) {
+          targetX = fanoutChildX;
+          targetY = fanoutChildY;
+        } else {
+          const slot = findAvailableSlot(fanoutChildX, fanoutChildY, result, node.id);
+          targetX = slot.x;
+          targetY = slot.y;
+        }
       }
     } else {
       // Đối với node độc lập, nếu bị va chạm cũng tìm ô trống gần nhất

@@ -13,14 +13,12 @@ export const App: React.FC = () => {
   const { graph, setGraph, fetchCurrentGraph } = useGraphStore();
 
   useEffect(() => {
-    // Khởi tạo đồ thị: thử tải từ backend SQLite, nếu offline dùng INITIAL_PAYMENT_GRAPH
-    if (!graph) {
-      fetchCurrentGraph().then(() => {
-        if (!useGraphStore.getState().graph) {
-          setGraph(INITIAL_PAYMENT_GRAPH);
-        }
-      });
-    }
+    // Luôn đồng bộ đồ thị mới nhất từ backend SQLite khi tải trang
+    fetchCurrentGraph().then(() => {
+      if (!useGraphStore.getState().graph) {
+        setGraph(INITIAL_PAYMENT_GRAPH);
+      }
+    });
   }, []);
 
   return (

@@ -17,7 +17,8 @@ export const SvgGridCanvas: React.FC = () => {
     zoom,
     setPan,
     setZoom,
-    spawnNode
+    spawnNode,
+    spawnCluster
   } = useGraphStore();
 
   const canvasRef = useRef<HTMLElement>(null);
@@ -31,10 +32,53 @@ export const SvgGridCanvas: React.FC = () => {
     graphY: number;
   } | null>(null);
 
-  // Lọc danh sách node hiển thị theo cơ chế Thu gọn phân cấp đa tầng (Hierarchical Progressive Collapse)
+  // Lọc danh sách node hiển thị theo cơ chế DAG Liveness (Đồ thị có hướng đa cha)
   const visibleNodes = useMemo(() => {
     if (!graph) return [];
     const nodeMap = new Map(graph.nodes.map(n => [n.id, n]));
+
+    // Xây dựng tập hợp cha (Incoming Parents) từ các cạnh có hướng trong đồ thị
+    const incomingParentsMap = new Map<string, string[]>();
+    for (const edge of graph.edges) {
+      if (!incomingParentsMap.has(edge.to)) {
+        incomingParentsMap.set(edge.to, []);
+      }
+      if (!incomingParentsMap.get(edge.to)!.includes(edge.from)) {
+        incomingParentsMap.get(edge.to)!.push(edge.from);
+      }
+    }
+
+    // Bổ sung parent_id tường minh nếu chưa có trong edge
+    for (const node of graph.nodes) {
+      if (node.parent_id) {
+        if (!incomingParentsMap.has(node.id)) {
+          incomingParentsMap.set(node.id, []);
+        }
+        if (!incomingParentsMap.get(node.id)!.includes(node.parent_id)) {
+          incomingParentsMap.get(node.id)!.push(node.parent_id);
+        }
+      }
+    }
+
+    // Quy tắc DAG Liveness:
+    // Một node chỉ bị ẩn nếu TẤT CẢ các incoming parents trỏ vào nó đều bị thu gọn (hoặc bị ẩn).
+    // Nếu có ít nhất một parent còn mở và hiển thị, node đó vẫn sống và hiển thị!
+    const isNodeCollapsedAway = (nodeId: string, visited = new Set<string>()): boolean => {
+      if (visited.has(nodeId)) return false;
+      visited.add(nodeId);
+
+      const parents = incomingParentsMap.get(nodeId);
+      if (!parents || parents.length === 0) {
+        return false; // Root node không có cha thì không bị ẩn bởi collapse
+      }
+
+      return parents.every(parentId => {
+        const parentNode = nodeMap.get(parentId);
+        if (!parentNode) return true;
+        if (parentNode.is_collapsed) return true;
+        return isNodeCollapsedAway(parentId, new Set(visited));
+      });
+    };
 
     return graph.nodes.filter(node => {
       // Ẩn node TMĐT nếu công tắc liên kết miền đang TẮT
@@ -42,15 +86,7 @@ export const SvgGridCanvas: React.FC = () => {
         return false;
       }
 
-      // Thu gọn phân cấp: node chỉ hiển thị nếu toàn bộ chuỗi tổ tiên của nó đều KHÔNG bị thu gọn
-      let curr = node;
-      while (curr.parent_id) {
-        const parent = nodeMap.get(curr.parent_id);
-        if (!parent) break;
-        if (parent.is_collapsed) return false;
-        curr = parent;
-      }
-      return true;
+      return !isNodeCollapsedAway(node.id);
     });
   }, [graph, isDomainLinkActive]);
 
@@ -462,8 +498,151 @@ export const SvgGridCanvas: React.FC = () => {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{ padding: '4px 8px', fontSize: '10px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            + Thêm Node Kiến Trúc
+          {/* PHẦN 1: SINH CỤM PHÂN HỆ (PARALLEL CLUSTER SPAWNING) */}
+          <div style={{ padding: '5px 8px 3px', fontSize: '10px', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            ⚡ Sinh Cụm Phân Hệ
+          </div>
+          <button
+            className="nut-spawn-cluster-waf"
+            onClick={() => {
+              spawnCluster({
+                cluster_name: 'Phân Hệ WAF & Rate Limiting',
+                cluster_theme: 'indigo',
+                nodes: [
+                  {
+                    title: 'Lá chắn WAF & Chống DDoS',
+                    role: 'EDGE_GATEWAY',
+                    summary: 'Tường lửa L7 phát hiện tấn công dồn dập từ botnet và dội request ảo.',
+                    schematic_template: 'zero_trust_pep'
+                  },
+                  {
+                    title: 'Bộ lọc Rate Limiting Trượt',
+                    role: 'RATE_LIMITER',
+                    summary: 'Đếm tần suất request theo thuật toán Sliding Window trên RAM Redis.',
+                    schematic_template: 'rate_limit_sliding'
+                  }
+                ],
+                connect_to_shared_infra: ['cache', 'queue'],
+                position: { x: contextMenu.graphX, y: contextMenu.graphY }
+              });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>🛡️</span>
+            <span>Cụm WAF & Rate Limiting</span>
+          </button>
+          <button
+            className="nut-spawn-cluster-zero-trust"
+            onClick={() => {
+              spawnCluster({
+                cluster_name: 'Phân Hệ Zero-Trust Auth',
+                cluster_theme: 'emerald',
+                nodes: [
+                  {
+                    title: 'Cổng Zero-Trust Gateway',
+                    role: 'EDGE_GATEWAY',
+                    summary: 'Xác thực mTLS và giải mã Identity Token trước khi chuyển tiếp vào mạng nội bộ.',
+                    schematic_template: 'zero_trust_pep'
+                  },
+                  {
+                    title: 'Thẩm định Quyền PDP Server',
+                    role: 'SECURITY_SHIELD',
+                    summary: 'Đối chiếu quyền hạn RBAC/ABAC và kiểm tra Token Revocation List.',
+                    schematic_template: 'zero_trust_pep'
+                  }
+                ],
+                connect_to_shared_infra: ['cache', 'db'],
+                position: { x: contextMenu.graphX, y: contextMenu.graphY }
+              });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>🔐</span>
+            <span>Cụm Xác Thực Zero-Trust</span>
+          </button>
+          <button
+            className="nut-spawn-cluster-audit"
+            onClick={() => {
+              spawnCluster({
+                cluster_name: 'Phân Hệ Sổ Cái Kiểm Toán',
+                cluster_theme: 'amber',
+                nodes: [
+                  {
+                    title: 'Nhật Ký Kiểm Toán Audit Log',
+                    role: 'AUDIT_LOGGER',
+                    summary: 'Bản ghi bất biến ghi vết các giao dịch tài chính.',
+                    schematic_template: 'audit_hash_chain'
+                  },
+                  {
+                    title: 'Kho Lưu Trữ Ký Số Merkle',
+                    role: 'SECURITY_SHIELD',
+                    summary: 'Mã hóa băm nhị phân Merkle Tree và ký số HMAC SHA-256 chống giả mạo.',
+                    schematic_template: 'audit_hash_chain'
+                  }
+                ],
+                connect_to_shared_infra: ['db'],
+                position: { x: contextMenu.graphX, y: contextMenu.graphY }
+              });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF3C7')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>📜</span>
+            <span>Cụm Sổ Cái Kiểm Toán & Hash</span>
+          </button>
+
+          <div style={{ height: '1px', background: '#E5E7EB', margin: '4px 0' }} />
+
+          {/* PHẦN 2: SINH NODE ĐƠN LẺ */}
+          <div style={{ padding: '4px 8px 3px', fontSize: '10px', fontWeight: 800, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            + Sinh Node Đơn Lẻ
           </div>
           <button
             onClick={() => {
@@ -534,11 +713,70 @@ export const SvgGridCanvas: React.FC = () => {
               borderRadius: '4px',
               textAlign: 'left'
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF3C7')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EFF6FF')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <span>📥</span>
             <span>Hàng đợi Message Queue</span>
+          </button>
+          <button
+            className="nut-spawn-audit"
+            onClick={() => {
+              spawnNode('audit_log', { x: contextMenu.graphX, y: contextMenu.graphY });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>📜</span>
+            <span>Nhật ký Kiểm toán Audit Log</span>
+          </button>
+          <div style={{ height: '1px', background: '#E5E7EB', margin: '3px 0' }} />
+          <button
+            className="nut-spawn-custom"
+            onClick={() => {
+              const customTopic = window.prompt('Nhập tên chủ đề kiến trúc mới cần spawn:', 'Elasticsearch Cluster');
+              if (customTopic && customTopic.trim()) {
+                spawnNode(customTopic.trim().toLowerCase().replace(/\s+/g, '_'), { x: contextMenu.graphX, y: contextMenu.graphY }, {
+                  title: customTopic.trim()
+                });
+              }
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '7px 10px',
+              border: 'none',
+              background: 'transparent',
+              fontFamily: 'JetBrains Mono',
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#4F46E5',
+              cursor: 'pointer',
+              borderRadius: '4px',
+              textAlign: 'left'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <span>➕</span>
+            <span>Nhập chủ đề tùy chỉnh...</span>
           </button>
         </div>
       )}

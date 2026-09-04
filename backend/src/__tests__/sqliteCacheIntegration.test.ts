@@ -163,7 +163,8 @@ describe('SQLite & Local Cache Integration Test (Zero Mock)', () => {
 
     expect(parent?.is_collapsed).toBe(true);
     expect(parent?.collapsed_count).toBe(1);
-    expect(child?.is_collapsed).toBe(true);
+    expect(child).toBeDefined();
+    expect(child?.is_collapsed).toBeFalsy(); // DAG-Safe: child is preserved intact in DB
   });
 
   it('should permanently delete node and its descendants recursively and cleanup orphan edges', () => {

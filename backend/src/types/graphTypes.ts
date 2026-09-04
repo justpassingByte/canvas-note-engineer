@@ -39,6 +39,7 @@ export interface NodeEntity {
   tam: { x: number; y: number };
   fully_explored: boolean;
   parent_id?: string;
+  cluster_id?: string;
   is_collapsed?: boolean;
   collapsed_count?: number;
   hoat_hoa: AnimationParams;
@@ -64,6 +65,21 @@ export interface GraphData {
   edges: EdgeEntity[];
 }
 
+export interface CompactClusterNode {
+  title: string;
+  role?: string;
+  summary: string;
+  schematic_template?: string;
+}
+
+export interface SpawnClusterPayload {
+  cluster_name: string;
+  cluster_theme?: 'indigo' | 'emerald' | 'amber' | 'blue' | 'purple' | 'rose';
+  sub_title?: string;
+  nodes: CompactClusterNode[];
+  connect_to_shared_infra?: Array<'db' | 'cache' | 'queue'>;
+  position?: { x: number; y: number };
+}
 
 export interface ExpandPayload {
   target_concept_slug: string;

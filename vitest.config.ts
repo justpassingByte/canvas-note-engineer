@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    fileParallelism: false,
     include: [
       'frontend/src/**/__tests__/**/*.test.ts',
       'backend/src/**/__tests__/**/*.test.ts'

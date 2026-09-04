@@ -30,45 +30,35 @@ function createMockNode(id: string, icon: any, x: number, y: number, label: stri
   };
 }
 
-describe('Cluster Engine - Automated Architecture Topic Grouping (2-Tier Nested Clusters)', () => {
+describe('Cluster Engine - Automated Architecture Topic Grouping (Clean Single-Level Clusters)', () => {
   it('should return empty array when nodes array is empty', () => {
     const clusters = computeClusters([]);
     expect(clusters).toEqual([]);
   });
 
-  it('should classify nodes into proper technical clusters and generate parent container', () => {
+  it('should create cluster bounds for groups with >= 2 nodes, skipping isolated single nodes', () => {
     const nodes: NodeEntity[] = [
-      createMockNode('node-tru-db', 'khoi_tru_database', 100, 100),
-      createMockNode('node-queue', 'hang_doi_message_queue', 400, 100),
-      createMockNode('node-tmdt', 'hop_kien_hang_domain', 700, 100),
-      createMockNode('node-su-co', 'su_co_canh_bao', 100, 400),
-      createMockNode('node-khien-khoa', 'khien_bao_ve', 400, 400)
+      createMockNode('node-khien-khoa', 'khien_bao_ve', 400, 400),
+      createMockNode('node-tranh-chap', 'tranh_chap_phan_nhanh', 400, 200),
+      createMockNode('node-su-co', 'su_co_canh_bao', 100, 400), // isolated 1 node
+      createMockNode('node-tmdt', 'hop_kien_hang_domain', 700, 100) // isolated 1 node
     ];
 
+    // Mặc định minNodes = 2: chỉ nhóm có >= 2 node mới vẽ viền cụm
     const clusters = computeClusters(nodes);
 
-    // 1 Parent Cluster (cum-idempotency-system) + 5 Sub-clusters/Independent clusters = 6 total
-    expect(clusters.length).toBe(6);
-
-    const clusterIds = clusters.map(c => c.id);
-    expect(clusterIds).toContain('cum-idempotency-system');
-    expect(clusterIds).toContain('cum-database-acid');
-    expect(clusterIds).toContain('cum-async-buffer');
-    expect(clusterIds).toContain('cum-tmdt-domain');
-    expect(clusterIds).toContain('cum-webhook-gateway');
-    expect(clusterIds).toContain('cum-idempotency-app');
-
-    // Verify parent cluster metadata
-    const parentCluster = clusters.find(c => c.id === 'cum-idempotency-system');
-    expect(parentCluster?.cap_do).toBe('me');
+    expect(clusters.length).toBe(1);
+    expect(clusters[0].id).toBe('cum-idempotency-app');
+    expect(clusters[0].nodeIds).toEqual(['node-khien-khoa', 'node-tranh-chap']);
+    expect(clusters[0].cap_do).toBe('doc_lap');
   });
 
-  it('should classify DDoS Protection node into independent Edge WAF cluster', () => {
+  it('should allow minNodes = 1 when all cluster topics need to be enumerated', () => {
     const nodes: NodeEntity[] = [
       createMockNode('node-ddos-waf', 'khien_bao_ve', 100, -200, 'HẠ TẦNG PHÒNG THỦ BIÊN')
     ];
 
-    const clusters = computeClusters(nodes);
+    const clusters = computeClusters(nodes, 1);
     expect(clusters.length).toBe(1);
 
     const ddosCluster = clusters[0];
@@ -78,32 +68,32 @@ describe('Cluster Engine - Automated Architecture Topic Grouping (2-Tier Nested 
     expect(ddosCluster.mau).toBe('#4338CA');
   });
 
-  it('should compute padded bounding boxes and centroid coordinates for clusters', () => {
+  it('should compute padded bounding boxes and centroid coordinates for 2-node clusters without nested outer cluster', () => {
     const nodes: NodeEntity[] = [
       createMockNode('node-queue', 'hang_doi_message_queue', 200, 300),
       createMockNode('node-cache', 'bo_nho_dem_cache', 500, 300)
     ];
 
     const clusters = computeClusters(nodes);
-    // Both belong to cum-async-buffer and are wrapped in parent cum-idempotency-system
-    expect(clusters.length).toBe(2);
+    // Both belong to cum-async-buffer, exactly 1 clean cluster (no mother cluster)
+    expect(clusters.length).toBe(1);
 
-    const subCluster = clusters.find(c => c.id === 'cum-async-buffer');
-    expect(subCluster).toBeDefined();
-    expect(subCluster?.nodeIds).toHaveLength(2);
+    const subCluster = clusters[0];
+    expect(subCluster.id).toBe('cum-async-buffer');
+    expect(subCluster.nodeIds).toHaveLength(2);
 
-    // Bounding box calculation for sub-cluster:
+    // Bounding box calculation:
     // minX = 200, maxX = 500 + 220 = 720
     // minY = 300, maxY = 300 + 145 = 445
-    // PADDING = 34, HEADER PADDING = 20
-    expect(subCluster!.bounds.minX).toBe(200 - 34);
-    expect(subCluster!.bounds.maxX).toBe(720 + 34);
-    expect(subCluster!.bounds.minY).toBe(300 - 34 - 20);
-    expect(subCluster!.bounds.maxY).toBe(445 + 34);
+    // PADDING = 28, HEADER PADDING = 22
+    expect(subCluster.bounds.minX).toBe(200 - 28);
+    expect(subCluster.bounds.maxX).toBe(720 + 28);
+    expect(subCluster.bounds.minY).toBe(300 - 28 - 22);
+    expect(subCluster.bounds.maxY).toBe(445 + 28);
 
-    expect(subCluster!.bounds.width).toBe((720 + 34) - (200 - 34));
-    expect(subCluster!.bounds.height).toBe((445 + 34) - (300 - 34 - 20));
-    expect(subCluster!.bounds.centerX).toBe(subCluster!.bounds.minX + subCluster!.bounds.width / 2);
-    expect(subCluster!.bounds.centerY).toBe(subCluster!.bounds.minY + subCluster!.bounds.height / 2);
+    expect(subCluster.bounds.width).toBe((720 + 28) - (200 - 28));
+    expect(subCluster.bounds.height).toBe((445 + 28) - (300 - 28 - 22));
+    expect(subCluster.bounds.centerX).toBe(subCluster.bounds.minX + subCluster.bounds.width / 2);
+    expect(subCluster.bounds.centerY).toBe(subCluster.bounds.minY + subCluster.bounds.height / 2);
   });
 });

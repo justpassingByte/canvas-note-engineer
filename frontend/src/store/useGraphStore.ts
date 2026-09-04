@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
+import { GraphData, NodeEntity, EdgeEntity, SpawnClusterPayload } from '../types/graphTypes.js';
 import { resolveNodeCollisions } from '../utils/nodePlacement.js';
 
 interface GraphState {
@@ -41,7 +41,8 @@ interface GraphState {
   zoomOut: () => void;
   resetView: () => void;
   fetchCurrentGraph: () => Promise<void>;
-  spawnNode: (conceptType: string, position?: { x: number; y: number }) => Promise<void>;
+  spawnNode: (conceptType: string, position?: { x: number; y: number }, options?: { title?: string; category?: string; description?: string }) => Promise<void>;
+  spawnCluster: (payload: SpawnClusterPayload) => Promise<void>;
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
@@ -220,18 +221,13 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
     const newCollapseState = !targetNode.is_collapsed;
 
-    // Tìm toàn bộ các node con trực tiếp và hậu duệ
-    const directChildIds = new Set(graph.nodes.filter(n => n.parent_id === nodeId).map(n => n.id));
-
     // Cập nhật UI lạc quan tức thì (0 token, 0 delay)
+    // CHỈ thay đổi is_collapsed của chính targetNode!
+    // Tuyệt đối không cascade gán is_collapsed = true cho các node con,
+    // vì SvgGridCanvas tự động lọc hiển thị dựa trên toàn bộ chuỗi tổ tiên (ancestor chain).
     const updatedNodes = graph.nodes.map(n => {
       if (n.id === nodeId) {
         return { ...n, is_collapsed: newCollapseState };
-      }
-      // Nếu thu gọn node cha: các node con trực tiếp cũng được đặt is_collapsed = true
-      // để khi mở lại node cha, hệ thống mở theo từng lớp phân cấp (layer-by-layer)
-      if (newCollapseState && directChildIds.has(n.id)) {
-        return { ...n, is_collapsed: true };
       }
       return n;
     });
@@ -320,7 +316,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     }
   },
 
-  spawnNode: async (conceptType: string, position?: { x: number; y: number }) => {
+  spawnNode: async (conceptType: string, position?: { x: number; y: number }, options?: { title?: string; category?: string; description?: string }) => {
     set({ isLoading: true });
     try {
       const res = await fetch('/api/graph/spawn', {
@@ -328,7 +324,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           concept_type: conceptType,
-          position
+          position,
+          title: options?.title,
+          category: options?.category,
+          description: options?.description
         })
       });
 
@@ -349,6 +348,38 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
     } catch (err) {
       console.error('Lỗi khi spawn node:', err);
+      set({ isLoading: false });
+    }
+  },
+
+  spawnCluster: async (payload: SpawnClusterPayload) => {
+    set({ isLoading: true });
+    try {
+      const res = await fetch('/api/graph/spawn-cluster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.spawned) {
+          const safeNodes = resolveNodeCollisions(data.graph.nodes);
+          // Focus vào node đầu tiên của cụm vừa sinh
+          const firstClusterNode = safeNodes.find(n => n.cluster_id === data.cluster_id);
+          set({
+            graph: { ...data.graph, nodes: safeNodes },
+            selectedNodeId: firstClusterNode?.id || get().selectedNodeId,
+            isLoading: false,
+            isDrawerOpen: true
+          });
+        } else {
+          alert(data.message);
+          set({ isLoading: false });
+        }
+      }
+    } catch (err) {
+      console.error('Lỗi khi spawn cluster:', err);
       set({ isLoading: false });
     }
   }

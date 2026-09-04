@@ -65,3 +65,18 @@ Nếu Backend (Port 3001) chưa hoạt động khi gọi các lệnh mở rộng
 1. Dùng lệnh `npm run dev:backend` hoặc `npm run dev:all` chạy ở chế độ daemon nền (`IsDaemon: true`).
 2. Xác nhận cổng 3001 phản hồi HTTP 200 tại `/api/health`.
 3. Tiếp tục thực thi tác vụ `/canvas`.
+
+---
+
+## 3. Quy Chuẩn Đặt Tên & Sinh Nội Dung Node / Edge (Bắt Buộc Cho Mọi Agent)
+
+Khi sinh (spawn) hoặc mở rộng (expand) đồ thị kiến trúc:
+1. **Nhãn Phân Tầng Node (`nhan_buoc`)**:
+   - BẮT BUỘC dùng **Tầng Công Nghệ (Architectural Layer)** viết hoa (ví dụ: `GATEWAY / INGRESS`, `COMPUTE / CONCURRENCY`, `SECURITY / IDEMPOTENCY`, `STORAGE / ACID DB`, `ASYNC / QUEUE BUFFER`, `CACHE / DISTRIBUTED LOCK`, `EDGE / WAF RATE LIMIT`, `OBSERVABILITY / AUDIT LOG`, `DOMAIN / E-COMMERCE`).
+   - **CẤM TUYỆT ĐỐI**: Không dùng tiền tố số thứ tự bước tuần tự như `BƯỚC 1 //`, `BƯỚC 2 //`, `Step 1:`, `1.`. Đồ thị kiến trúc là đồ thị DAG đa cha đa nhánh, không phải danh sách tuyến tính.
+2. **Nhãn Dây Liên Kết (`edges.nhan`)**:
+   - BẮT BUỘC dùng **Luồng Giao Thức Kỹ Thuật (Technical Protocol Flow)** (ví dụ: `Webhook Timeout Retry`, `Atomic Lock Check`, `ACID Write / Unique Index`, `Async Event Produce`, `Async Audit Stream`, `Distributed Lock Acquire`).
+   - **CẤM TUYỆT ĐỐI**: Không thêm số thứ tự như `1. `, `2. `, `3.1. ` trên dây nối.
+3. **Chặn Trùng Lặp Thành Phần (Zero Duplication)**:
+   - Tái sử dụng các trụ hạ tầng cốt lõi (`node-tru-db`, `node-cache`, `node-queue`, `node-audit-log`, `node-ddos-waf`) bằng quan hệ đa cha (multi-parent DAG) thay vì tạo node trùng.
+

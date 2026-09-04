@@ -6,7 +6,9 @@ import Database from 'better-sqlite3';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-const DB_PATH = path.resolve(process.cwd(), 'data', 'knowledge.db');
+const BACKEND_DB = path.resolve(process.cwd(), 'backend', 'data', 'knowledge.db');
+const ROOT_DB = path.resolve(process.cwd(), 'data', 'knowledge.db');
+const DB_PATH = fs.existsSync(BACKEND_DB) ? BACKEND_DB : ROOT_DB;
 
 async function isServerAlive(url) {
   try {

@@ -116,6 +116,9 @@ export class SQLiteKnowledgeClient {
     }
 
     for (const node of newNodes) {
+      if (node.nhan_buoc) {
+        node.nhan_buoc = node.nhan_buoc.replace(/^(bước|buoc|step)\s*[\d\.]+\s*(\/\/|:|-)?\s*/i, '').trim();
+      }
       if (!graph.nodes.some(n => n.id === node.id)) {
         if (parentNodeId) {
           node.parent_id = parentNodeId;
@@ -125,6 +128,9 @@ export class SQLiteKnowledgeClient {
     }
 
     for (const edge of newEdges) {
+      if (edge.nhan) {
+        edge.nhan = edge.nhan.replace(/^(\d+(\.\d+)*)\s*[:.-]?\s*/i, '').replace(/^(bước|buoc|step)\s*[\d\.]+\s*[:.-]?\s*/i, '').trim();
+      }
       if (!graph.edges.some(e => e.from === edge.from && e.to === edge.to)) {
         graph.edges.push(edge);
       }
@@ -148,10 +154,6 @@ export class SQLiteKnowledgeClient {
     const childNodes = graph.nodes.filter(n => n.parent_id === nodeId);
     parent.is_collapsed = isCollapsed;
     parent.collapsed_count = childNodes.length;
-
-    for (const child of childNodes) {
-      child.is_collapsed = isCollapsed;
-    }
 
     this.saveGraph(graph);
     return graph;

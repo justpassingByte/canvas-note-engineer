@@ -38,6 +38,7 @@ export interface NodeEntity {
   toa_do: { x: number; y: number };
   tam: { x: number; y: number };
   fully_explored: boolean;
+  cluster_id?: string;
   parent_id?: string;
   is_collapsed?: boolean;
   collapsed_count?: number;
@@ -64,3 +65,28 @@ export interface GraphData {
   edges: EdgeEntity[];
 }
 
+export interface CompactClusterNode {
+  title: string;
+  role?: string;
+  summary: string;
+  schematic_template?: string;
+}
+
+export interface SpawnClusterPayload {
+  cluster_name: string;
+  cluster_theme?: 'indigo' | 'emerald' | 'amber' | 'blue' | 'purple' | 'rose';
+  sub_title?: string;
+  nodes: CompactClusterNode[];
+  connect_to_shared_infra?: Array<'db' | 'cache' | 'queue'>;
+  position?: { x: number; y: number };
+}
+
+export interface ExpandPayload {
+  target_concept_slug: string;
+  existing_node_slugs: string[];
+}
+
+export interface PrunePayload {
+  node_id: string;
+  action: 'collapse' | 'expand' | 'delete_permanently';
+}

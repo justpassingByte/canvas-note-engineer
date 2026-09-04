@@ -17,3 +17,16 @@ When the user starts a message with any of the following slash commands, immedia
 - `/bundle [args]`: Invoke skill `bundle-inspector` to audit dist/assets size and package dependencies.
 - `/memory [args]`: Invoke MCP server `memory` to read or store knowledge graph entities.
 - `/canvas [args]`: Invoke skill `canvas-engineer` to manage, open, query, expand, or export the Engineering Notebook architecture canvas.
+
+# Architectural Knowledge Graph Generation Guidelines
+
+When generating, expanding, or modifying architecture nodes and edges in this repository:
+1. **Node Badge / Category (`nhan_buoc`)**:
+   - MUST BE an Architectural Layer / Category uppercase (e.g. `GATEWAY / INGRESS`, `COMPUTE / CONCURRENCY`, `SECURITY / IDEMPOTENCY`, `STORAGE / ACID DB`, `ASYNC / QUEUE BUFFER`, `CACHE / DISTRIBUTED LOCK`, `EDGE / WAF RATE LIMIT`, `OBSERVABILITY / AUDIT LOG`, `DOMAIN / E-COMMERCE`).
+   - **STRICT PROHIBITION**: NEVER use linear step numbers or prefixes such as "BƯỚC 1 //", "BƯỚC 2 //", "Step 1:", "1.", etc. The architecture graph is a Directed Acyclic Graph (DAG) with multiple branches and multiple parents, not a single sequential step list.
+2. **Edge Label (`edges.nhan`)**:
+   - MUST BE a Technical Protocol Flow (e.g. `Webhook Timeout Retry`, `Atomic Lock Check`, `ACID Write / Unique Index`, `Async Event Produce`, `Async Audit Stream`, `mTLS Delegation Token`).
+   - **STRICT PROHIBITION**: NEVER use numeric ordering prefixes (e.g., "1. ", "2. ", "3.1. ") on connecting edges.
+3. **No Duplicate Components (Zero-Duplicate Guard)**:
+   - When introducing audit logging, caching, database persistence, queue buffering, or WAF, reuse existing infrastructure nodes (`node-tru-db`, `node-cache`, `node-queue`, `node-audit-log`, `node-ddos-waf`) by creating multi-parent edges rather than duplicating nodes.
+

@@ -12,7 +12,6 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
   const {
     selectedNodeId,
     selectNode,
-    expandNode,
     toggleCollapse,
     graph,
     searchQuery,
@@ -40,18 +39,28 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
   // Chế độ ôn tập: ẩn tiêu đề thành [ ? ] nếu chưa mở
   const isMaskedInRecall = isRecallMode && !revealedRecallNodes.includes(node.id);
 
-  // Đếm toàn bộ số lượng node hậu duệ phân cấp (0 token)
-  const countAllDescendants = (nodeId: string): number => {
-    if (!graph) return 0;
-    const directChildren = graph.nodes.filter(n => n.parent_id === nodeId);
-    let count = directChildren.length;
-    for (const child of directChildren) {
-      count += countAllDescendants(child.id);
-    }
-    return count;
-  };
+  // Đếm toàn bộ số lượng node hậu duệ phân cấp trong đồ thị DAG (0 token, chống lặp chu trình)
+  const allDescendantsSet = React.useMemo(() => {
+    if (!graph) return new Set<string>();
+    const visited = new Set<string>();
 
-  const totalDescendants = countAllDescendants(node.id);
+    const traverse = (currId: string) => {
+      const children = graph.nodes.filter(
+        n => (n.parent_id === currId || graph.edges.some(e => e.from === currId && e.to === n.id)) && n.id !== currId
+      );
+      for (const child of children) {
+        if (!visited.has(child.id)) {
+          visited.add(child.id);
+          traverse(child.id);
+        }
+      }
+    };
+
+    traverse(node.id);
+    return visited;
+  }, [graph, node.id]);
+
+  const totalDescendants = allDescendantsSet.size;
   const hasChildren = totalDescendants > 0;
   const isCollapsed = node.is_collapsed || false;
 
@@ -62,15 +71,6 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
     }
     // 100% CHỈ mở Drawer và highlight node (0 token, 0 độ trễ)
     selectNode(node.id);
-  };
-
-  const handleExpandClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (node.fully_explored) {
-      alert(`Node '${node.tieu_de}' đã được khai phá toàn bộ. Không tốn thêm token nào!`);
-      return;
-    }
-    expandNode(node.id);
   };
 
   const handleCollapseClick = (e: React.MouseEvent) => {
@@ -102,30 +102,6 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
         <div className={`hop-icon-pod ${getPodVariantClass()}`}>
           <LucideIconPod type={node.bieu_tuong} />
         </div>
-
-        {/* Nút mở rộng [+] hoặc [✓] đính trên góc Icon Pod */}
-        <button
-          className={`nut-mo-rong-pod ${node.fully_explored ? 'da-kham-pha' : ''}`}
-          onClick={handleExpandClick}
-          title={node.fully_explored ? 'Đã khai phá toàn bộ' : 'Mở rộng nhánh mới bằng AI'}
-        >
-          {node.fully_explored ? '✓' : '+'}
-        </button>
-
-        {/* Huy hiệu Thu gọn / Bung ra nếu node có nhánh con */}
-        {hasChildren && (
-          <button
-            className={`badge-thu-gon ${isCollapsed ? 'dang-dong' : ''}`}
-            onClick={handleCollapseClick}
-            title={
-              isCollapsed
-                ? `Bung mở lớp tiếp theo (+${totalDescendants} nodes)`
-                : `Thu gọn toàn bộ nhánh hậu duệ (-${totalDescendants} nodes)`
-            }
-          >
-            {isCollapsed ? `+${totalDescendants}` : `-${totalDescendants}`}
-          </button>
-        )}
       </div>
 
       <div className="the-nhan-duoi">
@@ -144,6 +120,26 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
             className="nhan-tom-tat"
             dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(node.tom_tat) }}
           />
+        )}
+
+        {/* Thanh Trạng Thái Thu Gọn (Collapse Pill) - Rõ ràng, trực quan, không gây nhầm lẫn */}
+        {hasChildren && (
+          <div className="chan-the-thu-gon">
+            <button
+              className={`nut-thu-gon-pill ${isCollapsed ? 'dang-thu-gon' : 'dang-mo'}`}
+              onClick={handleCollapseClick}
+              title={
+                isCollapsed
+                  ? `Bấm để mở hiển thị ${totalDescendants} node con`
+                  : `Bấm để ẩn ${totalDescendants} node con`
+              }
+            >
+              <span className="icon-mui-ten-pill">{isCollapsed ? '▸' : '▾'}</span>
+              <span className="chu-thu-gon-pill">
+                {isCollapsed ? `Mở ${totalDescendants} node con` : `Thu gọn (${totalDescendants})`}
+              </span>
+            </button>
+          </div>
         )}
       </div>
     </div>

@@ -55,10 +55,30 @@ app.post('/api/graph/expand', async (req, res) => {
 
 app.post('/api/graph/spawn', async (req, res) => {
   try {
-    const { concept_type, target_concept_slug, position } = req.body;
+    const { concept_type, target_concept_slug, position, title, category, description } = req.body;
     const result = await toolHandlers.spawnConceptNode({
       concept_type: concept_type || 'ddos',
       target_concept_slug,
+      position,
+      title,
+      category,
+      description
+    });
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/graph/spawn-cluster', async (req, res) => {
+  try {
+    const { cluster_name, cluster_theme, sub_title, nodes, connect_to_shared_infra, position } = req.body;
+    const result = await toolHandlers.spawnConceptCluster({
+      cluster_name: cluster_name || 'Phân Hệ Kiến Trúc Mới',
+      cluster_theme,
+      sub_title,
+      nodes: nodes || [],
+      connect_to_shared_infra,
       position
     });
     res.json(result);

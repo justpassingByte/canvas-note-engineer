@@ -116,48 +116,7 @@
   color: var(--mau-bo-nho-cache);
 }
 
-/* Nút mở rộng nhánh [+] đính trên góc Icon Pod */
-.nut-mo-rong-pod {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid #1A1D24;
-  background: #ECFDF5;
-  color: #059669;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 1.5px 1.5px 0px #1A1D24;
-  transition: all 0.12s ease;
-  z-index: 10;
-  line-height: 1;
-  padding: 0;
-}
-
-.nut-mo-rong-pod:hover:not(.da-kham-pha) {
-  background: #059669;
-  color: #FFFFFF;
-  transform: scale(1.12);
-}
-
-.nut-mo-rong-pod.da-kham-pha {
-  background: #E5E7EB;
-  color: #059669;
-  border-color: #9CA3AF;
-  cursor: default;
-  transform: none;
-  box-shadow: none;
-  font-size: 11px;
-}
-
-/* Badge số đếm khi nhánh con bị thu gọn (Collapse) */
+/* Badge số đếm khi nhánh con bị thu gọn (giữ tương thích) */
 .badge-thu-gon {
   position: absolute;
   bottom: -2px;
@@ -190,6 +149,66 @@
 
 .badge-thu-gon.dang-dong:hover {
   background: #B45309;
+}
+
+/* THANH TRẠNG THÁI THU GỌN (COLLAPSE PILL) CHÂN NODE CARD */
+.chan-the-thu-gon {
+  margin-top: 9px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px dashed rgba(26, 29, 36, 0.15);
+  padding-top: 7px;
+}
+
+.nut-thu-gon-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 1.5px solid;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  line-height: 1.2;
+}
+
+.nut-thu-gon-pill .icon-mui-ten-pill {
+  font-size: 9px;
+  line-height: 1;
+}
+
+/* Trạng thái đang thu gọn (Ẩn node con) - Mời người dùng bấm để bung */
+.nut-thu-gon-pill.dang-thu-gon {
+  background: #FEF3C7;
+  color: #B45309;
+  border-color: #F59E0B;
+  box-shadow: 1.5px 2px 0px #D97706;
+}
+
+.nut-thu-gon-pill.dang-thu-gon:hover {
+  background: #FDE68A;
+  color: #92400E;
+  transform: translateY(-1px);
+  box-shadow: 1.5px 3px 0px #D97706;
+}
+
+/* Trạng thái đang mở - Tinh gọn, tối giản */
+.nut-thu-gon-pill.dang-mo {
+  background: #F3F4F6;
+  color: #4B5563;
+  border-color: #D1D5DB;
+  box-shadow: 1px 1.5px 0px rgba(0, 0, 0, 0.1);
+}
+
+.nut-thu-gon-pill.dang-mo:hover {
+  background: #E5E7EB;
+  color: #1F2937;
+  border-color: #9CA3AF;
+  transform: translateY(-1px);
 }
 
 /* Thẻ nhãn giải thích bên dưới */
@@ -226,4 +245,56 @@
   font-size: 11px;
   color: var(--net-muc-phu);
   line-height: 1.4;
+}
+
+/* Tooltip thuật ngữ kỹ thuật trong Node Card */
+.nhan-tom-tat u,
+.cum-thuc-the u {
+  text-decoration: underline dotted #6366f1;
+  text-underline-offset: 3px;
+  cursor: help;
+  position: relative;
+  font-style: normal;
+  color: #4338ca;
+  font-weight: 600;
+}
+
+.nhan-tom-tat u:hover,
+.cum-thuc-the u:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+  border-radius: 2px;
+}
+
+.nhan-tom-tat u[data-tooltip]::after,
+.cum-thuc-the u[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: #1e1b4b;
+  color: #f5f3ff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  white-space: normal;
+  width: max-content;
+  max-width: 240px;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(165, 180, 252, 0.3);
+}
+
+.nhan-tom-tat u[data-tooltip]:hover::after,
+.cum-thuc-the u[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }

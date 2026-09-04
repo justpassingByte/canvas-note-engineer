@@ -36,16 +36,54 @@ export const TECHNICAL_DICTIONARY: Record<string, string> = {
   "cache aside": "Mô hình đọc cache trước: Nếu miss thì đọc database rồi ghi ngược lại vào cache.",
   "cache hit": "Dữ liệu được tìm thấy ngay trên bộ nhớ RAM đệm, phản hồi tức thì trong mili-giây.",
   "cache miss": "Dữ liệu không có trên RAM, hệ thống buộc phải đọc đĩa cứng Database mất nhiều thời gian hơn.",
-  "eventual consistency": "Tính nhất quán cuối cùng: Dữ liệu giữa các node phân tán có thể lệch nhau vài giây nhưng chắc chắn sẽ đồng nhất."
+  "eventual consistency": "Tính nhất quán cuối cùng: Dữ liệu giữa các node phân tán có thể lệch nhau vài giây nhưng chắc chắn sẽ đồng nhất.",
+
+  // Edge Defense & Rate Limiting (Mới)
+  "waf": "Web Application Firewall: Lá chắn tường lửa tầng ứng dụng L7 phát hiện và chặn đứng tấn công độc hại trước khi đến Gateway.",
+  "ddos": "Distributed Denial of Service: Tấn công từ chối dịch vụ phân tán dội hàng triệu request ảo nhằm đánh sập máy chủ.",
+  "rate limiting": "Kỹ thuật kiểm soát lưu lượng request từ mỗi IP hoặc User trong một đơn vị thời gian để bảo vệ máy chủ.",
+  "rate limit": "Giới hạn tần suất: Ngưỡng trần số lượng yêu cầu được phép gửi trong một khung thời gian xác định.",
+  "token bucket": "Thuật toán xô thẻ: Cho phép xử lý lưu lượng bùng phát tức thời (burst traffic) nếu xô còn thẻ tích lũy.",
+  "sliding window": "Thuật toán cửa sổ trượt: Đếm số lượng request chính xác theo thời gian thực trượt, triệt tiêu lỗi biên thời gian.",
+  "leaky bucket": "Thuật toán xô rò rỉ: Rót request vào xô và xử lý đầu ra với tốc độ cố định hoàn toàn phẳng.",
+
+  // Zero-Trust & Security Auth (Mới)
+  "zero-trust": "Kiến trúc an ninh Zero-Trust: Nguyên tắc 'Never Trust, Always Verify' - xác thực mọi truy cập từ trong lẫn ngoài mạng.",
+  "zero trust": "Kiến trúc an ninh Zero-Trust: Nguyên tắc 'Never Trust, Always Verify' - xác thực mọi truy cập từ trong lẫn ngoài mạng.",
+  "mtls": "Mutual TLS: Giao thức mã hóa 2 chiều, cả client và server đều phải trình chứng chỉ số X.509 để xác thực lẫn nhau.",
+  "pep": "Policy Enforcement Point: Điểm thực thi chính sách ở tầng biên, kiểm tra token và chuyển tiếp hoặc chặn yêu cầu.",
+  "pdp": "Policy Decision Point: Máy chủ trung tâm thẩm định quyền hạn người dùng dựa trên luật phân quyền RBAC/ABAC.",
+  "jwt": "JSON Web Token: Chuỗi mã hóa ký số chứa danh tính người dùng và quyền hạn truy cập truyền qua HTTP Header.",
+  "token revocation list": "Danh sách thu hồi token: Danh sách đen (blacklist) trên RAM Redis lưu các JWT bị vô hiệu hóa trước hạn.",
+  "lateral movement": "Hành vi leo thang di chuyển ngang của hacker bên trong mạng nội bộ sau khi chiếm được 1 máy chủ biên.",
+
+  // Audit Log & Cryptographic Ledger (Mới)
+  "audit log": "Nhật ký kiểm toán: Bản ghi bất biến ghi chép chi tiết ai đã thao tác gì, vào thời điểm nào và thay đổi ra sao.",
+  "merkle tree": "Cây Merkle: Cấu trúc cây mã hóa băm nhị phân giúp xác thực tính toàn vẹn của hàng triệu bản ghi chỉ bằng Merkle Root.",
+  "hmac sha-256": "Thuật toán băm có khóa bí mật (Hash-based Message Authentication Code) dùng SHA-256 đảm bảo tính chống giả mạo.",
+  "hmac": "Mã xác thực thông điệp có khóa bí mật, đảm bảo dữ liệu không bị sửa đổi trên đường truyền.",
+  "hash chain": "Chuỗi băm: Mỗi bản ghi mới chứa mã băm của bản ghi trước đó, hễ sửa 1 ký tự thì toàn bộ chuỗi bị gãy vụn.",
+  "append-only": "Mô hình chỉ cho phép ghi nối tiếp vào cuối file/bảng, nghiêm cấm tuyệt đối thao tác sửa (UPDATE) hoặc xóa (DELETE).",
+  "tamper-proof": "Khả năng chống can thiệp trái phép: Mọi hành vi sửa đổi dữ liệu dù là 1 byte đều lập tức bị phát hiện."
 };
 
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Tạo regex tổng hợp quét tất cả từ khóa, ưu tiên từ dài trước
+const SORTED_KEYS = Object.keys(TECHNICAL_DICTIONARY).sort((a, b) => b.length - a.length);
+const KEYWORD_REGEX = new RegExp(`\\b(${SORTED_KEYS.map(escapeRegex).join('|')})\\b`, 'gi');
+
 /**
- * Tự động gắn tooltip cho các thẻ <u>Thuật ngữ</u> chưa có data-tooltip
- * 100% cục bộ trên client, 0 token, 0 độ trễ.
+ * Tự động gắn tooltip cho các thẻ <u>Thuật ngữ</u> và tự động phát hiện từ khóa trong text thuần.
+ * Chạy 100% cục bộ trên client, 0 token, 0 độ trễ (Hybrid Zero-Token).
  */
 export function enrichHtmlWithTooltips(htmlText: string): string {
   if (!htmlText) return '';
-  return htmlText.replace(/<u(?:\s+data-tooltip="([^"]*)")?>(.*?)<\/u>/gi, (match, existTooltip, content) => {
+
+  // Bước 1: Làm giàu các thẻ <u> đã có sẵn trong văn bản
+  const step1 = htmlText.replace(/<u(?:\s+data-tooltip="([^"]*)")?>(.*?)<\/u>/gi, (match, existTooltip, content) => {
     if (existTooltip) {
       return match;
     }
@@ -56,4 +94,40 @@ export function enrichHtmlWithTooltips(htmlText: string): string {
     }
     return match;
   });
+
+  // Bước 2: Tự động quét từ khóa trong các đoạn văn bản thuần bên ngoài thẻ HTML
+  const tokens = step1.split(/(<[^>]+>)/g);
+  let inUTag = false;
+
+  const enrichedTokens = tokens.map((token) => {
+    if (!token) return '';
+
+    // Kiểm tra nếu là thẻ HTML
+    if (token.startsWith('<') && token.endsWith('>')) {
+      const lower = token.toLowerCase();
+      if (lower.startsWith('<u ') || lower === '<u>') {
+        inUTag = true;
+      } else if (lower === '</u>') {
+        inUTag = false;
+      }
+      return token;
+    }
+
+    // Nếu đang nằm trong thẻ <u>, không bọc lồng thêm thẻ <u> khác
+    if (inUTag) {
+      return token;
+    }
+
+    // Quét và bọc tự động từ khóa chưa có thẻ
+    return token.replace(KEYWORD_REGEX, (match) => {
+      const cleanKey = match.trim().toLowerCase();
+      const definition = TECHNICAL_DICTIONARY[cleanKey];
+      if (definition) {
+        return `<u data-tooltip="${definition}">${match}</u>`;
+      }
+      return match;
+    });
+  });
+
+  return enrichedTokens.join('');
 }
