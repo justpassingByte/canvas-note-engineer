@@ -878,8 +878,12 @@ export const SvgGridCanvas: React.FC = () => {
           </div>
           {hoveredEdge.explanation && (
             <div
-              style={{ color: '#E5E7EB', fontSize: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.15)', paddingTop: '5px', marginTop: '4px', lineHeight: 1.4 }}
-              dangerouslySetInnerHTML={{ __html: hoveredEdge.explanation }}
+              style={{ color: '#E5E7EB', fontSize: '10.5px', borderTop: '1px solid rgba(255, 255, 255, 0.15)', paddingTop: '5px', marginTop: '4px', lineHeight: 1.45 }}
+              dangerouslySetInnerHTML={{
+                __html: hoveredEdge.explanation
+                  .split('<u').join('<span style="color: #FDE047; font-weight: 700; text-decoration: underline; text-decoration-style: dashed;"')
+                  .split('</u>').join('</span>')
+              }}
             />
           )}
           <div style={{ color: '#6B7280', fontSize: '9px', marginTop: '4px', fontStyle: 'italic' }}>

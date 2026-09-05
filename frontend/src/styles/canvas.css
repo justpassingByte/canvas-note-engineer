@@ -55,6 +55,14 @@
   letter-spacing: -0.2px;
 }
 
+/* Styling cho u tags bên trong Dark Tooltip & Hover Cards */
+.card-hover-dark u,
+div[style*="background: rgb(26, 29, 36)"] u,
+div[style*="background: #1A1D24"] u {
+  color: #FDE047 !important;
+  border-bottom: 1px dashed #FDE047 !important;
+}
+
 .nhan-dem-node {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
