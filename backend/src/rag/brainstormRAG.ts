@@ -416,8 +416,14 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             title: label,
             summary: 'Lưu trữ ACID bền vững, quản lý Quota, Budget và Redemption Ledger với khóa dòng Pessimistic Lock.',
             infra_type: 'postgres',
-            schematic_template: 'luu_tru_acid',
+            schematic_template: 'table_row_lock',
             schematic_params: { db: 'POSTGRESQL', lock: 'ROW LOCK FOR UPDATE', isolation: 'SERIALIZABLE' },
+            incident_dossier: {
+              boi_canh_tai: '0h Flash Voucher: 10.000 requests/giây cùng tranh chấp áp 1 mã khuyến mãi toàn sàn.',
+              nguyen_nhan_goc_re: 'Pessimistic Row-Level Lock giữ connection quá 150ms gây cạn kiệt Connection Pool (Starvation).',
+              ban_kinh_anh_huong: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
+              chien_luoc_phong_thu: 'Khóa theo thứ tự ID tăng dần + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
+            },
             ban_chat: 'Cơ sở dữ liệu quan hệ PostgreSQL đóng vai trò Single Source of Truth cho definitions, quota, budget, reservation và immutable redemption ledger. Toàn bộ thao tác ghi tài chính đều bọc trong Transaction và khóa dòng (SELECT ... FOR UPDATE) theo thứ tự ID cố định chống deadlock.',
             ca_thuc_te: [
               'Khóa dòng record promotion theo thứ tự ID bảng tăng dần khi có 10.000 request áp mã Flash Voucher 0h.',
@@ -429,10 +435,10 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               'Cạn kiệt Connection Pool nếu transaction giữ khóa dòng quá lâu (> 150ms).'
             ],
             chuoi_sup_do: [
-              '1. Bão request thanh toán dồn dập tranh nhau khóa dòng cùng 1 voucher.',
-              '2. Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
-              '3. Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
-              '4. Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
+              '1. [Trigger]: 10.000 request dồn dập tranh nhau khóa dòng cùng 1 voucher lúc 0h.',
+              '2. [Saturation]: Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
+              '3. [Failure Cascade]: Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
+              '4. [Blast Radius]: Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
             ],
             trac_nghiem: {
               cau_hoi: 'Tại sao PostgreSQL được chọn làm Source of Truth duy nhất cho Quota và Budget thay vì Redis?',
@@ -553,8 +559,14 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               title: label,
               summary: 'Bộ tính toán giảm giá thuần Domain (0 I/O), thực thi Stacking Policy, Exclusive Matrix và Split Allocation.',
               is_public_interface: false,
-              schematic_template: 'default',
+              schematic_template: 'split_allocation',
               schematic_params: { engine: 'PURE DOMAIN ENGINE', io: '0 I/O DETERMINISTIC', math: 'EXACT SPLIT ALLOCATION' },
+              incident_dossier: {
+                boi_canh_tai: 'Đêm Flash Sale 11.11: Giỏ hàng 15 món từ 4 gian hàng (Multi-Seller Cart), áp Voucher sàn -100k.',
+                nguyen_nhan_goc_re: 'Lỗi làm tròn Float (Penny Rounding): Chia 100k cho 3 seller dư 1đ (33.333,33đ) gây lệch sổ cái đối soát.',
+                ban_kinh_anh_huong: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm.',
+                chien_luoc_phong_thu: 'Thuật toán Largest Remainder + Minor-Unit BigInt dồn phần dư 1đ vào seller có giá trị đơn cao nhất.'
+              },
               ban_chat: 'Pure Domain Engine là trái tim thuật toán độc lập 100% với DB/Redis/Network. Nhận PriceableCheckoutSnapshot và danh sách PromotionDefinition để đánh giá điều kiện, ma trận stacking và phân bổ giảm giá đa người bán (Multi-Seller Split Allocation).',
               ca_thuc_te: [
                 'Tính toán phân bổ voucher sàn 50.000đ cho 3 gian hàng khác nhau bảo toàn chính xác tổng số tiền (Penny Rounding Balance).',
@@ -565,10 +577,10 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
                 'Sai lệch phân bổ chiết khấu giữa các seller dẫn đến khiếu nại tài chính.'
               ],
               chuoi_sup_do: [
-                '1. Giỏ hàng chứa 20 mặt hàng từ 5 seller với 6 mã voucher khác nhau.',
-                '2. Thuật toán phân bổ gặp lỗi chia lẻ tiền tệ không bảo toàn tổng.',
-                '3. Một seller bị trừ quá số tiền chiết khấu thực tế phải chịu.',
-                '4. Tranh chấp settlement giữa sàn thương mại và người bán hàng.'
+                '1. [Trigger]: Giỏ hàng chứa 20 mặt hàng từ 5 seller với 6 mã voucher khác nhau.',
+                '2. [Calculation Bug]: Thuật toán phân bổ gặp lỗi chia lẻ tiền tệ không bảo toàn tổng.',
+                '3. [Failure Cascade]: Một seller bị trừ quá số tiền chiết khấu thực tế phải chịu.',
+                '4. [Blast Radius]: Tranh chấp settlement giữa sàn thương mại và người bán hàng.'
               ],
               trac_nghiem: {
                 cau_hoi: 'Lợi ích cốt lõi của việc thiết kế Promotion Engine dạng Pure Domain Service (0 I/O) là gì?',

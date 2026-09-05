@@ -8,12 +8,15 @@ export type NodeBadgeType =
   | 'bo_nho_dem_cache'
   | 'ghi_chep_so_sach';
 
-export interface ReflexQuiz {
+export interface ReflexQuizItem {
   cau_hoi: string;
   lua_chon: [string, string];
   dung: 0 | 1;
   giai_thich: string;
+  phan_tang?: 'Kiến trúc cốt lõi' | 'Tương tranh cao điểm' | 'Lan truyền sự cố' | 'Đánh đổi kỹ thuật' | 'Vận hành & Giám sát' | string;
 }
+
+export type ReflexQuiz = ReflexQuizItem | ReflexQuizItem[];
 
 export type SchematicArchetype =
   | 'pipeline_filter'
@@ -60,6 +63,13 @@ export interface AnimationParams {
   schematic_data?: SchematicData;
 }
 
+export interface IncidentDossier {
+  boi_canh_tai: string;        // Traffic Scale: e.g. 50.000 req/s, P99 Latency
+  nguyen_nhan_goc_re: string;   // RCA
+  ban_kinh_anh_huong: string;   // Blast Radius
+  chien_luoc_phong_thu: string; // Defense & Mitigation Strategy
+}
+
 export interface NodeDetails {
   phan_loai: string;
   tieu_de: string;
@@ -68,6 +78,7 @@ export interface NodeDetails {
   ca_thuc_te: string[];
   rui_ro: string[];
   chuoi_sup_do?: string[];
+  incident_dossier?: IncidentDossier;
 }
 
 export interface NodeEntity {
@@ -95,6 +106,7 @@ export interface NodeEntity {
   hoat_hoa: AnimationParams;
   chi_tiet: NodeDetails;
   trac_nghiem: ReflexQuiz;
+  trac_nghiem_list?: ReflexQuizItem[];
 }
 
 export interface EdgeEntity {
@@ -126,7 +138,9 @@ export interface CompactClusterNode {
   ca_thuc_te?: string[];
   rui_ro?: string[];
   chuoi_sup_do?: string[];
+  incident_dossier?: IncidentDossier;
   trac_nghiem?: ReflexQuiz;
+  trac_nghiem_list?: ReflexQuizItem[];
   is_public_interface?: boolean;
   infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker';
   sub_cluster_id?: string;

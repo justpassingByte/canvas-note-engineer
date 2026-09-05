@@ -35,7 +35,10 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
     expect(result.spawned).toBe(true);
     expect(result.node?.chi_tiet?.phan_loai).toBe('CỔNG BẢO VỆ BIÊN & CHỐNG DDOS');
     expect(result.node?.chi_tiet?.ca_thuc_te).toHaveLength(2);
-    expect(result.node?.trac_nghiem?.cau_hoi).toContain('Rate Limiting');
+    const quizText = Array.isArray(result.node?.trac_nghiem)
+      ? result.node?.trac_nghiem[0]?.cau_hoi
+      : (result.node?.trac_nghiem as any)?.cau_hoi;
+    expect(quizText).toContain('Rate Limiting');
   });
 
   it('should support targeted attachment and enforce Saturation Lock when target slug is specified', async () => {

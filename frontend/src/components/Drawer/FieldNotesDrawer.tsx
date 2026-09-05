@@ -340,12 +340,34 @@ export const FieldNotesDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Khối 3: Ca sự cố thực chiến */}
+        {/* Khối 3: Production War Stories & Incident Dossier */}
         <div className="khoi-noi-dung">
           <div className="tieu-de-khoi" style={{ color: '#DC2626' }}>
             <AlertTriangle className="lucide-icon-sm" />
-            <span>TÌNH HUỐNG SỰ CỐ THỰC CHIẾN</span>
+            <span>PRODUCTION WAR STORIES & BLAST RADIUS</span>
           </div>
+
+          {c.incident_dossier && (
+            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '10px 12px', marginBottom: '10px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div>
+                <span style={{ fontWeight: 800, color: '#991B1B' }}>📊 TRAFFIC LOAD PROFILE: </span>
+                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.boi_canh_tai}</span>
+              </div>
+              <div>
+                <span style={{ fontWeight: 800, color: '#991B1B' }}>🔍 ROOT CAUSE (RCA): </span>
+                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.nguyen_nhan_goc_re}</span>
+              </div>
+              <div>
+                <span style={{ fontWeight: 800, color: '#991B1B' }}>💥 BLAST RADIUS: </span>
+                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.ban_kinh_anh_huong}</span>
+              </div>
+              <div>
+                <span style={{ fontWeight: 800, color: '#065F46' }}>🛡️ MITIGATION & DEFENSE: </span>
+                <span style={{ color: '#064E3B' }}>{c.incident_dossier.chien_luoc_phong_thu}</span>
+              </div>
+            </div>
+          )}
+
           <ul className="danh-sach-chi-tiet">
             {c.ca_thuc_te.map((item, idx) => (
               <li key={idx} className="dong-chi-tiet su-co">
@@ -356,12 +378,12 @@ export const FieldNotesDrawer: React.FC = () => {
           </ul>
         </div>
 
-        {/* Khối 4: Rủi ro sụp đổ & Tính năng "What breaks if..." (Section 56) */}
+        {/* Khối 4: Incident Post-Mortem & Cascading Failure Modes */}
         <div className="khoi-noi-dung">
           <div className="tieu-de-khoi" style={{ color: '#D97706', justifyContent: 'space-between', display: 'flex' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ShieldAlert className="lucide-icon-sm" />
-              <span>RỦI RO NẾU THIẾU THÀNH PHẦN NÀY</span>
+              <span>INCIDENT POST-MORTEM & FAILURE MODES</span>
             </div>
             <button
               onClick={toggleWhatBreaks}
@@ -378,14 +400,14 @@ export const FieldNotesDrawer: React.FC = () => {
                 alignItems: 'center',
                 gap: '4px'
               }}
-              title="Mô phỏng chuỗi sụp đổ dây chuyền trên canvas"
+              title="Mô phỏng hiệu ứng lan truyền sự cố (Failure Cascade) trên canvas"
             >
               <Zap size={12} />
-              <span>{isWhatBreaksActive ? 'Tắt sụp đổ' : 'Điều gì sụp đổ?'}</span>
+              <span>{isWhatBreaksActive ? 'Tắt Failure Cascade' : 'Mô phỏng Failure Cascade'}</span>
             </button>
           </div>
 
-          {/* Nếu chế độ What Breaks đang bật, hiển thị kịch bản sụp đổ dây chuyền */}
+          {/* Nếu chế độ What Breaks đang bật, hiển thị kịch bản Failure Cascade Chain */}
           {isWhatBreaksActive && c.chuoi_sup_do && (
             <div style={{
               background: '#FFF1F2',
@@ -398,7 +420,7 @@ export const FieldNotesDrawer: React.FC = () => {
             }}>
               <div style={{ fontWeight: 700, color: '#9F1239', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <AlertCircle size={14} />
-                <span>KỊCH BẢN SỤP ĐỔ DÂY CHUYỀN (CASCADE FAILURE)</span>
+                <span>KỊCH BẢN LAN TRUYỀN SỰ CỐ DÂY CHUYỀN (CASCADING FAILURE CHAIN)</span>
               </div>
               <ol style={{ margin: 0, paddingLeft: '18px', color: '#881337' }}>
                 {c.chuoi_sup_do.map((step, sIdx) => (
@@ -420,9 +442,9 @@ export const FieldNotesDrawer: React.FC = () => {
           </ul>
         </div>
 
-        {/* Khối 5: Thử thách phản xạ kỹ sư */}
-        {isReflexQuizOpen && node.trac_nghiem && (
-          <ReflexQuizCard quiz={node.trac_nghiem} />
+        {/* Khối 5: Chuỗi 5 câu hỏi phản xạ kỹ sư thực chiến */}
+        {isReflexQuizOpen && (node.trac_nghiem || node.trac_nghiem_list) && (
+          <ReflexQuizCard quiz={node.trac_nghiem} quizList={node.trac_nghiem_list} />
         )}
       </div>
 

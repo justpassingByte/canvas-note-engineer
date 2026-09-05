@@ -7,8 +7,68 @@ import {
   ExpandPayload,
   PrunePayload,
   SpawnClusterPayload,
-  CompactSubCluster
+  CompactSubCluster,
+  ReflexQuizItem,
+  IncidentDossier
 } from '../types/graphTypes.js';
+
+export function generate5StepReflexDrill(title: string, summary: string, clusterName: string): ReflexQuizItem[] {
+  const tLower = title.toLowerCase();
+
+  return [
+    {
+      cau_hoi: `Nguyên tắc kiến trúc cốt lõi (Architectural Invariance) của '${title}' là gì?`,
+      lua_chon: [
+        `Đảm bảo tính toàn vẹn và thực thi đúng vai trò ${summary.slice(0, 48)}...`,
+        'Bỏ qua các bước kiểm tra xác thực để tối đa hóa thông lượng'
+      ],
+      dung: 0,
+      giai_thich: `Thành phần ${title} bắt buộc phải duy trì tính toàn vẹn kiến trúc của phân hệ ${clusterName}.`,
+      phan_tang: 'Kiến trúc cốt lõi'
+    },
+    {
+      cau_hoi: `Trong kịch bản lưu lượng bùng phát (High Concurrency 50k req/s), nguy cơ lớn nhất tại '${title}' là gì?`,
+      lua_chon: [
+        'Nghẽn cổ chai tài nguyên (CPU/RAM/Socket) làm tăng P99 Latency vượt ngưỡng timeout',
+        'Hệ thống tự động sinh thêm CPU vật lý mà không tốn chi phí'
+      ],
+      dung: 0,
+      giai_thich: 'Tải đột biến sẽ làm dồn ứ hàng đợi và cạn kiệt Connection Pool nếu không có cơ chế Rate Limiting hoặc Buffering.',
+      phan_tang: 'Tương tranh cao điểm'
+    },
+    {
+      cau_hoi: `Nếu '${title}' gặp sự cố dừng hoạt động, hiệu ứng lan truyền (Failure Cascade & Blast Radius) xảy ra như thế nào?`,
+      lua_chon: [
+        `Các dịch vụ phụ thuộc phía sau bị dồn ứ, kéo sập dây chuyền toàn bộ phân hệ ${clusterName}`,
+        'Toàn bộ mạng Internet toàn cầu tự động ngắt kết nối'
+      ],
+      dung: 0,
+      giai_thich: 'Lỗi tại một thành phần trọng yếu sẽ lan truyền sang các client phụ thuộc nếu thiếu Circuit Breaker.',
+      phan_tang: 'Lan truyền sự cố'
+    },
+    {
+      cau_hoi: `Đánh đổi kỹ thuật (Trade-off) quan trọng nhất khi vận hành '${title}' là gì?`,
+      lua_chon: [
+        'Cân bằng giữa Tính nhất quán dữ liệu (Consistency) và Độ trễ phản hồi (Low Latency)',
+        'Không có bất kỳ đánh đổi nào, mọi thứ đều hoàn hảo tuyệt đối'
+      ],
+      dung: 0,
+      giai_thich: 'Theo định lý CAP và nguyên lý hệ thống phân tán, tăng cường bảo vệ và kiểm tra luôn đi kèm chi phí độ trễ xử lý.',
+      phan_tang: 'Đánh đổi kỹ thuật'
+    },
+    {
+      cau_hoi: `Chỉ số SRE Observability quan trọng nhất cần giám sát thời gian thực cho '${title}' là gì?`,
+      lua_chon: [
+        'Tỷ lệ lỗi (Error Rate 5xx), P99 Latency và Trạng thái bão hòa tài nguyên (Resource Saturation)',
+        'Số lượng dòng code của file nguồn'
+      ],
+      dung: 0,
+      giai_thich: 'Phương pháp Golden Signals của Google SRE yêu cầu giám sát 4 chỉ số vàng: Latency, Traffic, Errors, Saturation.',
+      phan_tang: 'Vận hành & Giám sát'
+    }
+  ];
+}
+
 
 export const MAX_GRAPH_NODES = 36;
 
@@ -984,7 +1044,8 @@ export const toolHandlers = {
           lua_chon: [cNode.summary.slice(0, 48) + '...', 'Bỏ qua các bước kiểm tra để tăng tốc độ'],
           dung: 0,
           giai_thich: `Thành phần này thực thi nhiệm vụ: ${cNode.summary}`
-        }
+        },
+        trac_nghiem_list: cNode.trac_nghiem_list || generate5StepReflexDrill(cNode.title, cNode.summary, payload.cluster_name)
       };
 
       spawnedNodes.push(entity);
@@ -1072,7 +1133,8 @@ export const toolHandlers = {
               lua_chon: ['Cung cấp hạ tầng chuyên biệt cho dịch vụ cùng domain', 'Mở public cho toàn bộ Internet kết nối'],
               dung: 0,
               giai_thich: 'Sub-cluster thuộc Bounded Context riêng biệt của phân hệ.'
-            }
+            },
+            trac_nghiem_list: sNode.trac_nghiem_list || generate5StepReflexDrill(sNode.title, sNode.summary, sub.name)
           };
 
           spawnedSubNodes.push(sEntity);
