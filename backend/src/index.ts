@@ -54,15 +54,7 @@ app.post('/api/graph/expand', async (req, res) => {
 
 app.post('/api/graph/spawn', async (req, res) => {
   try {
-    const { concept_type, target_concept_slug, position, title, category, description } = req.body;
-    const result = await toolHandlers.spawnConceptNode({
-      concept_type: concept_type || 'ddos',
-      target_concept_slug,
-      position,
-      title,
-      category,
-      description
-    });
+    const result = await toolHandlers.spawnConceptNode(req.body);
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

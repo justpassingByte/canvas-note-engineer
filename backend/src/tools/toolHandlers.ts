@@ -173,6 +173,13 @@ export interface SpawnPayload {
   title?: string;
   category?: string;
   description?: string;
+  ban_chat?: string;
+  ca_thuc_te?: string[];
+  rui_ro?: string[];
+  chuoi_sup_do?: string[];
+  trac_nghiem?: any;
+  schematic_template?: string;
+  schematic_params?: Record<string, string>;
 }
 
 export const toolHandlers = {
@@ -769,29 +776,29 @@ export const toolHandlers = {
         fully_explored: true,
         parent_id: targetNode?.id,
         hoat_hoa: {
-          mau: autoTemplate,
-          tham_so: autoParams
+          mau: payload.schematic_template || autoTemplate,
+          tham_so: payload.schematic_params || autoParams
         },
         chi_tiet: {
           phan_loai: payload.category || (targetNode ? targetNode.chi_tiet.phan_loai : `Phân hệ ${formattedTitle}`),
           tieu_de: formattedTitle,
-          ban_chat: payload.description || `Thực thi cơ chế ${formattedTitle} nhằm tăng cường tính toàn vẹn và ngăn chặn các nguy cơ tấn công chiếm đoạt phiên.`,
-          chu_thich_so_do: `Mô hình luồng thực thi của ${formattedTitle}`,
-          ca_thuc_te: [
+          ban_chat: payload.ban_chat || payload.description || `Thực thi cơ chế ${formattedTitle} nhằm tăng cường tính toàn vẹn và ngăn chặn các nguy cơ tấn công chiếm đoạt phiên.`,
+          chu_thich_so_do: `Mô hình luồng thực thi chuyên sâu của ${formattedTitle}`,
+          ca_thuc_te: payload.ca_thuc_te || [
             `Áp dụng quy trình xoay vòng token một lần dùng (One-Time Use) cho ${formattedTitle}`,
             'Tự động thu hồi phiên và cô lập rủi ro khi phát hiện hành vi tái sử dụng token bất thường'
           ],
-          rui_ro: [
+          rui_ro: payload.rui_ro || [
             'Cần xử lý độ trễ mạng tránh race condition khi client gửi nhiều request refresh đồng thời'
           ],
-          chuoi_sup_do: [
+          chuoi_sup_do: payload.chuoi_sup_do || [
             `1. Lỗ hổng trong quy trình quản lý phiên ${formattedTitle} bị khai thác.`,
             '2. Kẻ tấn công chiếm đoạt quyền truy cập dài hạn của người dùng.',
             '3. Dữ liệu nhạy cảm có nguy cơ bị rò rỉ trái phép.',
             '4. Buộc phải thu hồi diện rộng toàn bộ phiên đăng nhập của người dùng.'
           ]
         },
-        trac_nghiem: {
+        trac_nghiem: payload.trac_nghiem || {
           cau_hoi: `Nguyên tắc an ninh cốt lõi khi vận hành '${formattedTitle}' là gì?`,
           lua_chon: ['Đảm bảo nguyên tắc một lần dùng (One-Time Use) và thu hồi tức thì', 'Cho phép sử dụng lại token cũ nhiều lần'],
           dung: 0,
