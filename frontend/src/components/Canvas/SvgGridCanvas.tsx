@@ -53,6 +53,8 @@ export const SvgGridCanvas: React.FC = () => {
     initialPositions: Map<string, { x: number; y: number }>;
   } | null>(null);
   const [isDraggingCluster, setIsDraggingCluster] = useState(false);
+  // Cờ phân biệt rõ ràng giữa Click và Kéo Thả (Drag vs Click Disambiguation)
+  const wasJustDraggedRef = useRef(false);
 
   // Quản lý Menu ngữ cảnh động (Dynamic Context Menu)
   const [contextMenu, setContextMenu] = useState<{
