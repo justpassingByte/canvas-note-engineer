@@ -10,15 +10,27 @@ import { useGraphStore } from './store/useGraphStore.js';
 import { INITIAL_PAYMENT_GRAPH } from './data/initialGraph.js';
 
 export const App: React.FC = () => {
-  const { graph, setGraph, fetchCurrentGraph } = useGraphStore();
+  const { graph, setGraph, fetchCurrentGraph, pollCurrentGraph } = useGraphStore();
 
   useEffect(() => {
-    // Luôn đồng bộ đồ thị mới nhất từ backend SQLite khi tải trang
+    // 1. Tải đồ thị ban đầu
     fetchCurrentGraph().then(() => {
       if (!useGraphStore.getState().graph) {
-        setGraph(INITIAL_PAYMENT_GRAPH);
+        setGraph({
+          id: 'graph-interactive-workspace',
+          topic: 'Kiến Trúc Hệ Thống Phân Tán',
+          nodes: [],
+          edges: []
+        });
       }
     });
+
+    // 2. Tự động đồng bộ thời gian thực mỗi 1.5 giây mà không cần reload trang
+    const timer = setInterval(() => {
+      pollCurrentGraph();
+    }, 1500);
+
+    return () => clearInterval(timer);
   }, []);
 
   return (

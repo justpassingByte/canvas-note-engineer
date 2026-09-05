@@ -156,14 +156,12 @@ export const toolHandlers = {
       return { graph: existing, from_cache: true };
     }
 
-    // Nạp đồ thị chuẩn ban đầu vào SQLite sau khi đã kiểm duyệt liên kết (deep copy tránh mutate)
-    const freshNodes = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.nodes));
-    const freshEdges = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.edges));
-    const sanitizedEdges = validateAndSanitizeEdges(freshNodes, freshEdges);
+    // Khởi tạo đồ thị trống trong SQLite, không seed dữ liệu dịch cứng
     const initialGraph: GraphData = {
-      ...INITIAL_PAYMENT_GRAPH,
-      nodes: freshNodes,
-      edges: sanitizedEdges
+      id: 'graph-interactive-workspace',
+      topic: topic || 'Kiến Trúc Hệ Thống Phân Tán',
+      nodes: [],
+      edges: []
     };
 
     sqliteClient.saveGraph(initialGraph);
@@ -974,12 +972,15 @@ export const toolHandlers = {
 
       spawnedNodes.push(entity);
 
-      // Cạnh nội bộ nối tuần tự các node trong cụm
+      // Cạnh nội bộ nối tuần tự các node trong cụm - Nhãn ngắn gọn chuẩn giao thức
       if (idx > 0) {
+        const prevRole = spawnedNodes[idx - 1].chi_tiet?.tieu_de?.slice(0, 10) || 'Flow';
+        const nextRole = cNode.title.slice(0, 10);
+        const compactLabel = cNode.role ? `${cNode.role} Flow` : `${prevRole} ➔ ${nextRole}`;
         newEdges.push({
           from: spawnedNodes[idx - 1].id,
           to: nodeId,
-          nhan: `Route to ${cNode.title}`,
+          nhan: compactLabel,
           kieu: 'duong-xung-em-ai',
           loai_lien_ket: 'HOA_GIAI'
         });
@@ -1042,15 +1043,13 @@ export const toolHandlers = {
    * Khôi phục đồ thị về 5 node gốc ban đầu
    */
   async resetToRoot(): Promise<{ graph: GraphData; message: string }> {
-    const freshNodes = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.nodes));
-    const freshEdges = JSON.parse(JSON.stringify(INITIAL_PAYMENT_GRAPH.edges));
-    const sanitizedEdges = validateAndSanitizeEdges(freshNodes, freshEdges);
-    const initialGraph: GraphData = {
-      ...INITIAL_PAYMENT_GRAPH,
-      nodes: freshNodes,
-      edges: sanitizedEdges
+    const cleanGraph: GraphData = {
+      id: 'graph-interactive-workspace',
+      topic: 'Kiến Trúc Hệ Thống Phân Tán',
+      nodes: [],
+      edges: []
     };
-    sqliteClient.saveGraph(initialGraph);
-    return { graph: initialGraph, message: 'Đã khôi phục đồ thị về 5 node ban đầu (0 token).' };
+    sqliteClient.saveGraph(cleanGraph);
+    return { graph: cleanGraph, message: 'Đã dọn sạch đồ thị về trạng thái canvas mới (0 token).' };
   }
 };

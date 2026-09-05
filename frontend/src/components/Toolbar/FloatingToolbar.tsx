@@ -184,15 +184,14 @@ export const FloatingToolbar: React.FC = () => {
 
       <div className="vach-ngan-thanh"></div>
 
-      {/* Nút DeepSeek AI mở rộng Queue & Cache */}
+      {/* Nút DeepSeek AI mở rộng node con */}
       <button
         className="nut-thao-tac-noi nut-sinh-node"
-        disabled={isKhienExpanded}
-        onClick={() => expandNode('node-khien-khoa')}
-        title={isKhienExpanded ? 'Nhánh đã được khai phá toàn bộ' : 'Gọi DeepSeek mở rộng Queue & Cache'}
+        onClick={() => expandNode(selectedNodeId || 'node-main')}
+        title="Mở rộng thêm node con cho khái niệm đang chọn"
       >
         <Sparkles className="lucide-icon-sm" />
-        <span>{isKhienExpanded ? '✓ Đã mở rộng Queue & Cache' : 'Mở rộng: Queue & Cache'}</span>
+        <span>+ Mở rộng node con</span>
       </button>
 
       {/* Toggle cầu nối liên kết miền TMĐT */}

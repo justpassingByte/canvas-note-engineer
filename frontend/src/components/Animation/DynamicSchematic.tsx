@@ -127,15 +127,18 @@ export const DynamicSchematic: React.FC<DynamicSchematicProps> = ({ params }) =>
       );
 
     case 'doc_cache_nhanh':
+    case 'bo_nho_dem_redis':
+    case 'bo_nho_dem_cache':
+    case 'redis_cache':
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
           <rect x="20" y="38" width="75" height="48" rx="4" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
-          <text x="32" y="66" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800">{p.yeu_cau || 'REQUEST'}</text>
+          <text x="28" y="66" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800">{p.yeu_cau || p.actor || 'REQUEST'}</text>
 
           {/* Redis RAM */}
           <rect x="170" y="20" width="130" height="42" rx="5" fill="#FFEDD5" stroke="#EA580C" strokeWidth="2" />
-          <text x="182" y="42" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="900" fill="#C2410C">{p.cache || 'REDIS CACHE'}</text>
-          <text x="185" y="54" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#059669">{p.toc_do || 'RAM: 1ms'}</text>
+          <text x="180" y="42" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#C2410C">{p.cache || (p.component && p.component.length > 16 ? p.component.slice(0, 14) + '…' : p.component) || 'REDIS RAM'}</text>
+          <text x="185" y="54" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#059669">{p.toc_do || p.status || 'RAM: 1ms'}</text>
 
           <path d="M 95 55 L 170 41" stroke="#EA580C" strokeWidth="2" strokeDasharray="3 3" />
 
@@ -147,34 +150,39 @@ export const DynamicSchematic: React.FC<DynamicSchematicProps> = ({ params }) =>
       );
 
     case 'zero_trust_pep':
+      const clientLabel = p.client || p.actor || 'CLIENT mTLS';
+      const gatewayLabel = p.gateway || (p.component && p.component.length > 18 ? p.component.slice(0, 16) + '…' : p.component) || 'PEP GATEWAY';
+      const authServerLabel = p.auth_server || p.target || 'PDP ENGINE';
+      const tokenLabel = p.token || p.status || 'RBAC GRANTED';
+
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
           {/* Client mTLS */}
-          <rect x="15" y="32" width="80" height="58" rx="4" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.8" />
-          <text x="24" y="55" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#3730A3">{p.client || 'CLIENT mTLS'}</text>
-          <text x="22" y="71" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#6366F1" fontWeight="700">mTLS Cert: OK</text>
+          <rect x="15" y="32" width="85" height="58" rx="4" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.8" />
+          <text x="20" y="55" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800" fill="#3730A3">{clientLabel}</text>
+          <text x="20" y="71" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6366F1" fontWeight="700">mTLS Cert: OK</text>
 
           {/* Đường truyền Token */}
-          <path d="M 95 61 L 180 61" stroke="#4F46E5" strokeWidth="2" strokeDasharray="4 4" />
+          <path d="M 100 61 L 180 61" stroke="#4F46E5" strokeWidth="2" strokeDasharray="4 4" />
           <circle r="5" fill="#4F46E5">
-            <animateMotion path="M 95 61 L 180 61" dur="2.8s" repeatCount="indefinite" />
+            <animateMotion path="M 100 61 L 180 61" dur="2.8s" repeatCount="indefinite" />
           </circle>
 
           {/* PEP Gateway Shield */}
           <path d="M 180 25 L 260 25 L 260 78 Q 220 108 180 78 Z" fill="#E0E7FF" stroke="#4338CA" strokeWidth="2" />
-          <text x="195" y="52" fontFamily="'JetBrains Mono', monospace" fontSize="9.5" fontWeight="900" fill="#312E81">{p.gateway || 'PEP GATEWAY'}</text>
-          <text x="192" y="68" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#059669">{p.status || 'JWT VERIFIED'}</text>
+          <text x="188" y="52" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#312E81">{gatewayLabel}</text>
+          <text x="188" y="68" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#059669">{tokenLabel}</text>
 
           {/* Đường sang PDP Policy Decision */}
-          <path d="M 260 61 L 345 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
+          <path d="M 260 61 L 340 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
           <circle r="5" fill="#059669">
-            <animateMotion path="M 260 61 L 345 61" dur="2.8s" begin="1.4s" repeatCount="indefinite" />
+            <animateMotion path="M 260 61 L 340 61" dur="2.8s" begin="1.4s" repeatCount="indefinite" />
           </circle>
 
           {/* PDP Auth / Keystore */}
-          <rect x="345" y="32" width="90" height="58" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          <text x="355" y="55" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#065F46">{p.auth_server || 'PDP ENGINE'}</text>
-          <text x="352" y="71" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#047857" fontWeight="800">{p.token || 'RBAC GRANTED'}</text>
+          <rect x="340" y="32" width="95" height="58" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="348" y="55" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800" fill="#065F46">{authServerLabel}</text>
+          <text x="348" y="71" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#047857" fontWeight="800">RBAC GRANTED</text>
         </svg>
       );
 

@@ -10,10 +10,8 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Khởi tạo đồ thị mặc định trong SQLite khi server khởi động
-toolHandlers.createKnowledgeGraph().catch(err => {
-  console.error('Lỗi khi khởi tạo đồ thị SQLite:', err);
-});
+// Khởi tạo đồ thị sạch từ SQLite (Không tự động seed dữ liệu mẫu cứng)
+console.log('[DSH Plugin Backend] Khởi động với SQLite sạch - Sẵn sàng cho AI sinh đồ thị theo yêu cầu.');
 
 // API Routes cho Frontend & DeepSeek Harness Webview
 app.get('/api/health', (req, res) => {

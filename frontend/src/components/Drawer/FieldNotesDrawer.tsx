@@ -195,21 +195,14 @@ export const FieldNotesDrawer: React.FC = () => {
             </div>
 
             <div className="dau-trang-nhom-nut">
-              {/* Nút mở rộng nhánh con */}
+              {/* Nút mở rộng node con */}
               <button
-                className={`nut-mo-rong-drawer ${node.fully_explored ? 'da-kham-pha' : ''}`}
-                disabled={node.fully_explored}
+                className="nut-mo-rong-drawer"
                 onClick={() => expandNode(node.id)}
-                title={node.fully_explored ? 'Nhánh này đã khai phá toàn bộ' : 'Gọi DeepSeek mở rộng nhánh này'}
+                title="Mở rộng thêm các node con liên quan"
               >
-                {node.fully_explored ? (
-                  <span>✓ Đã khai phá</span>
-                ) : (
-                  <>
-                    <Sparkles className="lucide-icon-sm" />
-                    <span>+ Mở rộng nhánh</span>
-                  </>
-                )}
+                <Sparkles className="lucide-icon-sm" />
+                <span>+ Mở rộng node con</span>
               </button>
 
               {/* Nút thu gọn / bung ra nếu có node con */}

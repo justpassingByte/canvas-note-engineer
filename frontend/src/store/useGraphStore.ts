@@ -41,6 +41,7 @@ interface GraphState {
   zoomOut: () => void;
   resetView: () => void;
   fetchCurrentGraph: () => Promise<void>;
+  pollCurrentGraph: () => Promise<void>;
   spawnNode: (conceptType: string, position?: { x: number; y: number }, options?: { title?: string; category?: string; description?: string }) => Promise<void>;
   spawnCluster: (payload: SpawnClusterPayload) => Promise<void>;
 }
@@ -153,9 +154,29 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
     } catch (err: any) {
       console.warn('Backend chưa khởi động, dùng mock graph cục bộ:', err.message);
-      // Fallback cục bộ đảm bảo app luôn chạy được
       set({ isLoading: false });
     }
+  },
+
+  pollCurrentGraph: async () => {
+    try {
+      const res = await fetch('/api/graph/current');
+      if (res.ok) {
+        const data = await res.json();
+        const rawGraph = data.graph || data;
+        const current = get().graph;
+        // Chỉ cập nhật khi số lượng node/edge hoặc danh sách node có sự thay đổi
+        if (
+          !current ||
+          current.nodes.length !== rawGraph.nodes.length ||
+          current.edges.length !== rawGraph.edges.length ||
+          JSON.stringify(current.nodes.map(n => n.id)) !== JSON.stringify(rawGraph.nodes.map((n: any) => n.id))
+        ) {
+          const safeNodes = resolveNodeCollisions(rawGraph.nodes);
+          set({ graph: { ...rawGraph, nodes: safeNodes } });
+        }
+      }
+    } catch {}
   },
 
   expandNode: async (nodeId: string) => {

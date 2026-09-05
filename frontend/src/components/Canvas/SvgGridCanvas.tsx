@@ -120,11 +120,14 @@ export const SvgGridCanvas: React.FC = () => {
       const { pathD, midX, midY } = calculateEdgePath(fromNode, toNode);
       const isEdgeSelected = selectedEdge?.from === edge.from && selectedEdge?.to === edge.to;
       const isCascadeEdge = isWhatBreaksActive && (edge.from === selectedNodeId || edge.to === selectedNodeId);
-      const labelWidth = Math.max(edge.nhan.length * 8.2 + 26, 110);
-      const labelHeight = 24;
+      // Giới hạn nhãn hiển thị trên dây tối đa 22 ký tự để không đè lên các Node
+      const displayLabel = edge.nhan.length > 22 ? edge.nhan.slice(0, 20) + '…' : edge.nhan;
+      const labelWidth = Math.min(Math.max(displayLabel.length * 7.5 + 22, 70), 180);
+      const labelHeight = 22;
 
       return {
         edge,
+        displayLabel,
         key: `${edge.from}-${edge.to}-${idx}`,
         pathD,
         midX,
@@ -461,6 +464,7 @@ export const SvgGridCanvas: React.FC = () => {
                   strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 2 : 1.3
                 }}
               />
+              <title>{item.edge.nhan}</title>
               <text
                 className="chu-nhan-svg"
                 x={item.midX}
@@ -470,7 +474,7 @@ export const SvgGridCanvas: React.FC = () => {
                   fontWeight: item.isEdgeSelected || item.isCascadeEdge ? 700 : 600
                 }}
               >
-                {item.edge.nhan}
+                {item.displayLabel}
               </text>
             </g>
           ))}

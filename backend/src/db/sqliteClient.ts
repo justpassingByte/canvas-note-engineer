@@ -85,10 +85,7 @@ export class SQLiteKnowledgeClient {
   }
 
   public getCurrentGraph(): GraphData | null {
-    // Ưu tiên đồ thị thanh toán chính nếu tồn tại
-    const mainGraph = this.getGraph('graph-payment-idempotency');
-    if (mainGraph) return mainGraph;
-
+    // Lấy đồ thị hoạt động gần nhất
     const stmt = this.db.prepare('SELECT graph_data FROM knowledge_graphs ORDER BY updated_at DESC LIMIT 1');
     const row = stmt.get() as { graph_data: string } | undefined;
     if (!row) return null;
