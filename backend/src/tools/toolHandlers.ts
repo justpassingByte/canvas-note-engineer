@@ -1059,7 +1059,13 @@ export const toolHandlers = {
               ban_chat: sNode.ban_chat || sNode.summary,
               chu_thich_so_do: `Sub-Cluster ${sub.name} của ${payload.cluster_name}`,
               ca_thuc_te: sNode.ca_thuc_te || [`Lưu trữ và phục vụ nội bộ cho phân hệ ${payload.cluster_name}`],
-              rui_ro: sNode.rui_ro || ['Cần đảm bảo đồng bộ trạng thái và TTL bộ nhớ']
+              rui_ro: sNode.rui_ro || ['Cần đảm bảo đồng bộ trạng thái và TTL bộ nhớ'],
+              chuoi_sup_do: sNode.chuoi_sup_do || [
+                `1. Phân hệ hạ tầng ${sub.name} gặp sự cố hoặc quá tải I/O.`,
+                `2. Các luồng xử lý của ${payload.cluster_name} bị dồn ứ hàng đợi.`,
+                `3. Thời gian phản hồi vượt ngưỡng timeout cho phép.`,
+                `4. Phân hệ rơi vào trạng thái suy giảm hiệu năng.`
+              ]
             },
             trac_nghiem: sNode.trac_nghiem || {
               cau_hoi: `Mục đích của sub-cluster '${sub.name}' là gì?`,
