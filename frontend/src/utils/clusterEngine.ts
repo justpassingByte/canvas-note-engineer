@@ -25,7 +25,11 @@ export interface TopicCluster {
 // Kích thước ước tính tiêu chuẩn của thẻ Node Card (width: 220px, height: 145px)
 const CARD_WIDTH = 220;
 const CARD_HEIGHT = 145;
-const PADDING = 28;
+
+// Khoảng đệm rộng rãi (Generous Breathing Room) nới rộng khung cụm chống dính mép
+const PADDING_X = 52;       // Đệm rộng 52px hai bên hông (trái / phải)
+const PADDING_TOP = 64;     // Đệm 64px phía trên để thẻ Tiêu đề Cụm không chạm node
+const PADDING_BOTTOM = 46;  // Đệm 46px phía dưới đáy cụm
 
 /**
  * Xác định Cụm Kiến trúc cho một Node dựa trên ID, phả hệ cha-con hoặc phân loại kỹ thuật.
@@ -238,10 +242,10 @@ export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): Topi
       maxY = Math.max(maxY, n.toa_do.y + CARD_HEIGHT);
     }
 
-    const paddedMinX = minX - PADDING;
-    const paddedMinY = minY - PADDING - 22; // Thêm không gian cho Header Topic
-    const paddedMaxX = maxX + PADDING;
-    const paddedMaxY = maxY + PADDING;
+    const paddedMinX = minX - PADDING_X;
+    const paddedMinY = minY - PADDING_TOP;
+    const paddedMaxX = maxX + PADDING_X;
+    const paddedMaxY = maxY + PADDING_BOTTOM;
 
     const width = paddedMaxX - paddedMinX;
     const height = paddedMaxY - paddedMinY;

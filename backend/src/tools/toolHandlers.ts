@@ -898,15 +898,15 @@ export const toolHandlers = {
 
     const clusterId = `cum-${slugBase}-${timestamp}`;
 
-    // Xác định vị trí xuất phát
-    const startX = payload.position?.x ?? (current.nodes.length > 0 ? Math.max(...current.nodes.map(n => n.toa_do.x)) + 300 : 100);
-    const startY = payload.position?.y ?? -350;
+    // Xác định vị trí xuất phát - Khoảng cách an toàn giữa các cụm kiến trúc (chống dính cụm)
+    const startX = payload.position?.x ?? 100;
+    const startY = payload.position?.y ?? (current.nodes.length > 0 ? Math.min(...current.nodes.map(n => n.toa_do.y)) - 450 : 150);
 
     const nodesToSpawn = payload.nodes.slice(0, slotsAvailable);
     const spawnedNodes: NodeEntity[] = [];
     const newEdges: EdgeEntity[] = [];
 
-    // 1. Khởi tạo các Node trong Cụm
+    // 1. Khởi tạo các Node trong Cụm - Giãn cách 310px giữa các node trong cụm
     nodesToSpawn.forEach((cNode, idx) => {
       const nodeSlug = cNode.title
         .toLowerCase()
@@ -915,7 +915,7 @@ export const toolHandlers = {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '') || `node-${idx}`;
       const nodeId = `node-${nodeSlug}-${timestamp}`;
-      const posX = startX + idx * 260;
+      const posX = startX + idx * 310;
       const posY = startY;
 
       // Nhận diện biểu tượng thích hợp
