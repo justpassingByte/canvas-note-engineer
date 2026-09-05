@@ -10,7 +10,7 @@ import {
   CompactSubCluster
 } from '../types/graphTypes.js';
 
-export const MAX_GRAPH_NODES = 12;
+export const MAX_GRAPH_NODES = 36;
 
 /**
  * Chuẩn hóa nhãn phân tầng kiến trúc (Architectural Layer Standard)
