@@ -80,3 +80,16 @@ Khi sinh (spawn) hoặc mở rộng (expand) đồ thị kiến trúc:
 3. **Chặn Trùng Lặp Thành Phần (Zero Duplication)**:
    - Tái sử dụng các trụ hạ tầng cốt lõi (`node-tru-db`, `node-cache`, `node-queue`, `node-audit-log`, `node-ddos-waf`) bằng quan hệ đa cha (multi-parent DAG) thay vì tạo node trùng.
 
+4. **Quy Tắc Thuật Ngữ Kỹ Thuật Chuẩn Ngành (Strict Tech Industry Terminology)**:
+   - **CẤM TUYỆT ĐỐI dịch thô / dịch ngô nghê** các thuật ngữ chuyên ngành sang tiếng Việt:
+     + Dùng: `API Gateway`, `Ingress Gateway`, `Edge Gateway` (CẤM dịch: *cổng biên*, *cổng vào*).
+     + Dùng: `Zero-Trust Gateway (PEP)`, `Policy Decision Point (PDP)`.
+     + Dùng: `OAuth2 & OIDC Identity Provider` / `Auth Server` (CẤM dịch: *máy chủ định danh*).
+     + Dùng: `Token Revocation`, `Redis Blacklist` (CẤM dịch: *bộ lọc thu hồi*).
+     + Dùng: `Refresh Token Rotation (RTR)`.
+     + Dùng: `Kafka Partition Broker`, `Consumer Worker Pool` (CẤM dịch: *băng chuyền*, *tiến trình thợ*).
+     + Dùng: `Idempotency Key`, `Row Lock`, `Deadlock`, `Unique Index` (CẤM dịch: *khóa định danh*, *khiên bảo vệ*).
+     + Dùng: `Rate Limiting`, `Sliding Window`, `Token Bucket`, `WAF` (CẤM dịch: *bộ lọc giới hạn tần suất trượt*).
+     + Dùng: `Audit Log`, `Append-Only Ledger`, `Merkle Tree`, `HMAC SHA-256`.
+   - Lối hành văn giải thích trong `chi_tiet.ban_chat` phải tự nhiên, cô đọng, đi thẳng vào bản chất kỹ thuật (packet lifecycle, protocol handshake, data structure, concurrency edge cases) như văn phong trao đổi giữa các Senior Backend / Solution Architects thực thụ.
+
