@@ -877,9 +877,10 @@ export const SvgGridCanvas: React.FC = () => {
             {hoveredEdge.fromTitle} ➔ {hoveredEdge.toTitle}
           </div>
           {hoveredEdge.explanation && (
-            <div style={{ color: '#D1D5DB', fontSize: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.12)', paddingTop: '4px', marginTop: '4px' }}>
-              {hoveredEdge.explanation}
-            </div>
+            <div
+              style={{ color: '#E5E7EB', fontSize: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.15)', paddingTop: '5px', marginTop: '4px', lineHeight: 1.4 }}
+              dangerouslySetInnerHTML={{ __html: hoveredEdge.explanation }}
+            />
           )}
           <div style={{ color: '#6B7280', fontSize: '9px', marginTop: '4px', fontStyle: 'italic' }}>
             (Click để mở chi tiết trong Sổ tay)

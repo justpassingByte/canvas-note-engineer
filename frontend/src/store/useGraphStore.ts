@@ -91,14 +91,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   },
 
   selectNode: (id) => {
-    // 100% 0 token, đổi active ID, mở Drawer, bỏ chọn Edge
-    set({
+    // 100% 0 token, đổi active ID, mở Drawer, bỏ chọn Edge, DUY TRÌ trạng thái mô phỏng Failure Cascade
+    set((state) => ({
       selectedNodeId: id,
       selectedEdge: null,
       isReflexQuizOpen: false,
-      isWhatBreaksActive: false,
+      // Giữ nguyên trạng thái mô phỏng nếu người dùng đang bật
+      isWhatBreaksActive: state.isWhatBreaksActive,
       isDrawerOpen: true
-    });
+    }));
   },
 
   selectEdge: (edge) => {

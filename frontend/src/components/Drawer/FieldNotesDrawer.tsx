@@ -447,6 +447,23 @@ export const FieldNotesDrawer: React.FC = () => {
                   );
                 })}
               </div>
+
+              {/* Đề xuất hướng Fix & Chiến lược phòng thủ ngay bên dưới Failure Cascade */}
+              {c.incident_dossier?.chien_luoc_phong_thu && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px 10px',
+                  background: '#ECFDF5',
+                  border: '1px solid #A7F3D0',
+                  borderRadius: '5px',
+                  fontSize: '11px',
+                  lineHeight: '1.45',
+                  color: '#065F46'
+                }}>
+                  <span style={{ fontWeight: 800 }}>🛡️ ĐỀ XUẤT HƯỚNG FIX & PHÒNG THỦ (MITIGATION): </span>
+                  <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(c.incident_dossier.chien_luoc_phong_thu) }} />
+                </div>
+              )}
             </div>
           )}
 
