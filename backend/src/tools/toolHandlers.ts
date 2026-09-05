@@ -241,13 +241,7 @@ export const toolHandlers = {
         return { graph: current, spawned: false, message: `Node đích '${targetSlug}' không tồn tại trong đồ thị.` };
       }
 
-      if (targetNode.fully_explored) {
-        return {
-          graph: current,
-          spawned: false,
-          message: `Node '${targetNode.tieu_de}' đã bão hòa và bị khóa (fully_explored: true). 0 token tiêu thụ.`
-        };
-      }
+      // Cho phép mở rộng linh hoạt không bị chặn cứng
     }
 
     const existingDb = current.nodes.find(n => n.id === 'node-tru-db' || n.bieu_tuong === 'khoi_tru_database');
