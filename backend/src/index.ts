@@ -64,12 +64,14 @@ app.post('/api/graph/spawn', async (req, res) => {
 
 app.post('/api/graph/spawn-cluster', async (req, res) => {
   try {
-    const { cluster_name, cluster_theme, sub_title, nodes, connect_to_shared_infra, position } = req.body;
+    const { domain_id, cluster_name, cluster_theme, sub_title, nodes, sub_clusters, connect_to_shared_infra, position } = req.body;
     const result = await toolHandlers.spawnConceptCluster({
+      domain_id,
       cluster_name: cluster_name || 'Phân Hệ Kiến Trúc Mới',
       cluster_theme,
       sub_title,
       nodes: nodes || [],
+      sub_clusters,
       connect_to_shared_infra,
       position
     });

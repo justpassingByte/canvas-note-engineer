@@ -77,7 +77,7 @@ describe('Live Backend REST API Integration Tests', () => {
         title: 'Lá chắn WAF'
       })
     });
-    const spawnBody = await spawnRes.json();
+    const spawnBody = (await spawnRes.json()) as any;
     const nodeId = spawnBody.node.id;
 
     // 2. Collapse action

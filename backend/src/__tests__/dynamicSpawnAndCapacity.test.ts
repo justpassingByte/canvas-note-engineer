@@ -41,7 +41,7 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
   it('should support targeted attachment and enforce Saturation Lock when target slug is specified', async () => {
     // 1. Spawn parent node first
     const parentRes = await toolHandlers.spawnConceptNode({
-      concept_type: 'gateway',
+      concept_type: 'custom_gateway',
       title: 'API Gateway'
     });
     expect(parentRes.spawned).toBe(true);
@@ -49,7 +49,8 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
 
     // 2. Spawn child attached to parent
     const childRes = await toolHandlers.spawnConceptNode({
-      concept_type: 'rate_limiter',
+      concept_type: 'custom_rate_limiter',
+      title: 'Rate Limiter Component',
       target_concept_slug: parentId
     });
     expect(childRes.spawned).toBe(true);
@@ -68,13 +69,13 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
     expect(secondAttempt.message).toContain('đã bão hòa và bị khóa');
   });
 
-  it('should enforce Global Graph Capacity Cap (Max 12 Nodes) to block AI hallucination when near full', async () => {
-    expect(MAX_GRAPH_NODES).toBe(12);
+  it('should enforce Global Graph Capacity Cap (Max 36 Nodes) to block AI hallucination when near full', async () => {
+    expect(MAX_GRAPH_NODES).toBe(36);
 
     let graph = (await toolHandlers.createKnowledgeGraph()).graph;
     expect(graph.nodes).toHaveLength(0);
 
-    // Spawn nodes until reaching 12
+    // Spawn nodes until reaching MAX_GRAPH_NODES
     let counter = 1;
     while (graph.nodes.length < MAX_GRAPH_NODES) {
       const res = await toolHandlers.spawnConceptNode({
@@ -101,7 +102,7 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
       const res = await toolHandlers.spawnConceptNode({ concept_type: `fill-${graph.nodes.length}` });
       graph = res.graph;
     }
-    expect(graph.nodes).toHaveLength(12);
+    expect(graph.nodes).toHaveLength(36);
 
     // Delete one node
     const lastNode = graph.nodes[graph.nodes.length - 1];
@@ -110,12 +111,12 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
       action: 'delete_permanently'
     });
     expect(pruneRes.success).toBe(true);
-    expect(pruneRes.graph.nodes).toHaveLength(11);
+    expect(pruneRes.graph.nodes).toHaveLength(35);
 
     // Now spawning is permitted again!
     const newSpawn = await toolHandlers.spawnConceptNode({ concept_type: 'freed-slot-node' });
     expect(newSpawn.spawned).toBe(true);
-    expect(newSpawn.graph.nodes).toHaveLength(12);
+    expect(newSpawn.graph.nodes).toHaveLength(36);
   });
 
   it('should spawn Audit Log as a new topic with PCI-DSS compliance metadata and reflex quiz in SQLite', async () => {
@@ -137,7 +138,7 @@ describe('Dynamic Node Spawning & Anti-Hallucination Capacity Cap', () => {
 
   it('should spawn any arbitrary custom new topic with dynamic title, details and quiz', async () => {
     const result = await toolHandlers.spawnConceptNode({
-      concept_type: 'oauth2_token_rotation',
+      concept_type: 'custom_rotation_service',
       title: 'Cơ chế RTR Token Rotation',
       category: 'BẢO MẬT PHIÊN ĐĂNG NHẬP',
       description: 'Tự động cấp cặp token mới và hủy token cũ ngay trong 1 lần gọi API.',

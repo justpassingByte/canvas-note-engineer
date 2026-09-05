@@ -703,7 +703,7 @@ export const toolHandlers = {
         tom_tat: payload.description || `Mô-đun kiến trúc ${formattedTitle} nâng cao bảo mật toàn hệ thống.`,
         toa_do: { x: defaultX, y: defaultY },
         tam: { x: defaultX + 110, y: defaultY + 72 },
-        fully_explored: true,
+        fully_explored: false,
         parent_id: targetNode?.id,
         hoat_hoa: {
           mau: payload.schematic_template || autoTemplate,
@@ -1090,8 +1090,10 @@ export const toolHandlers = {
     }
 
     // 3. Nối dây vào Cụm Hạ tầng Dùng chung (Option B: Shared Infrastructure Platform)
-    // NẾU CHƯA CÓ TRỤ HẠ TẦNG TRONG GRAPH, TỰ ĐỘNG TẠO NODE HẠ TẦNG DÙNG CHUNG!
-    const connectInfra = payload.connect_to_shared_infra || [];
+    // Nếu cụm đã có Sub-Clusters hạ tầng riêng biệt thì không tự ý tạo thêm node hạ tầng dùng chung
+    const connectInfra = (payload.sub_clusters && payload.sub_clusters.length > 0)
+      ? []
+      : (payload.connect_to_shared_infra || []);
     let infraNodes = current.nodes.filter(n => n.cluster_id?.includes('infra') || n.cluster_id === 'cum-shared-infrastructure' || n.domain_id === 'domain-shared-infra');
     let existingDb = infraNodes.find(n => n.id.includes('db') || n.id.includes('postgres') || n.id.includes('acid') || n.bieu_tuong === 'khoi_tru_database');
     let existingCache = infraNodes.find(n => n.id.includes('redis') || n.id.includes('cache') || n.bieu_tuong === 'bo_nho_dem_cache');
