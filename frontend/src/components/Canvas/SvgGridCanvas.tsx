@@ -78,6 +78,17 @@ export const SvgGridCanvas: React.FC = () => {
     targetNode?: NodeEntity;
   } | null>(null);
 
+  // Tooltip tùy chỉnh cao cấp khi hover đường nối (Sleek Floating Edge Tooltip)
+  const [hoveredEdge, setHoveredEdge] = useState<{
+    edge: EdgeEntity;
+    clientX: number;
+    clientY: number;
+    displayLabel: string;
+    fromTitle: string;
+    toTitle: string;
+    explanation?: string;
+  } | null>(null);
+
   // Lọc danh sách node hiển thị theo cơ chế DAG Liveness (Đồ thị có hướng đa cha)
   const visibleNodes = useMemo(() => {
     if (!graph) return [];
@@ -624,58 +635,107 @@ export const SvgGridCanvas: React.FC = () => {
             >
               <path d="M 0 1 L 9 5 L 0 9 z" fill="#D97706" />
             </marker>
+            <marker
+              id="mui-ten-do"
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="8"
+              markerHeight="8"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 1 L 9 5 L 0 9 z" fill="#DC2626" />
+            </marker>
           </defs>
 
-          {edgeGeometries.map((item) => (
-            <g
-              key={item.key}
-              onClick={() => selectEdge(item.edge)}
-              style={{ cursor: 'pointer' }}
-              className="nhom-duong-noi-svg"
-            >
-              <title>{getEdgeKeywordTooltip(item.edge)}</title>
-              {/* Vùng đệm bắt sự kiện click chuột rộng hơn (20px) */}
-              <path
-                d={item.pathD}
-                fill="none"
-                stroke="transparent"
-                strokeWidth={20}
-              />
-              {/* Đường nối nét đen chính */}
-              <path
-                className="duong-noi-day"
-                d={item.pathD}
-                markerEnd={item.isEdgeSelected ? 'url(#mui-ten-vang)' : 'url(#mui-ten-den)'}
-                style={{
-                  stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
-                  strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 3 : undefined
-                }}
-              />
-              {/* Đường xung điện động nhịp thở 4.5s */}
-              <path className={item.edge.kieu} d={item.pathD} />
+          {edgeGeometries.map((item) => {
+            const fromNode = nodeMap.get(item.edge.from);
+            const toNode = nodeMap.get(item.edge.to);
 
-              {/* Hạt con bọ Bug Particle lan truyền sự cố (chạy 3 chu kỳ rồi dừng) */}
-              {item.isCascadeEdge && (
-                <g>
-                  <animateMotion
-                    path={item.pathD}
-                    dur="2.6s"
-                    repeatCount="3"
-                    rotate="auto"
-                    begin={`${item.cascadeDelay || 0}s`}
-                    fill="freeze"
-                  />
-                  <g transform="translate(-7, -7)">
-                    <rect width="14" height="14" rx="7" fill="#FEE2E2" stroke="#DC2626" strokeWidth="1" />
-                    <path d="M7 3.5a2.2 2.2 0 0 1 2.2 2.2v2.5a2.2 2.2 0 0 1-4.4 0V5.7A2.2 2.2 0 0 1 7 3.5z" fill="#DC2626" />
-                    <path d="M4 6h6M3 8.5h8M4 11h6" stroke="#991B1B" strokeWidth="0.9" strokeLinecap="round" />
-                    <circle cx="5.8" cy="4.8" r="0.5" fill="#FFF" />
-                    <circle cx="8.2" cy="4.8" r="0.5" fill="#FFF" />
+            const handleEdgeMouseEnter = (e: React.MouseEvent) => {
+              setHoveredEdge({
+                edge: item.edge,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                displayLabel: item.displayLabel,
+                fromTitle: fromNode?.tieu_de || item.edge.from,
+                toTitle: toNode?.tieu_de || item.edge.to,
+                explanation: item.edge.giai_thich
+              });
+            };
+
+            const handleEdgeMouseMove = (e: React.MouseEvent) => {
+              setHoveredEdge(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null);
+            };
+
+            const handleEdgeMouseLeave = () => {
+              setHoveredEdge(null);
+            };
+
+            return (
+              <g
+                key={item.key}
+                onClick={() => selectEdge(item.edge)}
+                onMouseEnter={handleEdgeMouseEnter}
+                onMouseMove={handleEdgeMouseMove}
+                onMouseLeave={handleEdgeMouseLeave}
+                style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                className="nhom-duong-noi-svg"
+              >
+                {/* Vùng đệm bắt sự kiện click và hover chuột rộng rãi (24px) */}
+                <path
+                  d={item.pathD}
+                  fill="none"
+                  stroke="transparent"
+                  strokeWidth={24}
+                />
+                {/* Đường nối nét chính */}
+                <path
+                  className="duong-noi-day"
+                  d={item.pathD}
+                  markerEnd={item.isEdgeSelected ? 'url(#mui-ten-vang)' : (item.isCascadeEdge ? 'url(#mui-ten-do)' : 'url(#mui-ten-den)')}
+                  style={{
+                    stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                    strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 3 : undefined
+                  }}
+                />
+                {/* Đường xung điện động nhịp thở */}
+                <path
+                  className={item.isCascadeEdge ? 'duong-xung-su-co' : item.edge.kieu}
+                  d={item.pathD}
+                />
+
+                {/* Hạt Con Bọ (🐛 Bug Particle) bò dọc theo dây khi bật Failure Cascade */}
+                {item.isCascadeEdge && (
+                  <g key={`cascade-bug-${selectedNodeId}-${item.key}-${isWhatBreaksActive}`}>
+                    <animateMotion
+                      path={item.pathD}
+                      dur="2.4s"
+                      repeatCount="indefinite"
+                      rotate="auto"
+                      begin={`${item.cascadeDelay || 0}s`}
+                    />
+                    {/* Bug SVG sắc nét */}
+                    <g transform="translate(-10, -10)">
+                      {/* Vùng hào quang đỏ */}
+                      <circle cx="10" cy="10" r="11" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.2" />
+                      {/* Thân bọ */}
+                      <ellipse cx="10" cy="10.5" rx="5" ry="5.5" fill="#DC2626" />
+                      {/* Đầu bọ */}
+                      <circle cx="10" cy="5.5" r="2.5" fill="#991B1B" />
+                      {/* Chân bọ 2 bên */}
+                      <path d="M5 8L2 7M5 11L1.5 11M5 14L2 15M15 8L18 7M15 11L18.5 11M15 14L18 15" stroke="#991B1B" strokeWidth="1.2" strokeLinecap="round" />
+                      {/* Râu bọ */}
+                      <path d="M9 3.5L7 1.5M11 3.5L13 1.5" stroke="#991B1B" strokeWidth="1" strokeLinecap="round" />
+                      {/* Mắt bọ */}
+                      <circle cx="8.8" cy="5" r="0.6" fill="#FFFFFF" />
+                      <circle cx="11.2" cy="5" r="0.6" fill="#FFFFFF" />
+                    </g>
                   </g>
-                </g>
-              )}
-            </g>
-          ))}
+                )}
+              </g>
+            );
+          })}
         </svg>
 
         {/* Vùng chứa các node Concept (z-index: 5) */}
@@ -722,42 +782,110 @@ export const SvgGridCanvas: React.FC = () => {
           id="svg-nhan-duong-noi"
           style={{ width: '4000px', height: '4000px', overflow: 'visible', pointerEvents: 'none' }}
         >
-          {edgeGeometries.map((item) => (
-            <g
-              key={`label-${item.key}`}
-              onClick={() => selectEdge(item.edge)}
-              style={{ cursor: 'pointer', pointerEvents: 'all' }}
-              className="nhom-nhan-svg"
-            >
-              {/* Hộp nhãn nền trắng đổ bóng co giãn tự động theo độ dài chữ */}
-              <rect
-                className="hop-nhan-svg"
-                x={item.midX - item.labelWidth / 2}
-                y={item.midY - item.labelHeight / 2}
-                width={item.labelWidth}
-                height={item.labelHeight}
-                rx={6}
-                style={{
-                  stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
-                  strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 2 : 1.3
-                }}
-              />
-              <title>{getEdgeKeywordTooltip(item.edge)}</title>
-              <text
-                className="chu-nhan-svg"
-                x={item.midX}
-                y={item.midY}
-                style={{
-                  fill: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
-                  fontWeight: item.isEdgeSelected || item.isCascadeEdge ? 700 : 600
-                }}
+          {edgeGeometries.map((item) => {
+            const fromNode = nodeMap.get(item.edge.from);
+            const toNode = nodeMap.get(item.edge.to);
+
+            const handleLabelMouseEnter = (e: React.MouseEvent) => {
+              setHoveredEdge({
+                edge: item.edge,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                displayLabel: item.displayLabel,
+                fromTitle: fromNode?.tieu_de || item.edge.from,
+                toTitle: toNode?.tieu_de || item.edge.to,
+                explanation: item.edge.giai_thich
+              });
+            };
+
+            const handleLabelMouseMove = (e: React.MouseEvent) => {
+              setHoveredEdge(prev => prev ? { ...prev, clientX: e.clientX, clientY: e.clientY } : null);
+            };
+
+            const handleLabelMouseLeave = () => {
+              setHoveredEdge(null);
+            };
+
+            return (
+              <g
+                key={`label-${item.key}`}
+                onClick={() => selectEdge(item.edge)}
+                onMouseEnter={handleLabelMouseEnter}
+                onMouseMove={handleLabelMouseMove}
+                onMouseLeave={handleLabelMouseLeave}
+                style={{ cursor: 'pointer', pointerEvents: 'all' }}
+                className="nhom-nhan-svg"
               >
-                {item.displayLabel}
-              </text>
-            </g>
-          ))}
+                {/* Hộp nhãn nền trắng đổ bóng co giãn tự động theo độ dài chữ */}
+                <rect
+                  className="hop-nhan-svg"
+                  x={item.midX - item.labelWidth / 2}
+                  y={item.midY - item.labelHeight / 2}
+                  width={item.labelWidth}
+                  height={item.labelHeight}
+                  rx={6}
+                  style={{
+                    stroke: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                    strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 2 : 1.3
+                  }}
+                />
+                <text
+                  className="chu-nhan-svg"
+                  x={item.midX}
+                  y={item.midY}
+                  style={{
+                    fill: item.isEdgeSelected ? '#D97706' : (item.isCascadeEdge ? '#DC2626' : undefined),
+                    fontWeight: item.isEdgeSelected || item.isCascadeEdge ? 700 : 600
+                  }}
+                >
+                  {item.displayLabel}
+                </text>
+              </g>
+            );
+          })}
         </svg>
       </div>
+
+      {/* Floating Hover Card Cao Cấp Cho Đường Nối */}
+      {hoveredEdge && (
+        <div
+          style={{
+            position: 'fixed',
+            left: `${Math.min(hoveredEdge.clientX + 14, window.innerWidth - 300)}px`,
+            top: `${Math.min(hoveredEdge.clientY + 14, window.innerHeight - 160)}px`,
+            zIndex: 99998,
+            background: '#1A1D24',
+            color: '#FAF7F0',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '6px',
+            padding: '8px 12px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+            pointerEvents: 'none',
+            fontFamily: "'JetBrains Mono', monospace",
+            maxWidth: '280px',
+            fontSize: '11px',
+            lineHeight: 1.45
+          }}
+        >
+          <div style={{ color: 'var(--vang-ky-thuat)', fontWeight: 800, fontSize: '9.5px', marginBottom: '2px' }}>
+            LIÊN KẾT GIAO THỨC:
+          </div>
+          <div style={{ fontWeight: 700, color: '#FFFFFF', marginBottom: '3px' }}>
+            {hoveredEdge.displayLabel}
+          </div>
+          <div style={{ color: '#9CA3AF', fontSize: '10px', marginBottom: '4px' }}>
+            {hoveredEdge.fromTitle} ➔ {hoveredEdge.toTitle}
+          </div>
+          {hoveredEdge.explanation && (
+            <div style={{ color: '#D1D5DB', fontSize: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.12)', paddingTop: '4px', marginTop: '4px' }}>
+              {hoveredEdge.explanation}
+            </div>
+          )}
+          <div style={{ color: '#6B7280', fontSize: '9px', marginTop: '4px', fontStyle: 'italic' }}>
+            (Click để mở chi tiết trong Sổ tay)
+          </div>
+        </div>
+      )}
 
       {/* Menu Chuột Phải Động (Dynamic Context Menu) - Tự thích ứng theo Node hoặc Vùng trống */}
       {contextMenu?.visible && (
