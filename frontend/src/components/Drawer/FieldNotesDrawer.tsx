@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BookOpen,
   Activity,
@@ -39,6 +39,81 @@ export const FieldNotesDrawer: React.FC = () => {
     openDrawer
   } = useGraphStore();
 
+  // Tooltip cố định chống tràn mép (Fixed Collision-Free Floating Tooltip)
+  const [hoveredTooltip, setHoveredTooltip] = useState<{
+    text: string;
+    x: number;
+    y: number;
+    placement: 'top' | 'bottom';
+  } | null>(null);
+
+  const handleMouseOver = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('u[data-tooltip]');
+    if (target) {
+      const text = target.getAttribute('data-tooltip');
+      if (text) {
+        const rect = target.getBoundingClientRect();
+        const tooltipWidth = 270;
+        let x = rect.left + rect.width / 2 - tooltipWidth / 2;
+        // Chống tràn mép phải màn hình
+        if (x + tooltipWidth > window.innerWidth - 16) {
+          x = window.innerWidth - tooltipWidth - 16;
+        }
+        // Chống tràn mép trái
+        if (x < 16) {
+          x = 16;
+        }
+
+        let y = rect.top - 8;
+        let placement: 'top' | 'bottom' = 'top';
+        if (rect.top < 100) {
+          y = rect.bottom + 8;
+          placement = 'bottom';
+        }
+
+        setHoveredTooltip({ text, x, y, placement });
+      }
+    }
+  };
+
+  const handleMouseOut = (e: React.MouseEvent) => {
+    const target = (e.target as HTMLElement).closest('u[data-tooltip]');
+    if (target) {
+      setHoveredTooltip(null);
+    }
+  };
+
+  const renderFixedTooltip = () => {
+    if (!hoveredTooltip) return null;
+    return (
+      <div
+        className="drawer-fixed-tooltip"
+        style={{
+          position: 'fixed',
+          left: `${hoveredTooltip.x}px`,
+          top: hoveredTooltip.placement === 'bottom' ? `${hoveredTooltip.y}px` : undefined,
+          bottom: hoveredTooltip.placement === 'top' ? `${window.innerHeight - hoveredTooltip.y}px` : undefined,
+          width: '270px',
+          background: '#1A1D24',
+          color: '#FAF7F0',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '11px',
+          fontWeight: 500,
+          lineHeight: 1.45,
+          padding: '8px 12px',
+          borderRadius: '6px',
+          boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          zIndex: 999999,
+          pointerEvents: 'none',
+          wordBreak: 'break-word'
+        }}
+      >
+        {hoveredTooltip.text}
+      </div>
+    );
+  };
+
   // Phím tắt Esc để thu gọn/ẩn nhanh Sổ tay
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -72,7 +147,12 @@ export const FieldNotesDrawer: React.FC = () => {
     return (
       <>
         {renderOpenTab()}
-        <aside className={`trang-so-ghi-chep ${!isDrawerOpen ? 'dong' : ''}`} id="panel-chi-tiet">
+        <aside
+          className={`trang-so-ghi-chep ${!isDrawerOpen ? 'dong' : ''}`}
+          id="panel-chi-tiet"
+          onMouseOver={handleMouseOver}
+          onMouseOut={handleMouseOut}
+        >
           <div className="noi-dung-ghi-chep">
             <div className="dau-trang-chi-tiet">
               <div className="dau-trang-ben-trai">
@@ -135,6 +215,7 @@ export const FieldNotesDrawer: React.FC = () => {
             <span>Quay lại xem chi tiết Node</span>
           </button>
         </footer>
+        {renderFixedTooltip()}
       </aside>
       </>
     );
@@ -180,7 +261,12 @@ export const FieldNotesDrawer: React.FC = () => {
   return (
     <>
       {renderOpenTab()}
-      <aside className={`trang-so-ghi-chep ${!isDrawerOpen ? 'dong' : ''}`} id="panel-chi-tiet">
+      <aside
+        className={`trang-so-ghi-chep ${!isDrawerOpen ? 'dong' : ''}`}
+        id="panel-chi-tiet"
+        onMouseOver={handleMouseOver}
+        onMouseOut={handleMouseOut}
+      >
         <div className="noi-dung-ghi-chep">
           {/* Đầu trang chi tiết có Icon Pod thanh mảnh + Nút Mở rộng & Thao tác */}
           <div className="dau-trang-chi-tiet">
@@ -346,6 +432,7 @@ export const FieldNotesDrawer: React.FC = () => {
           <span>{isReflexQuizOpen ? 'Đóng thử thách phản xạ' : 'Kiểm tra kiến thức phản xạ'}</span>
         </button>
       </footer>
+      {renderFixedTooltip()}
     </aside>
     </>
   );

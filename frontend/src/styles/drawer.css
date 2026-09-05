@@ -282,6 +282,11 @@ u[data-tooltip]:hover::after {
   transform: translateX(-50%) translateY(0);
 }
 
+/* Tắt ::after của tooltip trong Drawer để dùng fixed floating tooltip chống che khuất mép */
+aside.trang-so-ghi-chep u[data-tooltip]::after {
+  display: none !important;
+}
+
 /* Tooltip trên Node Card (Canvas): Luôn hiển thị BÊN DƯỚI để 100% không bị Icon Pod che khuất */
 .the-nhan-duoi u[data-tooltip]::after {
   bottom: auto;
