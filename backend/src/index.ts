@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { toolHandlers } from './tools/toolHandlers.js';
+import { sqliteClient } from './db/sqliteClient.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -99,6 +100,28 @@ app.post('/api/graph/reset', async (req, res) => {
   try {
     const result = await toolHandlers.resetToRoot();
     res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/graph/update-positions', async (req, res) => {
+  try {
+    const { positions } = req.body as { positions: Array<{ id: string; x: number; y: number }> };
+    const current = sqliteClient.getCurrentGraph();
+    if (!current) return res.status(404).json({ error: 'Không tìm thấy đồ thị' });
+
+    if (Array.isArray(positions)) {
+      for (const p of positions) {
+        const node = current.nodes.find(n => n.id === p.id);
+        if (node) {
+          node.toa_do = { x: Math.round(p.x), y: Math.round(p.y) };
+          node.tam = { x: Math.round(p.x + 110), y: Math.round(p.y + 72) };
+        }
+      }
+      sqliteClient.saveGraph(current);
+    }
+    res.json({ success: true, graph: current });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

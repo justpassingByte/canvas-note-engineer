@@ -96,6 +96,7 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
     <div
       className={`cum-thuc-the ${isSelected ? 'dang-chon' : ''} ${!isSearchMatch ? 'mo-nhat' : ''} ${isSearchMatch && searchQuery ? 'khop-tim-kiem' : ''} ${isCascadeAffected ? 'canh-bao-sup-do' : ''}`}
       style={{ top: `${node.toa_do.y}px`, left: `${node.toa_do.x}px` }}
+      data-node-id={node.id}
       onClick={handleNodeClick}
     >
       <div className="hop-icon-pod-wrap">

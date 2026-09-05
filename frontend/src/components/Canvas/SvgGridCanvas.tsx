@@ -22,15 +22,20 @@ function getEdgeKeywordTooltip(edge: any): string {
 export const SvgGridCanvas: React.FC = () => {
   const {
     graph,
+    setGraph,
     isDomainLinkActive,
     selectedEdge,
     selectEdge,
     selectedNodeId,
+    selectNode,
+    deleteNode,
+    toggleCollapse,
     isWhatBreaksActive,
     pan,
     zoom,
     setPan,
     setZoom,
+    resetView,
     spawnNode,
     spawnCluster
   } = useGraphStore();
@@ -38,6 +43,26 @@ export const SvgGridCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Quản lý kéo thả Cụm phân hệ (Cluster Drag & Drop + Persistence)
+  const clusterDragRef = useRef<{
+    clusterId: string;
+    startMouseX: number;
+    startMouseY: number;
+    hasMoved: boolean;
+    initialPositions: Map<string, { x: number; y: number }>;
+  } | null>(null);
+  const [isDraggingCluster, setIsDraggingCluster] = useState(false);
+
+  // Quản lý Menu ngữ cảnh động (Dynamic Context Menu)
+  const [contextMenu, setContextMenu] = useState<{
+    visible: boolean;
+    clientX: number;
+    clientY: number;
+    graphX: number;
+    graphY: number;
+    targetNode?: NodeEntity;
+  } | null>(null);
 
   // Lọc danh sách node hiển thị theo cơ chế DAG Liveness (Đồ thị có hướng đa cha)
   const visibleNodes = useMemo(() => {
@@ -168,8 +193,32 @@ export const SvgGridCanvas: React.FC = () => {
     setPan({ x: newPanX, y: newPanY });
   };
 
+  // Khởi động kéo thả Cụm phân hệ
+  const handleClusterDragStart = (e: React.MouseEvent, cluster: TopicCluster) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+
+    const initialPositions = new Map<string, { x: number; y: number }>();
+    cluster.nodeIds.forEach(id => {
+      const n = nodeMap.get(id);
+      if (n) {
+        initialPositions.set(id, { x: n.toa_do.x, y: n.toa_do.y });
+      }
+    });
+
+    clusterDragRef.current = {
+      clusterId: cluster.id,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      hasMoved: false,
+      initialPositions
+    };
+    setIsDraggingCluster(true);
+  };
+
   // Xử lý kéo rê chuột (Pan)
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (contextMenu) setContextMenu(null);
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
     // Không pan nếu đang bấm vào node, đường nối, button hoặc thẻ tiêu đề cụm
@@ -186,11 +235,66 @@ export const SvgGridCanvas: React.FC = () => {
     dragStartRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
 
+  // Menu chuột phải Động (Dynamic Context Menu)
   const handleContextMenu = (e: React.MouseEvent) => {
-    e.preventDefault(); // Chặn menu chuột phải mặc định, giữ canvas sạch sẽ 100%
+    e.preventDefault();
+    const target = e.target as HTMLElement;
+
+    if (!canvasRef.current) return;
+    const rect = canvasRef.current.getBoundingClientRect();
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    const graphX = Math.round((clientX - rect.left - pan.x) / zoom);
+    const graphY = Math.round((clientY - rect.top - pan.y) / zoom);
+
+    // Kiểm tra xem có click vào Node Card không
+    const nodeEl = target.closest('.cum-thuc-the');
+    let targetNode: NodeEntity | undefined = undefined;
+    if (nodeEl && graph) {
+      const nodeId = nodeEl.getAttribute('data-node-id');
+      targetNode = graph.nodes.find(n => n.id === nodeId);
+    }
+
+    setContextMenu({
+      visible: true,
+      clientX,
+      clientY,
+      graphX,
+      graphY,
+      targetNode
+    });
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    // 1. Kéo thả Cụm phân hệ di chuyển đồng loạt các node bên trong
+    if (clusterDragRef.current && graph) {
+      const { startMouseX, startMouseY, initialPositions } = clusterDragRef.current;
+      const dx = (e.clientX - startMouseX) / zoom;
+      const dy = (e.clientY - startMouseY) / zoom;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        clusterDragRef.current.hasMoved = true;
+      }
+
+      const updatedNodes = graph.nodes.map(n => {
+        const init = initialPositions.get(n.id);
+        if (init) {
+          const newX = Math.round(init.x + dx);
+          const newY = Math.round(init.y + dy);
+          return {
+            ...n,
+            toa_do: { x: newX, y: newY },
+            tam: { x: newX + 110, y: newY + 72 }
+          };
+        }
+        return n;
+      });
+
+      setGraph({ ...graph, nodes: updatedNodes });
+      return;
+    }
+
+    // 2. Kéo rê Canvas (Pan)
     if (!isPanning) return;
     setPan({
       x: e.clientX - dragStartRef.current.x,
@@ -199,6 +303,23 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    // Lưu vị trí cụm mới xuống SQLite khi buông chuột
+    if (clusterDragRef.current) {
+      if (clusterDragRef.current.hasMoved && graph) {
+        const movedNodeIds = Array.from(clusterDragRef.current.initialPositions.keys());
+        const positionsToSave = graph.nodes
+          .filter(n => movedNodeIds.includes(n.id))
+          .map(n => ({ id: n.id, x: n.toa_do.x, y: n.toa_do.y }));
+
+        fetch('/api/graph/update-positions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ positions: positionsToSave })
+        }).catch(err => console.error('Lỗi khi lưu vị trí cụm:', err));
+      }
+      clusterDragRef.current = null;
+      setIsDraggingCluster(false);
+    }
     setIsPanning(false);
   };
 
@@ -300,7 +421,7 @@ export const SvgGridCanvas: React.FC = () => {
                 onClick={() => isMacroView && focusCluster(cluster)}
                 title={isMacroView ? `Bấm để phóng to vào cụm ${cluster.ten_cum}` : undefined}
               >
-                {/* Thẻ Tiêu đề Cụm Topic */}
+                {/* Thẻ Tiêu đề Cụm Topic - Có thể Kéo Thả (Drag & Drop) để sắp xếp vị trí cụm */}
                 {showHeader && (
                   <div
                     className={`the-tieu-de-cum ${isOuterCluster ? 'tieu-de-cum-me' : isSubCluster ? 'tieu-de-cum-con' : 'tieu-de-cum-doc-lap'}`}
@@ -309,17 +430,21 @@ export const SvgGridCanvas: React.FC = () => {
                       borderColor: cluster.mau,
                       transform: `scale(${headerScale})`,
                       transformOrigin: 'top left',
-                      pointerEvents: 'all'
+                      pointerEvents: 'all',
+                      cursor: isDraggingCluster ? 'grabbing' : 'grab'
                     }}
+                    onMouseDown={(e) => handleClusterDragStart(e, cluster)}
                     onClick={(e) => {
                       e.stopPropagation();
-                      focusCluster(cluster);
+                      if (!clusterDragRef.current?.hasMoved) {
+                        focusCluster(cluster);
+                      }
                     }}
-                    title={`Bấm để phóng to vào ${cluster.ten_cum}`}
+                    title={`Kéo chuột để di chuyển cụm "${cluster.ten_cum}" | Click để căn giữa`}
                   >
                     <div className="cham-mau-cum" style={{ backgroundColor: cluster.mau }}></div>
                     <div className="noi-dung-chu-cum">
-                      <span className="ten-topic-cum">{cluster.ten_cum}</span>
+                      <span className="ten-topic-cum">⋮⋮ {cluster.ten_cum}</span>
                       {!isMacroView && (
                         <span className="mo-ta-phu-cum">{cluster.chu_de_phu}</span>
                       )}
@@ -467,6 +592,143 @@ export const SvgGridCanvas: React.FC = () => {
           ))}
         </svg>
       </div>
+
+      {/* Menu Chuột Phải Động (Dynamic Context Menu) - Tự thích ứng theo Node hoặc Vùng trống */}
+      {contextMenu?.visible && (
+        <div
+          className="canvas-dynamic-context-menu"
+          style={{
+            position: 'fixed',
+            left: `${Math.min(contextMenu.clientX, window.innerWidth - 250)}px`,
+            top: `${Math.min(contextMenu.clientY, window.innerHeight - 280)}px`,
+            zIndex: 99999,
+            background: '#FFFFFF',
+            border: '2px solid #1A1D24',
+            borderRadius: '8px',
+            boxShadow: '4px 4px 0px #1A1D24',
+            padding: '6px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '3px',
+            minWidth: '230px',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '11.5px'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {contextMenu.targetNode ? (
+            <>
+              {/* Menu theo ngữ cảnh Node được click */}
+              <div style={{ padding: '6px 8px 4px', fontSize: '10px', fontWeight: 800, color: '#4F46E5', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>NODE:</span>
+                <span style={{ color: '#1A1D24', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '170px' }}>
+                  {contextMenu.targetNode.tieu_de}
+                </span>
+              </div>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  selectNode(contextMenu.targetNode!.id);
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>📖</span>
+                <span>Mở Sổ tay chi tiết</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  toggleCollapse(contextMenu.targetNode!.id);
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#F3F4F6')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>{contextMenu.targetNode.is_collapsed ? '▸' : '▾'}</span>
+                <span>{contextMenu.targetNode.is_collapsed ? 'Mở các nhánh con' : 'Thu gọn các nhánh con'}</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  if (window.confirm(`Xóa vĩnh viễn '${contextMenu.targetNode!.tieu_de}' và các liên kết liên quan?`)) {
+                    deleteNode(contextMenu.targetNode!.id);
+                  }
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600, color: '#DC2626' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#FEF2F2')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>🗑️</span>
+                <span>Xóa node này</span>
+              </button>
+            </>
+          ) : (
+            <>
+              {/* Menu theo ngữ cảnh Vùng trống Canvas */}
+              <div style={{ padding: '6px 8px 4px', fontSize: '10px', fontWeight: 800, color: '#6B7280', borderBottom: '1px solid #E5E7EB' }}>
+                VÙNG TRỐNG CANVAS ({contextMenu.graphX}, {contextMenu.graphY})
+              </div>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  const title = window.prompt('Nhập tên Concept kiến trúc cần tạo:');
+                  if (title && title.trim()) {
+                    spawnNode('custom', { x: contextMenu.graphX, y: contextMenu.graphY }, { title: title.trim() });
+                  }
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>➕</span>
+                <span>Thêm Concept tại đây...</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  const name = window.prompt('Nhập tên Cụm Phân Hệ kiến trúc mới:');
+                  if (name && name.trim()) {
+                    spawnCluster({
+                      cluster_name: name.trim(),
+                      position: { x: contextMenu.graphX, y: contextMenu.graphY },
+                      nodes: [
+                        { title: `${name.trim()} Ingress Gateway`, summary: `Cổng tiếp nhận của phân hệ ${name.trim()}` },
+                        { title: `${name.trim()} Core Service`, summary: `Thành phần xử lý của phân hệ ${name.trim()}` }
+                      ]
+                    });
+                  }
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>⚡</span>
+                <span>Sinh Cụm Phân Hệ tại đây...</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  resetView();
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#F3F4F6')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>🎯</span>
+                <span>Căn giữa toàn cảnh</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </section>
   );
 };
