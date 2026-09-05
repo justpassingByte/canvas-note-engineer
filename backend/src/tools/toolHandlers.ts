@@ -1098,6 +1098,8 @@ export const toolHandlers = {
     let existingQueue = infraNodes.find(n => n.id.includes('queue') || n.id.includes('kafka') || n.bieu_tuong === 'hang_doi_message_queue');
 
     if (connectInfra.length > 0) {
+      const mainServiceNodes = spawnedNodes.slice(0, nodesToSpawn.length);
+
       if (connectInfra.includes('cache')) {
         if (!existingCache && spawnedNodes.length + current.nodes.length < MAX_GRAPH_NODES) {
           const cacheId = 'node-shared-redis';
@@ -1129,7 +1131,7 @@ export const toolHandlers = {
         }
 
         if (existingCache) {
-          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('rate') || n.tieu_de.toLowerCase().includes('lock') || n.tieu_de.toLowerCase().includes('cache'))) || spawnedNodes[0];
+          const clientNode = mainServiceNodes.find(n => n.tieu_de.toLowerCase().includes('rate') || n.tieu_de.toLowerCase().includes('lock') || n.tieu_de.toLowerCase().includes('cache')) || mainServiceNodes[0];
           if (clientNode && clientNode.id !== existingCache.id) {
             newEdges.push({
               from: clientNode.id,
@@ -1174,7 +1176,7 @@ export const toolHandlers = {
         }
 
         if (existingQueue) {
-          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('waf') || n.tieu_de.toLowerCase().includes('event') || n.tieu_de.toLowerCase().includes('stream'))) || spawnedNodes[0];
+          const clientNode = mainServiceNodes.find(n => n.tieu_de.toLowerCase().includes('waf') || n.tieu_de.toLowerCase().includes('event') || n.tieu_de.toLowerCase().includes('stream')) || mainServiceNodes[0];
           if (clientNode && clientNode.id !== existingQueue.id) {
             newEdges.push({
               from: clientNode.id,
@@ -1219,7 +1221,7 @@ export const toolHandlers = {
         }
 
         if (existingDb) {
-          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('ledger') || n.tieu_de.toLowerCase().includes('db') || n.tieu_de.toLowerCase().includes('storage'))) || spawnedNodes[spawnedNodes.length - 1];
+          const clientNode = mainServiceNodes.find(n => n.tieu_de.toLowerCase().includes('ledger') || n.tieu_de.toLowerCase().includes('db') || n.tieu_de.toLowerCase().includes('storage')) || mainServiceNodes[mainServiceNodes.length - 1];
           if (clientNode && clientNode.id !== existingDb.id) {
             newEdges.push({
               from: clientNode.id,

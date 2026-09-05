@@ -149,7 +149,7 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
           cluster_theme: 'emerald',
           nodes: serviceNodes,
           sub_clusters: subClusters.length > 0 ? subClusters : undefined,
-          connect_to_shared_infra: ['db', 'cache']
+          connect_to_shared_infra: subClusters.length > 0 ? undefined : ['db', 'cache']
         };
       }
     }
@@ -300,7 +300,7 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
     cluster_theme: clusterTheme,
     nodes: serviceNodes,
     sub_clusters: subClusters.length > 0 ? subClusters : undefined,
-    connect_to_shared_infra: ['cache', 'db']
+    connect_to_shared_infra: subClusters.length > 0 ? undefined : ['cache', 'db']
   };
 }
 
