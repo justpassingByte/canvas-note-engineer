@@ -25,11 +25,37 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
 
   const isSelected = node.id === selectedNodeId;
 
-  // Tìm các cạnh liên quan đến node đang được chọn nếu đang bật chế độ "Điều gì sụp đổ"
-  const isCascadeAffected = isWhatBreaksActive && (
-    node.id === selectedNodeId ||
-    graph?.edges.some(e => (e.from === selectedNodeId && e.to === node.id) || (e.to === selectedNodeId && e.from === node.id))
-  );
+  // Tính toán tầng lan truyền sự cố động (Dynamic Failure Cascade Stage via DAG BFS)
+  const cascadeStageInfo = React.useMemo(() => {
+    if (!isWhatBreaksActive || !selectedNodeId || !graph) return null;
+    if (node.id === selectedNodeId) {
+      return { depth: 0, label: '🚨 1. TRIGGER' };
+    }
+
+    const queue: Array<{ id: string; depth: number }> = [{ id: selectedNodeId, depth: 0 }];
+    const visited = new Set<string>([selectedNodeId]);
+
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!;
+      const outgoing = graph.edges.filter(e => e.from === id).map(e => e.to);
+      for (const targetId of outgoing) {
+        if (targetId === node.id) {
+          const d = depth + 1;
+          if (d === 1) return { depth: 1, label: '🔴 2. SATURATION' };
+          if (d === 2) return { depth: 2, label: '💥 3. BLAST RADIUS' };
+          return { depth: d, label: `🛑 ${d + 1}. IMPACT` };
+        }
+        if (!visited.has(targetId)) {
+          visited.add(targetId);
+          queue.push({ id: targetId, depth: depth + 1 });
+        }
+      }
+    }
+
+    return null;
+  }, [isWhatBreaksActive, selectedNodeId, graph, node.id]);
+
+  const isCascadeAffected = Boolean(cascadeStageInfo);
 
   // Tìm kiếm
   const isSearchMatch = !searchQuery || (
@@ -138,6 +164,29 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
       onClick={handleNodeClick}
       title="Kéo chuột để di chuyển node | Click để mở sổ tay kỹ thuật"
     >
+      {/* Mini Stage Pill Badge khi kích hoạt Failure Cascade */}
+      {cascadeStageInfo && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-13px',
+            background: cascadeStageInfo.depth === 0 ? '#FEF2F2' : '#FFF1F2',
+            border: `1.5px solid ${cascadeStageInfo.depth === 0 ? '#DC2626' : '#E11D48'}`,
+            color: cascadeStageInfo.depth === 0 ? '#991B1B' : '#881337',
+            borderRadius: '12px',
+            padding: '1px 8px',
+            fontSize: '9px',
+            fontWeight: 800,
+            fontFamily: "'JetBrains Mono', monospace",
+            whiteSpace: 'nowrap',
+            zIndex: 15,
+            boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)'
+          }}
+        >
+          {cascadeStageInfo.label}
+        </div>
+      )}
+
       <div className="hop-icon-pod-wrap">
         <div className={`hop-icon-pod ${getPodVariantClass()}`}>
           <LucideIconPod type={node.bieu_tuong} />

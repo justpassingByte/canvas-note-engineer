@@ -147,6 +147,33 @@ export const SvgGridCanvas: React.FC = () => {
     });
   }, [graph, visibleNodeIds]);
 
+  // Tính toán đường đi lan truyền sự cố động (Dynamic DAG BFS Cascade Wave)
+  const cascadeEdgeMap = useMemo(() => {
+    const map = new Map<string, { depth: number; delay: number }>();
+    if (!isWhatBreaksActive || !selectedNodeId || !graph) return map;
+
+    const queue: Array<{ id: string; depth: number }> = [{ id: selectedNodeId, depth: 0 }];
+    const visited = new Set<string>([selectedNodeId]);
+
+    while (queue.length > 0) {
+      const { id, depth } = queue.shift()!;
+      for (const edge of visibleEdges) {
+        if (edge.from === id) {
+          const key = `${edge.from}->${edge.to}`;
+          if (!map.has(key)) {
+            map.set(key, { depth, delay: depth * 0.75 });
+          }
+          if (!visited.has(edge.to)) {
+            visited.add(edge.to);
+            queue.push({ id: edge.to, depth: depth + 1 });
+          }
+        }
+      }
+    }
+
+    return map;
+  }, [isWhatBreaksActive, selectedNodeId, graph, visibleEdges]);
+
   // Tính toán trước tọa độ và hình học của từng đường nối để tách biệt các lớp SVG
   const edgeGeometries = useMemo(() => {
     if (!graph) return [];
@@ -157,7 +184,10 @@ export const SvgGridCanvas: React.FC = () => {
 
       const { pathD, midX, midY } = calculateEdgePath(fromNode, toNode);
       const isEdgeSelected = selectedEdge?.from === edge.from && selectedEdge?.to === edge.to;
-      const isCascadeEdge = isWhatBreaksActive && (edge.from === selectedNodeId || edge.to === selectedNodeId);
+      const cascadeInfo = cascadeEdgeMap.get(`${edge.from}->${edge.to}`);
+      const isCascadeEdge = Boolean(cascadeInfo);
+      const cascadeDelay = cascadeInfo?.delay ?? 0;
+
       // Tự động gắn ký hiệu chỉ hướng ➔ để người dùng luôn nhận biết rõ chiều luồng dữ liệu
       const directionLabel = edge.nhan.includes('➔') || edge.nhan.includes('->') ? edge.nhan : `${edge.nhan} ➔`;
       const displayLabel = directionLabel.length > 24 ? directionLabel.slice(0, 22) + '…' : directionLabel;
@@ -174,7 +204,8 @@ export const SvgGridCanvas: React.FC = () => {
         labelWidth,
         labelHeight,
         isEdgeSelected,
-        isCascadeEdge
+        isCascadeEdge,
+        cascadeDelay
       };
     }).filter(Boolean) as Array<{
       edge: (typeof visibleEdges)[0];
@@ -187,8 +218,9 @@ export const SvgGridCanvas: React.FC = () => {
       labelHeight: number;
       isEdgeSelected: boolean;
       isCascadeEdge: boolean;
+      cascadeDelay: number;
     }>;
-  }, [visibleEdges, nodeMap, selectedEdge, isWhatBreaksActive, selectedNodeId]);
+  }, [visibleEdges, nodeMap, selectedEdge, cascadeEdgeMap]);
 
   // Điều hướng Camera mượt mà bay vào tâm cụm khi click (Click-to-Focus)
   const focusCluster = (cluster: TopicCluster) => {
@@ -621,6 +653,27 @@ export const SvgGridCanvas: React.FC = () => {
               />
               {/* Đường xung điện động nhịp thở 4.5s */}
               <path className={item.edge.kieu} d={item.pathD} />
+
+              {/* Hạt con bọ Bug Particle lan truyền sự cố (chạy 3 chu kỳ rồi dừng) */}
+              {item.isCascadeEdge && (
+                <g>
+                  <animateMotion
+                    path={item.pathD}
+                    dur="2.6s"
+                    repeatCount="3"
+                    rotate="auto"
+                    begin={`${item.cascadeDelay || 0}s`}
+                    fill="freeze"
+                  />
+                  <g transform="translate(-7, -7)">
+                    <rect width="14" height="14" rx="7" fill="#FEE2E2" stroke="#DC2626" strokeWidth="1" />
+                    <path d="M7 3.5a2.2 2.2 0 0 1 2.2 2.2v2.5a2.2 2.2 0 0 1-4.4 0V5.7A2.2 2.2 0 0 1 7 3.5z" fill="#DC2626" />
+                    <path d="M4 6h6M3 8.5h8M4 11h6" stroke="#991B1B" strokeWidth="0.9" strokeLinecap="round" />
+                    <circle cx="5.8" cy="4.8" r="0.5" fill="#FFF" />
+                    <circle cx="8.2" cy="4.8" r="0.5" fill="#FFF" />
+                  </g>
+                </g>
+              )}
             </g>
           ))}
         </svg>
