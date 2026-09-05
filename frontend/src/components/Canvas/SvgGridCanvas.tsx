@@ -17,7 +17,7 @@ function getEdgeKeywordTooltip(edge: any): string {
   if (edge.giai_thich) {
     return `${edge.nhan}\n\n▸ Bản chất luồng: ${edge.giai_thich}`;
   }
-  return `${edge.nhan}\n\n(Click để xem chi tiết liên kết kiến trúc trong Sổ tay)`;
+  return `${edge.nhan}\n\n(Click để xem chi tiết liên kết kiến trúc trong Field Notes)`;
 }
 
 export const SvgGridCanvas: React.FC = () => {
@@ -887,7 +887,7 @@ export const SvgGridCanvas: React.FC = () => {
             />
           )}
           <div style={{ color: '#6B7280', fontSize: '9px', marginTop: '4px', fontStyle: 'italic' }}>
-            (Click để mở chi tiết trong Sổ tay)
+            (Click để mở chi tiết trong Field Notes)
           </div>
         </div>
       )}
@@ -935,7 +935,7 @@ export const SvgGridCanvas: React.FC = () => {
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <span>📖</span>
-                <span>Mở Sổ tay chi tiết</span>
+                <span>Mở Field Notes chi tiết</span>
               </button>
               <button
                 className="context-menu-item"

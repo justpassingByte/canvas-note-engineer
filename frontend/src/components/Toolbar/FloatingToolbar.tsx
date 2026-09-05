@@ -118,7 +118,7 @@ export const FloatingToolbar: React.FC = () => {
         <span className="icon-so-tay">
           <Compass className="lucide-icon-sm" />
         </span>
-        <span className="chu-tieu-de-noi">Sổ tay Kỹ sư</span>
+        <span className="chu-tieu-de-noi">Canvas Note Engineer</span>
         <span className="nhan-dem-node">{visibleNodes.length} Nodes</span>
       </div>
 

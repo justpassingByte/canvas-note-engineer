@@ -131,10 +131,10 @@ export const FieldNotesDrawer: React.FC = () => {
       <button
         className="the-mo-drawer-noi"
         onClick={openDrawer}
-        title="Mở Sổ tay Kỹ sư chi tiết"
+        title="Mở Field Notes chi tiết"
       >
         <BookOpen size={14} />
-        <span>SỔ TAY</span>
+        <span>FIELD NOTES</span>
       </button>
     );
   };
@@ -233,7 +233,7 @@ export const FieldNotesDrawer: React.FC = () => {
               className="nut-thao-tac-phu-drawer nut-dong-drawer"
               onClick={closeDrawer}
               style={{ position: 'absolute', top: 16, right: 16 }}
-              title="Ẩn Sổ tay (Esc)"
+              title="Ẩn Field Notes (Esc)"
             >
               <X size={15} />
             </button>
@@ -305,7 +305,7 @@ export const FieldNotesDrawer: React.FC = () => {
               <button
                 className="nut-thao-tac-phu-drawer nut-dong-drawer"
                 onClick={closeDrawer}
-                title="Ẩn Sổ tay để xem toàn màn hình đồ thị (Esc)"
+                title="Ẩn Field Notes để xem toàn màn hình đồ thị (Esc)"
               >
                 <X size={15} />
               </button>
