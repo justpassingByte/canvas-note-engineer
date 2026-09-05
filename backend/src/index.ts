@@ -5,6 +5,10 @@ import fs from 'fs';
 import { toolHandlers } from './tools/toolHandlers.js';
 import { sqliteClient } from './db/sqliteClient.js';
 import { brainstormRAG } from './rag/brainstormRAG.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -174,8 +178,15 @@ app.post('/api/rag/upload', async (req, res) => {
 });
 
 // Phục vụ frontend bundle đã build khi chạy dạng plugin độc lập hoặc nhúng webview
-const FRONTEND_DIST = path.resolve(process.cwd(), '../frontend/dist');
-if (fs.existsSync(FRONTEND_DIST)) {
+const frontendCandidates = [
+  path.resolve(process.cwd(), 'frontend/dist'),
+  path.resolve(process.cwd(), '../frontend/dist'),
+  path.resolve(__dirname, '../../frontend/dist'),
+  path.resolve(__dirname, '../../../frontend/dist')
+];
+const FRONTEND_DIST = frontendCandidates.find(p => fs.existsSync(p));
+if (FRONTEND_DIST) {
+  console.log(`[DSH Plugin Backend] Đang phục vụ frontend từ: ${FRONTEND_DIST}`);
   app.use(express.static(FRONTEND_DIST));
   app.get('*', (req, res) => {
     res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
