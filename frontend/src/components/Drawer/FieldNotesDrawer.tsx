@@ -422,13 +422,31 @@ export const FieldNotesDrawer: React.FC = () => {
                 <AlertCircle size={14} />
                 <span>KỊCH BẢN LAN TRUYỀN SỰ CỐ DÂY CHUYỀN (CASCADING FAILURE CHAIN)</span>
               </div>
-              <ol style={{ margin: 0, paddingLeft: '18px', color: '#881337' }}>
-                {c.chuoi_sup_do.map((step, sIdx) => (
-                  <li key={sIdx} style={{ marginBottom: '4px' }}>
-                    <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(step) }} />
-                  </li>
-                ))}
-              </ol>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
+                {c.chuoi_sup_do.map((step, sIdx) => {
+                  const cleanStep = step.replace(/^[\d\.]+\s*/, '').trim();
+                  return (
+                    <div key={sIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#881337' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: '#FECDD3',
+                        color: '#9F1239',
+                        fontSize: '9.5px',
+                        fontWeight: 800,
+                        marginTop: '1px'
+                      }}>
+                        {sIdx + 1}
+                      </span>
+                      <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(cleanStep) }} />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

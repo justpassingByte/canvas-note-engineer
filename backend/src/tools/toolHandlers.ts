@@ -13,62 +13,343 @@ import {
 } from '../types/graphTypes.js';
 
 export function generate5StepReflexDrill(title: string, summary: string, clusterName: string): ReflexQuizItem[] {
-  const tLower = title.toLowerCase();
+  const t = title.toLowerCase();
+  const s = summary.toLowerCase();
 
+  // 1. DÀNH CHO COMPUTE & PURE ENGINES (PROMOTION, PRICING, STACKING RULES)
+  if (t.includes('engine') || t.includes('pure') || t.includes('tính toán') || t.includes('calculator') || s.includes('0 i/o') || s.includes('stacking')) {
+    return [
+      {
+        cau_hoi: `Tại sao '${title}' bắt buộc phải là một Pure Domain Service (100% 0 I/O) thay vì gọi trực tiếp DB/Redis?`,
+        lua_chon: [
+          'Inject trực tiếp Database Client vào Engine để query tồn kho thời gian thực, tránh việc phải truyền Snapshot cồng kềnh qua tham số',
+          'Đảm bảo tính Pure Deterministic: Unit Test chạy dưới 0.1ms, không bị nghẽn mạng và có thể Replay kiểm toán chính xác 100% mọi đơn hàng quá khứ'
+        ],
+        dung: 1,
+        giai_thich: 'Pure Engine không được có Side-Effects hay phụ thuộc I/O mạng. Toàn bộ dữ liệu cần thiết phải được nạp sẵn qua Snapshot trước khi đưa vào tính toán.',
+        phan_tang: 'Kiến trúc cốt lõi'
+      },
+      {
+        cau_hoi: `Khi phân bổ chiết khấu voucher sàn 100k cho 3 seller (Multi-Seller Split), giải pháp nào ngăn ngừa triệt để lỗi làm tròn số lẻ (Penny Rounding)?`,
+        lua_chon: [
+          'Dùng kiểu số thực Float (Number) chuẩn IEEE 754 có 2 chữ số thập phân rồi gọi hàm Math.round() ở bước thanh toán cuối cùng',
+          'Dùng Minor-Unit BigInt kèm thuật toán Largest Remainder để dồn chính xác phần dư 1đ vào dòng hàng có giá trị lớn nhất'
+        ],
+        dung: 1,
+        giai_thich: 'Số thực Float của JavaScript chỉ an toàn đến 53-bit và luôn tích lũy sai số làm tròn. Bắt buộc phải dùng BigInt và phân bổ phần dư nguyên vẹn để tổng chia luôn khớp 100%.',
+        phan_tang: 'Tương tranh cao điểm'
+      },
+      {
+        cau_hoi: `Nếu giỏ hàng chứa 15 sản phẩm từ 4 seller khác nhau, nguy cơ lớn nhất khi đánh giá ma trận Stacking Rules là gì?`,
+        lua_chon: [
+          'Bùng nổ tổ hợp (Combinatorial Explosion O(2^N)) làm nghẽn CPU nếu cố gắng giải thuật toán vét cạn tìm phương án giảm giá tối ưu nhất',
+          'Tràn bộ nhớ RAM do dung lượng file cấu hình JSON của rule vượt quá 100MB'
+        ],
+        dung: 0,
+        giai_thich: 'Vét cạn mọi tổ hợp voucher (Combinatorial Best Discount) có độ phức tạp lũy thừa. Hệ thống thực chiến luôn giới hạn số lượng voucher hoặc yêu cầu người dùng tự chọn khi có xung đột.',
+        phan_tang: 'Lan truyền sự cố'
+      },
+      {
+        cau_hoi: `Khi xử lý hoàn tiền (Refund) cho một phần đơn hàng đã áp voucher, Engine nên tính toán theo cơ chế nào?`,
+        lua_chon: [
+          'Chạy lại toàn bộ thuật toán Promotion Engine trên các món còn lại để tính lại biểu giá mới nhất cho người mua',
+          'Tuyệt đối không chạy lại Engine; hoàn tiền bắt buộc dựa trên Order Promotion Snapshot và Bảng phân bổ chiết khấu bất biến đã lưu lúc checkout'
+        ],
+        dung: 1,
+        giai_thich: 'Chạy lại Engine khi refund sẽ làm thay đổi mức chiết khấu ban đầu của các seller khác. Hoàn tiền phải bảo toàn lịch sử settlement qua Snapshot bất biến.',
+        phan_tang: 'Đánh đổi kỹ thuật'
+      },
+      {
+        cau_hoi: `Chỉ số kỹ thuật nào phản ánh chính xác nhất hiệu năng của Pure Domain Engine trong đợt cao điểm?`,
+        lua_chon: [
+          'P99 Execution Time của thuật toán đánh giá rule phải dưới 1ms và không phát sinh bất kỳ Network I/O nào',
+          'Tỷ lệ Cache Hit của cơ sở dữ liệu quan hệ PostgreSQL'
+        ],
+        dung: 0,
+        giai_thich: 'Vì là Pure In-Memory Service, chỉ số sống còn của Engine là thời gian thực thi CPU P99 < 1ms.',
+        phan_tang: 'Vận hành & Giám sát'
+      }
+    ];
+  }
+
+  // 2. DÀNH CHO DATABASE, REPOSITORIES, ACID STORAGE & LEDGER
+  if (t.includes('postgres') || t.includes('database') || t.includes('acid') || t.includes('storage') || t.includes('ledger') || t.includes('db')) {
+    return [
+      {
+        cau_hoi: `Tại sao PostgreSQL được chọn làm Source of Truth duy nhất cho Quota & Budget thay vì dùng Redis In-Memory Counter?`,
+        lua_chon: [
+          'Dùng lệnh DECR trên Redis Cluster cho tốc độ 1ms, sau đó định kỳ 5 phút dùng cronjob sync số dư ngược về PostgreSQL',
+          'Bắt buộc dùng PostgreSQL ACID Transaction và Row-Level Lock vì Redis Lock có nguy cơ split-brain hoặc hết hạn TTL giữa chừng gây bội chi ngân sách (Overspend)'
+        ],
+        dung: 1,
+        giai_thich: 'Dữ liệu tài chính và ngân sách tối cao bắt buộc phải dựa vào ACID và Row Lock của cơ sở dữ liệu quan hệ để đảm bảo an toàn tuyệt đối ngay cả khi máy chủ crash.',
+        phan_tang: 'Kiến trúc cốt lõi'
+      },
+      {
+        cau_hoi: `Trong kịch bản 10.000 transaction cùng áp 1 voucher lúc 0h, giải pháp nào ngăn ngừa triệt để lỗi Deadlock ở tầng DB?`,
+        lua_chon: [
+          'Bắt buộc sắp xếp danh sách ID các promotion cần khóa theo thứ tự tăng dần cố định trước khi thực thi lệnh SELECT ... FOR UPDATE',
+          'Khóa ngẫu nhiên theo thứ tự sản phẩm trong giỏ hàng và tăng connection_timeout lên 30 giây'
+        ],
+        dung: 0,
+        giai_thich: 'Deadlock xảy ra khi Tx1 khóa A chờ B, trong khi Tx2 khóa B chờ A. Khóa tài nguyên theo thứ tự ID cố định triệt tiêu 100% chu trình chờ chéo (Deadlock Cycle).',
+        phan_tang: 'Tương tranh cao điểm'
+      },
+      {
+        cau_hoi: `Nguy cơ nghẽn cổ chai nghiêm trọng nhất khi giữ Row-Level Lock trong transaction tài chính là gì?`,
+        lua_chon: [
+          'Bảng dữ liệu bị phình to dung lượng đĩa cứng quá nhanh',
+          'Connection Pool bị chiếm giữ quá 150ms làm cạn kiệt kết nối (Starvation), kéo sập dây chuyền toàn bộ API Checkout'
+        ],
+        dung: 1,
+        giai_thich: 'Row lock contention giữ chặt kết nối DB. Khi hàng ngàn request xếp hàng chờ, connection pool cạn kiệt khiến toàn bộ hệ thống bị timeout.',
+        phan_tang: 'Lan truyền sự cố'
+      },
+      {
+        cau_hoi: `Tại sao cột lưu trữ số tiền chiết khấu trong PostgreSQL nên dùng kiểu BIGINT thay vì NUMERIC(15,2) hay DOUBLE PRECISION?`,
+        lua_chon: [
+          'BIGINT (lưu Minor-Unit) xử lý phép tính số học nguyên thủy trên CPU cực nhanh và ánh xạ mượt mà sang BigInt của Node.js mà không bị sai số dấu phẩy động',
+          'DOUBLE PRECISION tiết kiệm dung lượng lưu trữ hơn BIGINT tới 4 lần'
+        ],
+        dung: 0,
+        giai_thich: 'Lưu Minor-Unit dạng BIGINT đảm bảo tính toán số nguyên nhanh nhất và không bao giờ bị sai lệch số lẻ như các kiểu số thực.',
+        phan_tang: 'Đánh đổi kỹ thuật'
+      },
+      {
+        cau_hoi: `Để bảo vệ PostgreSQL không bị quá tải khi hàng ngàn đơn hàng thanh toán cùng lúc, giải pháp nào tối ưu nhất?`,
+        lua_chon: [
+          'Mở rộng Connection Pool lên 5.000 kết nối đồng thời trên PostgreSQL',
+          'Kết hợp Fast Pre-Check hạn ngạch trên Redis Cache + Connection Pooling (PgBouncer) giữ pool ở ngưỡng tối ưu 50-100 connections'
+        ],
+        dung: 1,
+        giai_thich: 'Mở quá nhiều connection (> 500) sẽ làm PostgreSQL bị nghẽn context-switch CPU. Cần dùng PgBouncer và Fast Pre-check trên cache để gạn lọc request.',
+        phan_tang: 'Vận hành & Giám sát'
+      }
+    ];
+  }
+
+  // 3. DÀNH CHO REDIS CACHE, DISTRIBUTED LOCK & RATE LIMIT
+  if (t.includes('redis') || t.includes('cache') || t.includes('rate') || t.includes('lock') || t.includes('blacklist')) {
+    return [
+      {
+        cau_hoi: `Nguyên tắc phòng thủ sống còn khi thiết kế phân hệ Caching cho hệ thống Promotion / Auth là gì?`,
+        lua_chon: [
+          'Lưu trữ trạng thái duy nhất trên Redis và tắt cơ chế ghi đĩa của PostgreSQL để đạt thông lượng tối đa',
+          'Redis chỉ đóng vai trò bản sao tăng tốc (Read Cache) và Rate Limit; sự cố sập cụm Redis (Outage) không được phép làm sai lệch tính đúng đắn của dữ liệu'
+        ],
+        dung: 1,
+        giai_thich: 'Cache có thể bị xóa và dựng lại bất kỳ lúc nào từ Database. Hệ thống phải thiết kế sao cho khi Redis sập hoàn toàn thì dữ liệu tài chính vẫn bảo toàn.',
+        phan_tang: 'Kiến trúc cốt lõi'
+      },
+      {
+        cau_hoi: `Hiện tượng Cache Stampede (Thảm họa bão truy vấn) xảy ra khi nào và cách hóa giải tối ưu là gì?`,
+        lua_chon: [
+          'Xảy ra khi hàng triệu request cùng ùa xuống DB khi một key hot vừa hết hạn TTL; hóa giải bằng cơ chế Mutex Lock / Probabilistic Early Expiration (XFetch)',
+          'Xảy ra khi dung lượng RAM Redis đầy 100%; hóa giải bằng cách khởi động lại máy chủ Redis'
+        ],
+        dung: 0,
+        giai_thich: 'Cache Stampede làm nghẽn DB tức thì khi key hot hết hạn. Cần dùng Mutex khóa tái tạo cache hoặc thuật toán tính xác suất làm mới cache trước khi hết hạn.',
+        phan_tang: 'Tương tranh cao điểm'
+      },
+      {
+        cau_hoi: `Khi sử dụng Redis Distributed Lock (SETNX) cho các tác vụ dài hạn, nguy cơ tiềm ẩn lớn nhất là gì?`,
+        lua_chon: [
+          'Khóa bị giải phóng sớm do hết hạn TTL trong khi tiến trình nghiệp vụ vẫn đang thực thi, dẫn đến 2 tiến trình cùng thao tác đồng thời',
+          'Lệnh SETNX tốn nhiều I/O đĩa cứng làm tăng độ trễ mạng'
+        ],
+        dung: 0,
+        giai_thich: 'Nếu tác vụ chạy lâu hơn TTL của lock, Redis sẽ tự động nhả khóa cho tiến trình khác vào, phá vỡ tính cô lập. Cần có cơ chế Lock Watchdog / Heartbeat để gia hạn.',
+        phan_tang: 'Lan truyền sự cố'
+      },
+      {
+        cau_hoi: `Thuật toán Rate Limiting nào cân bằng tốt nhất giữa khả năng chịu tải đột biến ngắn hạn và tính chính xác biên thời gian?`,
+        lua_chon: [
+          'Fixed Window Counter (Bộ đếm cửa sổ cố định)',
+          'Sliding Window Counter kết hợp Token Bucket trong Redis Scripting (Lua)'
+        ],
+        dung: 1,
+        giai_thich: 'Sliding Window triệt tiêu lỗi bùng nổ lưu lượng ở biên cửa sổ thời gian, trong khi Token Bucket cho phép xử lý các đợt burst traffic an toàn.',
+        phan_tang: 'Đánh đổi kỹ thuật'
+      },
+      {
+        cau_hoi: `Chính sách loại bỏ dữ liệu (Eviction Policy) nào phù hợp nhất cho Redis cụm Caching & Rate Limiting?`,
+        lua_chon: [
+          'volatile-lru hoặc allkeys-lru để tự động giải phóng các key ít dùng nhất khi bộ nhớ chạm ngưỡng trần maxmemory',
+          'noeviction (từ chối nhận lệnh mới và báo lỗi Out of Memory ngay lập tức)'
+        ],
+        dung: 0,
+        giai_thich: 'LRU (Least Recently Used) đảm bảo hệ thống cache không bị sập khi đầy RAM mà tự động đào thải các bản ghi cũ.',
+        phan_tang: 'Vận hành & Giám sát'
+      }
+    ];
+  }
+
+  // 4. DÀNH CHO AUTH, GATEWAY, JWT & REFRESH TOKEN ROTATION (RTR)
+  if (t.includes('auth') || t.includes('jwt') || t.includes('token') || t.includes('rtr') || t.includes('gateway') || t.includes('pep') || t.includes('oidc')) {
+    return [
+      {
+        cau_hoi: `Tại sao Access Token JWT nên có thời gian sống rất ngắn (5-15 phút) và lưu trong HttpOnly Cookie thay vì localStorage?`,
+        lua_chon: [
+          'Lưu trong localStorage giúp lập trình viên Frontend dễ dàng đọc quyền hạn của user bằng JavaScript để ẩn hiện nút bấm',
+          'HttpOnly Cookie ngăn chặn 100% mã độc JavaScript đọc trộm token qua lỗ hổng XSS, và thời gian ngắn hạn giúp thu hẹp tối đa cửa sổ rủi ro nếu token bị lộ'
+        ],
+        dung: 1,
+        giai_thich: 'localStorage hoàn toàn bất lực trước tấn công XSS. Bắt buộc phải lưu trong HttpOnly Cookie kèm cờ SameSite=Lax/Strict.',
+        phan_tang: 'Kiến trúc cốt lõi'
+      },
+      {
+        cau_hoi: `Trong cơ chế Refresh Token Rotation (RTR), điều gì xảy ra khi hệ thống phát hiện một Refresh Token cũ trong quá khứ bị gửi lại lần 2?`,
+        lua_chon: [
+          'Vẫn tiếp tục cấp Access Token mới nếu thời hạn TTL của token cũ chưa hết',
+          'Kích hoạt cơ chế Phục hồi Xâm nhập (Breach Detection): Lập tức thu hồi toàn bộ Token Family (tất cả token con cháu của phiên) vì nghi ngờ Replay Attack'
+        ],
+        dung: 1,
+        giai_thich: 'Dùng lại token đã hủy là dấu hiệu chắc chắn token đã bị kẻ gian đánh cắp hoặc nghe lén. Bắt buộc phải thu hồi toàn bộ phiên để bảo vệ người dùng.',
+        phan_tang: 'Tương tranh cao điểm'
+      },
+      {
+        cau_hoi: `Để chống Race Condition khi ứng dụng Client (React/Mobile) phát 2 request refresh đồng thời qua mạng chập chờn, giải pháp nào chuẩn mực nhất?`,
+        lua_chon: [
+          'Cung cấp một khoảng thời gian ân hạn ngắn (Grace Period 10-30s) cho phép token vừa bị xoay vòng vẫn được trả về token mới đã sinh',
+          'Tắt hoàn toàn cơ chế xoay vòng token và chỉ dùng 1 token vĩnh viễn'
+        ],
+        dung: 0,
+        giai_thich: 'Grace Period ngắn (10-30s) cho phép xử lý độ trễ mạng khi nhiều request refresh bay song song mà không kích hoạt nhầm cảnh báo Replay Attack.',
+        phan_tang: 'Lan truyền sự cố'
+      },
+      {
+        cau_hoi: `Tại sao Auth Server nên phân tách rõ rệt Audience Claim (aud) giữa cổng Khách hàng (/customer) và cổng Quản trị (/admin)?`,
+        lua_chon: [
+          'Ngăn chặn tuyệt đối nguy cơ kẻ tấn công dùng Token hợp lệ của tài khoản Khách hàng để Replay mạo danh vào API Quản trị',
+          'Để giảm kích thước payload của chuỗi mã hóa JWT'
+        ],
+        dung: 0,
+        giai_thich: 'Audience routing đảm bảo mỗi token chỉ có giá trị trên một bề mặt ứng dụng xác định, không thể dùng chéo bề mặt.',
+        phan_tang: 'Đánh đổi kỹ thuật'
+      },
+      {
+        cau_hoi: `Khi Auth Gateway thẩm định JWT dạng Stateless ở tốc độ 0.2ms, làm thế nào để thu hồi tức thì một token bị lộ trước khi nó hết hạn?`,
+        lua_chon: [
+          'Truy vấn danh sách JTI bị thu hồi trong Redis Blacklist với thời gian sống TTL đúng bằng thời gian còn lại của Access Token',
+          'Khởi động lại toàn bộ máy chủ backend để xóa bộ nhớ tạm'
+        ],
+        dung: 0,
+        giai_thich: 'Redis Blacklist chỉ lưu JTI của những token bị thu hồi khẩn cấp với TTL ngắn, kết hợp ưu điểm của cả Stateless JWT và Tức thì Revocation.',
+        phan_tang: 'Vận hành & Giám sát'
+      }
+    ];
+  }
+
+  // 5. DÀNH CHO MESSAGE QUEUE, TRANSACTIONAL OUTBOX & BACKGROUND WORKERS
+  if (t.includes('queue') || t.includes('outbox') || t.includes('worker') || t.includes('kafka') || t.includes('event')) {
+    return [
+      {
+        cau_hoi: `Mẫu thiết kế Transactional Outbox giải quyết bài toán phân tán cốt lõi nào giữa Database và Message Broker?`,
+        lua_chon: [
+          'Thực thi giao dịch 2-Phase Commit (XA Transactions) khóa cứng cả PostgreSQL và Kafka cùng lúc',
+          'Đảm bảo tính nguyên tử: Lưu Event vào bảng outbox trong cùng 1 DB Transaction với Entity, sau đó Worker nền mới phát tán sự kiện sang Message Bus một cách tin cậy'
+        ],
+        dung: 1,
+        giai_thich: 'Transactional Outbox tránh được việc DB lưu thành công nhưng bắn Kafka thất bại (hoặc ngược lại) mà không cần giao dịch phân tán 2PC cồng kềnh.',
+        phan_tang: 'Kiến trúc cốt lõi'
+      },
+      {
+        cau_hoi: `Vì các hệ thống Message Queue phân tán (Kafka/RabbitMQ) hoạt động theo cơ chế At-Least-Once Delivery, Consumer bắt buộc phải thiết kế như thế nào?`,
+        lua_chon: [
+          'Consumer bắt buộc phải có tính Idempotent (Khử trùng lặp qua Message ID / Unique Index) để không xử lý trùng khi tin nhắn bị gửi lại',
+          'Yêu cầu Kafka cam kết chuyển phát Exactly-Once trên mọi điều kiện mạng mà không cần xử lý ở tầng ứng dụng'
+        ],
+        dung: 0,
+        giai_thich: 'Trong thực tế mạng phân tán, At-Least-Once là chuẩn mực. Mọi Consumer phải tự bảo vệ bằng cơ chế Idempotency chống lặp xử lý.',
+        phan_tang: 'Tương tranh cao điểm'
+      },
+      {
+        cau_hoi: `Nếu Background Worker giải phóng Reservation (hạn 15m) bị sập hoặc gặp sự cố Lag kéo dài, hậu quả là gì?`,
+        lua_chon: [
+          'Hạn ngạch (Quota) của các voucher bị bỏ dở không được nhả lại vào quỹ chung, khiến khách hàng khác không thể áp mã dù ngân sách thực tế vẫn còn',
+          'Dữ liệu tài khoản của người dùng bị xóa hoàn toàn khỏi cơ sở dữ liệu'
+        ],
+        dung: 0,
+        giai_thich: 'Worker giải phóng voucher quá hạn nếu bị lag sẽ gây hiện tượng "giữ ảo" quota, làm giảm doanh thu của đợt khuyến mãi.',
+        phan_tang: 'Lan truyền sự cố'
+      },
+      {
+        cau_hoi: `Chiến lược xử lý tin nhắn lỗi (Failed Message) chuẩn SRE sau khi đã thử lại nhiều lần (Max Retries) là gì?`,
+        lua_chon: [
+          'Bỏ qua tin nhắn lỗi và tiếp tục xử lý các tin nhắn tiếp theo trong hàng đợi',
+          'Đẩy tin nhắn lỗi vào Dead Letter Queue (DLQ) kèm đầy đủ Error Stacktrace và gửi cảnh báo để kỹ sư điều tra và Replay thủ công'
+        ],
+        dung: 1,
+        giai_thich: 'DLQ bảo vệ pipeline không bị tắc nghẽn vô tận bởi "Poison Pill Messages" mà vẫn lưu giữ nguyên vẹn dữ liệu lỗi để khắc phục.',
+        phan_tang: 'Đánh đổi kỹ thuật'
+      },
+      {
+        cau_hoi: `Chỉ số giám sát quan trọng nhất để phát hiện tình trạng quá tải của hệ thống hàng đợi tin nhắn là gì?`,
+        lua_chon: [
+          'Consumer Lag (Độ trễ số lượng tin nhắn chưa được xử lý giữa Producer và Consumer) và Thời gian lưu tin nhắn trong Outbox Table',
+          'Kích thước file cấu hình của Kafka cluster'
+        ],
+        dung: 0,
+        giai_thich: 'Consumer Lag tăng cao là cảnh báo sớm nhất cho thấy tốc độ tiêu thụ của worker không theo kịp tốc độ sản sinh tin nhắn.',
+        phan_tang: 'Vận hành & Giám sát'
+      }
+    ];
+  }
+
+  // 6. DEFAULT ARCHITECTURE QUESTIONS (FALLBACK CHUẨN KỸ SƯ CẤP CAO)
   return [
     {
-      cau_hoi: `Nguyên tắc kiến trúc cốt lõi (Architectural Invariance) của '${title}' là gì?`,
+      cau_hoi: `Nguyên tắc kiến trúc bất biến (Architectural Invariance) sống còn của '${title}' là gì?`,
       lua_chon: [
-        `Đảm bảo tính toàn vẹn và thực thi đúng vai trò ${summary.slice(0, 48)}...`,
-        'Bỏ qua các bước kiểm tra xác thực để tối đa hóa thông lượng'
+        'Bỏ qua các bước thẩm định tính toàn vẹn để ưu tiên tuyệt đối cho tốc độ phản hồi API',
+        `Duy trì ranh giới Bounded Context độc lập, không cho phép các phân hệ khác can thiệp trực tiếp vào cấu trúc nội tạng của ${title}`
       ],
-      dung: 0,
-      giai_thich: `Thành phần ${title} bắt buộc phải duy trì tính toàn vẹn kiến trúc của phân hệ ${clusterName}.`,
+      dung: 1,
+      giai_thich: `Mỗi phân hệ kiến trúc bắt buộc phải bảo vệ Bounded Context và dữ liệu nội bộ qua Interfaces trừu tượng.`,
       phan_tang: 'Kiến trúc cốt lõi'
     },
     {
-      cau_hoi: `Trong kịch bản lưu lượng bùng phát (High Concurrency 50k req/s), nguy cơ lớn nhất tại '${title}' là gì?`,
+      cau_hoi: `Trong kịch bản tải cao điểm đột biến 50.000 req/s, điểm nghẽn (Bottleneck) nguy hiểm nhất tại '${title}' là gì?`,
       lua_chon: [
-        'Nghẽn cổ chai tài nguyên (CPU/RAM/Socket) làm tăng P99 Latency vượt ngưỡng timeout',
-        'Hệ thống tự động sinh thêm CPU vật lý mà không tốn chi phí'
+        'Trạng thái bão hòa tài nguyên (CPU/RAM/Connection Pool) làm tăng đột biến P99 Latency và gây tràn hàng đợi xử lý',
+        'Hệ thống tự động chuyển sang trạng thái ngủ đông mà không tiêu thụ điện năng'
       ],
       dung: 0,
-      giai_thich: 'Tải đột biến sẽ làm dồn ứ hàng đợi và cạn kiệt Connection Pool nếu không có cơ chế Rate Limiting hoặc Buffering.',
+      giai_thich: 'Tải cao điểm làm cạn kiệt tài nguyên xử lý nếu thiếu các cơ chế đệm bất đồng bộ hoặc giới hạn tần suất.',
       phan_tang: 'Tương tranh cao điểm'
     },
     {
-      cau_hoi: `Nếu '${title}' gặp sự cố dừng hoạt động, hiệu ứng lan truyền (Failure Cascade & Blast Radius) xảy ra như thế nào?`,
+      cau_hoi: `Khi '${title}' gặp sự cố suy giảm hiệu năng, giải pháp ngăn chặn hiệu ứng thất bại dây chuyền (Failure Cascade) là gì?`,
       lua_chon: [
-        `Các dịch vụ phụ thuộc phía sau bị dồn ứ, kéo sập dây chuyền toàn bộ phân hệ ${clusterName}`,
-        'Toàn bộ mạng Internet toàn cầu tự động ngắt kết nối'
+        'Kích hoạt Circuit Breaker tự động ngắt kết nối và trả về phản hồi suy giảm có kiểm soát (Graceful Degradation / Fallback)',
+        'Tăng thời gian timeout lên 60 giây để tất cả client cùng kiên nhẫn chờ đợi'
       ],
       dung: 0,
-      giai_thich: 'Lỗi tại một thành phần trọng yếu sẽ lan truyền sang các client phụ thuộc nếu thiếu Circuit Breaker.',
+      giai_thich: 'Tăng timeout khi service đang chậm sẽ làm các client dồn ứ kết nối và kéo sập toàn bộ hệ sinh thái. Bắt buộc phải ngắt mạch sớm (Fast-Fail).',
       phan_tang: 'Lan truyền sự cố'
     },
     {
-      cau_hoi: `Đánh đổi kỹ thuật (Trade-off) quan trọng nhất khi vận hành '${title}' là gì?`,
+      cau_hoi: `Đánh đổi kỹ thuật (Trade-off) căn bản nhất khi thiết kế và vận hành '${title}' là gì?`,
       lua_chon: [
-        'Cân bằng giữa Tính nhất quán dữ liệu (Consistency) và Độ trễ phản hồi (Low Latency)',
-        'Không có bất kỳ đánh đổi nào, mọi thứ đều hoàn hảo tuyệt đối'
+        'Cân đối giữa Tính nhất quán dữ liệu (Data Consistency), Tính sẵn sàng (High Availability) và Độ phức tạp vận hành',
+        'Hệ thống có thể đạt được 100% tất cả các thuộc tính hoàn hảo mà không cần đánh đổi bất kỳ yếu tố nào'
       ],
       dung: 0,
-      giai_thich: 'Theo định lý CAP và nguyên lý hệ thống phân tán, tăng cường bảo vệ và kiểm tra luôn đi kèm chi phí độ trễ xử lý.',
+      giai_thich: 'Theo định lý CAP và PACELC, mọi quyết định kiến trúc đều là sự lựa chọn đánh đổi có chủ đích giữa Consistency, Availability và Latency.',
       phan_tang: 'Đánh đổi kỹ thuật'
     },
     {
-      cau_hoi: `Chỉ số SRE Observability quan trọng nhất cần giám sát thời gian thực cho '${title}' là gì?`,
+      cau_hoi: `Bộ chỉ số giám sát SRE (Golden Signals) nào cần thiết lập cảnh báo thời gian thực cho '${title}'?`,
       lua_chon: [
-        'Tỷ lệ lỗi (Error Rate 5xx), P99 Latency và Trạng thái bão hòa tài nguyên (Resource Saturation)',
-        'Số lượng dòng code của file nguồn'
+        'Tỷ lệ lỗi (Error Rate 5xx), P95/P99 Latency, Lưu lượng thông lượng (Traffic Throughput) và Mức độ bão hòa (Resource Saturation)',
+        'Số lượng commit trên kho lưu trữ mã nguồn'
       ],
       dung: 0,
-      giai_thich: 'Phương pháp Golden Signals của Google SRE yêu cầu giám sát 4 chỉ số vàng: Latency, Traffic, Errors, Saturation.',
+      giai_thich: '4 tín hiệu vàng (Golden Signals) của Google SRE là tiêu chuẩn quốc tế để phát hiện sớm mọi sự cố hệ thống.',
       phan_tang: 'Vận hành & Giám sát'
     }
   ];
 }
-
 
 export const MAX_GRAPH_NODES = 36;
 
