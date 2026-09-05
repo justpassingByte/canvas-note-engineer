@@ -70,6 +70,12 @@ export interface CompactClusterNode {
   role?: string;
   summary: string;
   schematic_template?: string;
+  schematic_params?: Record<string, string>;
+  ban_chat?: string;
+  ca_thuc_te?: string[];
+  rui_ro?: string[];
+  chuoi_sup_do?: string[];
+  trac_nghiem?: ReflexQuiz;
 }
 
 export interface SpawnClusterPayload {

@@ -922,12 +922,55 @@ export const toolHandlers = {
       let badge: NodeEntity['bieu_tuong'] = 'khien_bao_ve';
       const roleLower = (cNode.role || '').toLowerCase();
       const titleLower = cNode.title.toLowerCase();
-      if (roleLower.includes('audit') || titleLower.includes('kiểm toán') || titleLower.includes('sổ cái') || titleLower.includes('nhật ký')) {
+      const summaryLower = (cNode.summary || '').toLowerCase();
+      const combinedText = `${titleLower} ${roleLower} ${summaryLower}`;
+
+      if (combinedText.includes('audit') || combinedText.includes('kiểm toán') || combinedText.includes('sổ cái') || combinedText.includes('nhật ký')) {
         badge = 'ghi_chep_so_sach' as any;
-      } else if (roleLower.includes('queue') || titleLower.includes('queue') || titleLower.includes('hàng đợi')) {
+      } else if (combinedText.includes('queue') || combinedText.includes('kafka') || combinedText.includes('hàng đợi')) {
         badge = 'hang_doi_message_queue';
-      } else if (roleLower.includes('cache') || titleLower.includes('cache') || titleLower.includes('redis')) {
+      } else if (combinedText.includes('cache') || combinedText.includes('redis') || combinedText.includes('đệm')) {
         badge = 'bo_nho_dem_cache';
+      } else if (combinedText.includes('db') || combinedText.includes('database') || combinedText.includes('acid') || combinedText.includes('lưu trữ')) {
+        badge = 'khoi_tru_database';
+      }
+
+      // Tự động nhận diện template lược đồ tương thích hoàn hảo với vai trò kỹ thuật
+      let resolvedTemplate = cNode.schematic_template;
+      let resolvedParams = cNode.schematic_params || {};
+
+      if (!resolvedTemplate) {
+        if (combinedText.includes('oidc') || combinedText.includes('oauth') || combinedText.includes('token') || combinedText.includes('identity')) {
+          resolvedTemplate = 'oauth2_oidc';
+          resolvedParams = { client: 'CLIENT APP', auth_server: cNode.title.toUpperCase(), token: 'ACCESS & REFRESH JWT' };
+        } else if (combinedText.includes('blacklist') || combinedText.includes('thu hồi') || combinedText.includes('revocation') || combinedText.includes('jti')) {
+          resolvedTemplate = 'token_blacklist';
+          resolvedParams = { token_jti: 'BEARER TOKEN', cache_store: cNode.title.toUpperCase() };
+        } else if (combinedText.includes('pdp') || combinedText.includes('policy') || combinedText.includes('quyền') || combinedText.includes('rbac') || combinedText.includes('abac')) {
+          resolvedTemplate = 'pdp_policy';
+          resolvedParams = { subject: 'USER CLAIMS', engine: cNode.title.toUpperCase(), decision: 'PERMIT ACCESS' };
+        } else if (combinedText.includes('pep') || combinedText.includes('zero-trust') || combinedText.includes('zero trust') || combinedText.includes('mtls') || combinedText.includes('gateway')) {
+          resolvedTemplate = 'zero_trust_pep';
+          resolvedParams = { client: 'CLIENT mTLS', gateway: cNode.title.toUpperCase(), auth_server: 'INTERNAL MESH', status: 'CERT & TOKEN OK' };
+        } else if (combinedText.includes('rate') || combinedText.includes('waf') || combinedText.includes('ddos') || combinedText.includes('sliding')) {
+          resolvedTemplate = 'rate_limit_sliding';
+          resolvedParams = { client: 'FLOOD TRAFFIC', waf: cNode.title.toUpperCase() };
+        } else if (combinedText.includes('queue') || combinedText.includes('kafka') || combinedText.includes('rabbit') || combinedText.includes('hàng đợi')) {
+          resolvedTemplate = 'hang_doi_dieu_tiet';
+          resolvedParams = { dau_vao: 'PRODUCER', vung_dem: cNode.title.toUpperCase(), tho: 'WORKER POOL', tai_cao: '10k req/s', dieu_tiet: '100 req/s' };
+        } else if (combinedText.includes('cache') || combinedText.includes('redis') || combinedText.includes('đệm')) {
+          resolvedTemplate = 'bo_nho_dem_redis';
+          resolvedParams = { yeu_cau: 'APP REQUEST', cache: cNode.title.toUpperCase(), toc_do: 'LATENCY: 1ms' };
+        } else if (combinedText.includes('db') || combinedText.includes('database') || combinedText.includes('acid') || combinedText.includes('lưu trữ')) {
+          resolvedTemplate = 'luu_tru_acid';
+          resolvedParams = { lenh: 'TX WRITE', chu_lenh: cNode.title.toUpperCase() };
+        } else if (combinedText.includes('audit') || combinedText.includes('log') || combinedText.includes('kiểm toán') || combinedText.includes('hash')) {
+          resolvedTemplate = 'audit_hash_chain';
+          resolvedParams = { event: 'AUDIT EVENT', hash_node: cNode.title.toUpperCase() };
+        } else {
+          resolvedTemplate = 'default';
+          resolvedParams = { actor: 'INGRESS', component: cNode.title.toUpperCase(), target: 'DOWNSTREAM SERVICE', status: 'VERIFIED' };
+        }
       }
 
       const entity: NodeEntity = {
@@ -941,30 +984,32 @@ export const toolHandlers = {
         tam: { x: posX + 110, y: posY + 72 },
         fully_explored: true,
         hoat_hoa: {
-          mau: cNode.schematic_template || 'zero_trust_pep',
-          tham_so: {
-            actor: 'INGRESS',
-            component: cNode.title.toUpperCase(),
-            target: 'INTERNAL BUS',
-            status: 'PROCESSING'
-          }
+          mau: resolvedTemplate,
+          tham_so: resolvedParams
         },
         chi_tiet: {
           phan_loai: payload.cluster_name.toUpperCase(),
           tieu_de: cNode.title,
-          ban_chat: cNode.summary,
-          chu_thich_so_do: `Thành phần thuộc ${payload.cluster_name}`,
-          ca_thuc_te: [
-            `Đảm bảo luồng xử lý tin cậy trong ${payload.cluster_name}`,
-            'Tự động phân giải tải và phòng chống lỗi dây chuyền'
+          ban_chat: cNode.ban_chat || cNode.summary,
+          chu_thich_so_do: `Mô hình luồng thực thi của ${cNode.title}`,
+          ca_thuc_te: cNode.ca_thuc_te || [
+            `Xử lý lưu lượng phân tán trong phân hệ ${payload.cluster_name}`,
+            `Cô lập lỗi và phòng ngừa sự cố dây chuyền cho ${cNode.title}`
           ],
-          rui_ro: [
-            'Cần giám sát độ trễ và số lượng kết nối đồng thời'
+          rui_ro: cNode.rui_ro || [
+            'Nguy cơ nghẽn cổ chai nếu lưu lượng tăng đột biến vượt ngưỡng dự kiến',
+            'Độ trễ gia tăng nếu các kết nối phụ thuộc mạng chập chờn'
+          ],
+          chuoi_sup_do: cNode.chuoi_sup_do || [
+            `1. Thành phần ${cNode.title} gặp sự cố quá tải hoặc mất kết nối.`,
+            '2. Các luồng xử lý phụ thuộc phía sau bị dồn ứ hàng đợi.',
+            '3. Bộ đệm bộ nhớ bị đầy làm tăng độ trễ toàn hệ thống.',
+            `4. Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
           ]
         },
-        trac_nghiem: {
-          cau_hoi: `Vai trò chính của '${cNode.title}' là gì?`,
-          lua_chon: [cNode.summary.slice(0, 50) + '...', 'Bỏ qua kiểm tra để tăng tốc độ'],
+        trac_nghiem: cNode.trac_nghiem || {
+          cau_hoi: `Vai trò kỹ thuật chính của '${cNode.title}' là gì?`,
+          lua_chon: [cNode.summary.slice(0, 48) + '...', 'Bỏ qua các bước kiểm tra để tăng tốc độ'],
           dung: 0,
           giai_thich: `Thành phần này thực thi nhiệm vụ: ${cNode.summary}`
         }
@@ -972,17 +1017,19 @@ export const toolHandlers = {
 
       spawnedNodes.push(entity);
 
-      // Cạnh nội bộ nối tuần tự các node trong cụm - Nhãn ngắn gọn chuẩn giao thức
+      // Cạnh nội bộ nối tuần tự các node trong cụm - Nhãn ngắn gọn kèm giải thích kỹ thuật
       if (idx > 0) {
-        const prevRole = spawnedNodes[idx - 1].chi_tiet?.tieu_de?.slice(0, 10) || 'Flow';
+        const prevNode = spawnedNodes[idx - 1];
+        const prevRole = prevNode.chi_tiet?.tieu_de?.slice(0, 10) || 'Flow';
         const nextRole = cNode.title.slice(0, 10);
         const compactLabel = cNode.role ? `${cNode.role} Flow` : `${prevRole} ➔ ${nextRole}`;
         newEdges.push({
-          from: spawnedNodes[idx - 1].id,
+          from: prevNode.id,
           to: nodeId,
           nhan: compactLabel,
           kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'HOA_GIAI'
+          loai_lien_ket: 'HOA_GIAI',
+          giai_thich: `Luồng tích hợp giữa <u>${prevNode.tieu_de}</u> và <u>${cNode.title}</u> bảo đảm vận hành thông suốt và an toàn kiến trúc trong phân hệ ${payload.cluster_name}.`
         });
       }
     });
