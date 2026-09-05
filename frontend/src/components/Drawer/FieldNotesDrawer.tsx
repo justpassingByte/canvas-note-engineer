@@ -195,16 +195,6 @@ export const FieldNotesDrawer: React.FC = () => {
             </div>
 
             <div className="dau-trang-nhom-nut">
-              {/* Nút mở rộng node con */}
-              <button
-                className="nut-mo-rong-drawer"
-                onClick={() => expandNode(node.id)}
-                title="Mở rộng thêm các node con liên quan"
-              >
-                <Sparkles className="lucide-icon-sm" />
-                <span>+ Mở rộng node con</span>
-              </button>
-
               {/* Nút thu gọn / bung ra nếu có node con */}
               {hasChildren && (
                 <button
