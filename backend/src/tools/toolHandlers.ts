@@ -136,6 +136,36 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
 
 export const MAX_GRAPH_NODES = 24;
 
+/**
+ * Thuật toán tìm ô trống thông minh chống đè node (Collision-Free Spiral Slot Finder)
+ */
+export function findSafeNodePosition(
+  preferredX: number,
+  preferredY: number,
+  existingNodes: NodeEntity[]
+): { x: number; y: number } {
+  const isColliding = (testX: number, testY: number) => {
+    return existingNodes.some(n => Math.abs(n.toa_do.x - testX) < 290 && Math.abs(n.toa_do.y - testY) < 240);
+  };
+
+  if (!isColliding(preferredX, preferredY)) {
+    return { x: Math.round(preferredX), y: Math.round(preferredY) };
+  }
+
+  // Quét xoắn ốc tìm ô trống không chồng lấn
+  const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2, Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4];
+  for (let r = 320; r <= 2500; r += 280) {
+    for (const a of angles) {
+      const candidateX = Math.round(preferredX + r * Math.cos(a));
+      const candidateY = Math.round(preferredY + r * Math.sin(a));
+      if (!isColliding(candidateX, candidateY)) {
+        return { x: candidateX, y: candidateY };
+      }
+    }
+  }
+  return { x: preferredX + 320, y: preferredY + 260 };
+}
+
 export interface SpawnPayload {
   concept_type: string;
   target_concept_slug?: string;
@@ -338,9 +368,18 @@ export const toolHandlers = {
     const slotsAvailable = MAX_GRAPH_NODES - current.nodes.length;
     const canSpawnChild = slotsAvailable >= 2;
 
-    // Tọa độ ưu tiên vị trí click chuột của người dùng, hoặc đặt ở khu vực thoáng phía trên
-    const defaultX = payload.position?.x ?? (targetNode ? targetNode.toa_do.x - 260 : 100);
-    const defaultY = payload.position?.y ?? (targetNode ? targetNode.toa_do.y : -200);
+    // Tọa độ ưu tiên vị trí click chuột của người dùng, hoặc tìm ô trống thông minh gần targetNode
+    let preferredX = payload.position?.x ?? 100;
+    let preferredY = payload.position?.y ?? -200;
+
+    if (targetNode) {
+      preferredX = payload.position?.x ?? targetNode.toa_do.x + 320;
+      preferredY = payload.position?.y ?? targetNode.toa_do.y;
+    }
+
+    const safePos = findSafeNodePosition(preferredX, preferredY, current.nodes);
+    const defaultX = safePos.x;
+    const defaultY = safePos.y;
 
     let rootNode: NodeEntity;
     let childNode: NodeEntity | undefined = undefined;
@@ -685,89 +724,82 @@ export const toolHandlers = {
       // Concept mở rộng linh hoạt cho bất kỳ chủ đề mới nào
       const cleanSlug = typeLower.replace(/[^a-z0-9]/g, '-');
       const formattedTitle = payload.title || payload.concept_type.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-      const rootId = `node-${cleanSlug}-core-${timestamp}`;
-      const childId = `node-${cleanSlug}-sub-${timestamp}`;
+      const rootId = `node-${cleanSlug}-${timestamp}`;
+
+      // Tự động nhận diện template cho concept mới (ví dụ: refresh_token -> oauth2_oidc hoặc token_blacklist)
+      let autoTemplate = 'default';
+      let autoParams: Record<string, string> = {
+        actor: 'CLIENT APP',
+        component: formattedTitle.toUpperCase(),
+        target: 'SECURE AUTH MESH',
+        status: 'TOKEN VERIFIED'
+      };
+
+      if (typeLower.includes('token') || typeLower.includes('refresh') || typeLower.includes('session') || typeLower.includes('rotation')) {
+        autoTemplate = 'oauth2_oidc';
+        autoParams = {
+          client: 'CLIENT APP',
+          auth_server: formattedTitle.toUpperCase(),
+          token: 'ROTATED TOKEN PAIR'
+        };
+      } else if (typeLower.includes('blacklist') || typeLower.includes('revoc') || typeLower.includes('thu-hoi')) {
+        autoTemplate = 'token_blacklist';
+        autoParams = {
+          token_jti: 'BEARER JTI',
+          cache_store: formattedTitle.toUpperCase()
+        };
+      } else if (typeLower.includes('policy') || typeLower.includes('pdp') || typeLower.includes('rbac') || typeLower.includes('abac')) {
+        autoTemplate = 'pdp_policy';
+        autoParams = {
+          subject: 'USER CLAIMS',
+          engine: formattedTitle.toUpperCase(),
+          decision: 'PERMIT ACCESS'
+        };
+      }
 
       rootNode = {
         id: rootId,
-        bieu_tuong: 'hop_kien_hang_domain',
+        cluster_id: targetNode?.cluster_id,
+        bieu_tuong: 'khien_bao_ve',
         tieu_de: formattedTitle,
-        nhan_buoc: sanitizeNodeLayerLabel(payload.category, formattedTitle),
-        tom_tat: payload.description || `Phân hệ kiến trúc ${formattedTitle} được bổ sung độc lập vào hệ thống đồ thị tri thức.`,
+        nhan_buoc: sanitizeNodeLayerLabel(payload.category || targetNode?.nhan_buoc || 'SECURITY / TOKEN ROTATION', formattedTitle),
+        tom_tat: payload.description || `Mô-đun kiến trúc ${formattedTitle} nâng cao bảo mật toàn hệ thống.`,
         toa_do: { x: defaultX, y: defaultY },
         tam: { x: defaultX + 110, y: defaultY + 72 },
-        fully_explored: false,
+        fully_explored: true,
+        parent_id: targetNode?.id,
         hoat_hoa: {
-          mau: 'hybrid_flow_adaptive',
-          tham_so: {
-            nguon: 'CLIENT REQUEST',
-            quy_trinh: formattedTitle.toUpperCase(),
-            dich: 'TẦNG DỮ LIỆU ĐÍCH',
-            ket_qua: 'HOÀN TẤT',
-            mau_chu_dao: '#4F46E5'
-          }
+          mau: autoTemplate,
+          tham_so: autoParams
         },
         chi_tiet: {
-          phan_loai: payload.category || `Phân hệ ${formattedTitle}`,
+          phan_loai: payload.category || (targetNode ? targetNode.chi_tiet.phan_loai : `Phân hệ ${formattedTitle}`),
           tieu_de: formattedTitle,
-          ban_chat: payload.description || `Phân hệ cốt lõi ${formattedTitle} chịu trách nhiệm tiếp nhận và xử lý các yêu cầu kỹ thuật chuyên biệt.`,
-          chu_thich_so_do: `Cụm chủ đề kiến trúc phân hệ ${formattedTitle}`,
-          ca_thuc_te: [`Bảo vệ và phân phối tài nguyên cho phân hệ ${formattedTitle}`],
-          rui_ro: ['Tăng chi phí tích hợp và độ phức tạp cấu hình mạng']
+          ban_chat: payload.description || `Thực thi cơ chế ${formattedTitle} nhằm tăng cường tính toàn vẹn và ngăn chặn các nguy cơ tấn công chiếm đoạt phiên.`,
+          chu_thich_so_do: `Mô hình luồng thực thi của ${formattedTitle}`,
+          ca_thuc_te: [
+            `Áp dụng quy trình xoay vòng token một lần dùng (One-Time Use) cho ${formattedTitle}`,
+            'Tự động thu hồi phiên và cô lập rủi ro khi phát hiện hành vi tái sử dụng token bất thường'
+          ],
+          rui_ro: [
+            'Cần xử lý độ trễ mạng tránh race condition khi client gửi nhiều request refresh đồng thời'
+          ],
+          chuoi_sup_do: [
+            `1. Lỗ hổng trong quy trình quản lý phiên ${formattedTitle} bị khai thác.`,
+            '2. Kẻ tấn công chiếm đoạt quyền truy cập dài hạn của người dùng.',
+            '3. Dữ liệu nhạy cảm có nguy cơ bị rò rỉ trái phép.',
+            '4. Buộc phải thu hồi diện rộng toàn bộ phiên đăng nhập của người dùng.'
+          ]
         },
         trac_nghiem: {
-          cau_hoi: `Mục tiêu chính khi bổ sung phân hệ ${formattedTitle} vào kiến trúc là gì?`,
-          lua_chon: ['Tăng tính sẵn sàng, độ tin cậy và khả năng mở rộng', 'Tăng độ phức tạp không cần thiết'],
+          cau_hoi: `Nguyên tắc an ninh cốt lõi khi vận hành '${formattedTitle}' là gì?`,
+          lua_chon: ['Đảm bảo nguyên tắc một lần dùng (One-Time Use) và thu hồi tức thì', 'Cho phép sử dụng lại token cũ nhiều lần'],
           dung: 0,
-          giai_thich: 'Mỗi phân hệ kiến trúc thêm vào đều nhằm củng cố tính toàn vẹn, hiệu năng và khả năng mở rộng độc lập.'
+          giai_thich: 'Cơ chế xoay vòng token bắt buộc token cũ phải bị vô hiệu hóa ngay khi token mới được phát hành để triệt tiêu nguy cơ Replay Attack.'
         }
       };
 
-      if (canSpawnChild) {
-        childNode = {
-          id: childId,
-          bieu_tuong: 'hop_kien_hang_domain',
-          tieu_de: `Thành phần Xử lý ${formattedTitle}`,
-          nhan_buoc: 'COMPUTE / SUB-COMPONENT',
-          tom_tat: `Mô-đun thực thi tác vụ nội bộ và duy trì trạng thái cho phân hệ ${formattedTitle}.`,
-          toa_do: { x: defaultX + 260, y: defaultY },
-          tam: { x: defaultX + 370, y: defaultY + 72 },
-          fully_explored: false,
-          parent_id: rootId,
-          hoat_hoa: {
-            mau: 'hybrid_flow_adaptive',
-            tham_so: {
-              nguon: formattedTitle.toUpperCase(),
-              quy_trinh: 'THỰC THI MÔ-ĐUN CON',
-              dich: 'LƯU TRỮ TRẠNG THÁI',
-              ket_qua: 'ĐỒNG BỘ XONG',
-              mau_chu_dao: '#4F46E5'
-            }
-          },
-          chi_tiet: {
-            phan_loai: payload.category || `Phân hệ ${formattedTitle}`,
-            tieu_de: `Thành phần Xử lý ${formattedTitle}`,
-            ban_chat: `Thành phần con liên kết trực tiếp trong cụm chủ đề ${formattedTitle}, chịu trách nhiệm lưu trữ và tính toán chuyên biệt.`,
-            chu_thich_so_do: `Mô-đun con thuộc cụm ${formattedTitle}`,
-            ca_thuc_te: [`Xử lý song song tác vụ phụ trợ cho ${formattedTitle}`],
-            rui_ro: ['Đồng bộ dữ liệu chậm giữa node gốc và node con']
-          },
-          trac_nghiem: {
-            cau_hoi: `Thành phần con đóng vai trò gì trong cụm phân hệ ${formattedTitle}?`,
-            lua_chon: ['Chia nhỏ trách nhiệm và tăng tính module hóa', 'Làm chậm toàn bộ hệ thống'],
-            dung: 0,
-            giai_thich: 'Module hóa kiến trúc giúp hệ thống dễ bảo trì, cô lập lỗi và mở rộng độc lập.'
-          }
-        };
-
-        newEdges.push({
-          from: rootId,
-          to: childId,
-          nhan: 'Task Dispatch',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'HOA_GIAI'
-        });
-      }
+      childNode = undefined;
     }
 
     // Nếu người dùng chỉ định targetNode thì nối dây từ targetNode vào rootNode
@@ -775,9 +807,10 @@ export const toolHandlers = {
       newEdges.push({
         from: targetNode.id,
         to: rootNode.id,
-        nhan: 'Module Cross-Link',
+        nhan: 'RTR Rotation Flow',
         kieu: 'duong-xung-em-ai',
-        loai_lien_ket: 'HOA_GIAI'
+        loai_lien_ket: 'HOA_GIAI',
+        giai_thich: `Mở rộng tích hợp từ <u>${targetNode.tieu_de}</u> sang <u>${rootNode.tieu_de}</u> tăng cường bảo mật phiên và chống Replay Attack.`
       });
     }
 
