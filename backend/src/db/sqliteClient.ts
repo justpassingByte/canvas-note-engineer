@@ -3,19 +3,28 @@ import fs from 'fs';
 import Database from 'better-sqlite3';
 import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+import { fileURLToPath } from 'url';
 
-const DEFAULT_DB_PATH = path.join(DATA_DIR, 'knowledge.db');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getDefaultDbPath(): string {
+  if (process.env.SQLITE_DB_PATH) return process.env.SQLITE_DB_PATH;
+  const rootData = path.resolve(__dirname, '../../../data');
+  if (fs.existsSync(rootData)) return path.join(rootData, 'knowledge.db');
+  const parentData = path.resolve(__dirname, '../../data');
+  if (fs.existsSync(parentData)) return path.join(parentData, 'knowledge.db');
+  const cwdData = path.resolve(process.cwd(), 'data');
+  if (!fs.existsSync(cwdData)) fs.mkdirSync(cwdData, { recursive: true });
+  return path.join(cwdData, 'knowledge.db');
+}
 
 export class SQLiteKnowledgeClient {
   private db: Database.Database;
   private dbPath: string;
 
   constructor(customPath?: string) {
-    this.dbPath = customPath || process.env.SQLITE_DB_PATH || DEFAULT_DB_PATH;
+    this.dbPath = customPath || getDefaultDbPath();
     const dir = path.dirname(this.dbPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });

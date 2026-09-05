@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { CompactClusterNode, CompactSubCluster, SpawnClusterPayload } from '../types/graphTypes.js';
+import { CompactClusterNode, CompactSubCluster, SpawnClusterPayload, ReflexQuiz } from '../types/graphTypes.js';
 import { toolHandlers } from '../tools/toolHandlers.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,11 +40,8 @@ export interface IngestResult {
 }
 
 /**
- * Trình phân tích tài liệu Brainstorm / RFC / Kiến trúc Hệ thống thông minh
- * Hỗ trợ đa định dạng:
- * 1. Markdown Brainstorm phân cấp chuẩn ([DOMAIN], [SERVICE CLUSTER], [SUB-CLUSTER])
- * 2. Technical Design Specification / RFC (Mermaid diagrams, Module boundaries tables)
- * 3. Raw JSON SpawnClusterPayload
+ * Trình phân tích tài liệu Brainstorm / RFC / Kiến trúc Hệ thống chuyên sâu
+ * Bóc tách toàn diện Bản chất, Sơ đồ, Ca thực tế, Rủi ro, Chuỗi sụp đổ và Trắc nghiệm phản xạ.
  */
 export function parseBrainstormDocument(rawText: string, fallbackName: string = 'Phân Hệ Brainstorm'): SpawnClusterPayload {
   const text = rawText.trim();
@@ -59,12 +56,12 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
     } catch {}
   }
 
-  // 2. Kiểm tra nếu tài liệu chứa sơ đồ Mermaid Flowchart (như RFC / Technical Spec)
+  // 2. Phân tích tài liệu Technical Design Specification / RFC chứa Mermaid Flowchart
   const mermaidMatch = text.match(/\`\`\`mermaid[\s\S]*?flowchart[\s\S]*?\`\`\`/i);
   if (mermaidMatch) {
     const mermaidBlock = mermaidMatch[0];
     const nodeMatches = [...mermaidBlock.matchAll(/([A-Za-z0-9_]+)\["([^"\]]+)"\]/g)];
-    
+
     if (nodeMatches.length >= 2) {
       let docTitle = fallbackName;
       const titleMatch = text.match(/^#\s+([^\n]+)/m);
@@ -85,7 +82,7 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
         const label = m[2].trim();
         const labelLower = label.toLowerCase();
 
-        if (labelLower.includes('postgres') || labelLower.includes('database') || labelLower.includes('sql') || labelLower.includes('acid')) {
+        if (labelLower.includes('postgres') || labelLower.includes('database') || labelLower.includes('sql') || labelLower.includes('acid') || labelLower.includes('ledger')) {
           if (!dbSubCluster) {
             dbSubCluster = {
               name: 'PostgreSQL Storage & Ledger Subsystem',
@@ -96,9 +93,32 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
           }
           dbSubCluster.nodes.push({
             title: label,
-            summary: `Lưu trữ ACID bền vững cho ${docTitle}`,
+            summary: 'Lưu trữ ACID bền vững, quản lý Quota, Budget và Redemption Ledger với khóa dòng Pessimistic Lock.',
             infra_type: 'postgres',
-            schematic_template: 'luu_tru_acid'
+            schematic_template: 'luu_tru_acid',
+            schematic_params: { db: 'POSTGRESQL', lock: 'ROW LOCK FOR UPDATE', isolation: 'SERIALIZABLE' },
+            ban_chat: 'Cơ sở dữ liệu quan hệ PostgreSQL đóng vai trò Single Source of Truth cho definitions, quota, budget, reservation và immutable redemption ledger. Toàn bộ thao tác ghi tài chính đều bọc trong Transaction và khóa dòng (SELECT ... FOR UPDATE) theo thứ tự ID cố định chống deadlock.',
+            ca_thuc_te: [
+              'Khóa dòng record promotion theo thứ tự ID bảng tăng dần khi có 10.000 request áp mã Flash Voucher 0h.',
+              'Lưu trữ Minor-unit BigInt và Basis Points (10.000 = 100%) triệt tiêu hoàn toàn sai số dấu phẩy động (Floating-Point).',
+              'Lưu vết hoàn tiền (Refund) dựa trên Order snapshot bất biến mà không chạy lại Promotion Engine.'
+            ],
+            rui_ro: [
+              'Row lock contention tăng cao nếu hàng ngàn giao dịch cùng tranh chấp một mã giảm giá toàn sàn.',
+              'Cạn kiệt Connection Pool nếu transaction giữ khóa dòng quá lâu (> 150ms).'
+            ],
+            chuoi_sup_do: [
+              '1. Bão request thanh toán dồn dập tranh nhau khóa dòng cùng 1 voucher.',
+              '2. Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
+              '3. Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
+              '4. Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
+            ],
+            trac_nghiem: {
+              cau_hoi: 'Tại sao PostgreSQL được chọn làm Source of Truth duy nhất cho Quota và Budget thay vì Redis?',
+              lua_chon: ['Cần bảo đảm tính toàn vẹn ACID và Row-Level Locking cho dữ liệu tài chính', 'Redis không hỗ trợ lưu trữ số nguyên BigInt'],
+              dung: 0,
+              giai_thich: 'Dữ liệu tài chính, hạn mức ngân sách và quota bắt buộc phải dựa vào ACID Transaction và Row Lock của PostgreSQL để chống overspend khi xảy ra sự cố mạng hoặc crash.'
+            }
           });
         } else if (labelLower.includes('redis') || labelLower.includes('cache') || labelLower.includes('rate limit')) {
           if (!cacheSubCluster) {
@@ -112,9 +132,31 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
           }
           cacheSubCluster.nodes.push({
             title: label,
-            summary: `Bộ nhớ đệm RAM và kiểm soát tần suất cho ${docTitle}`,
+            summary: 'Bộ nhớ đệm RAM tốc độ cao cache rules đã compile và Rate Limiting trượt 10 req/s mỗi IP.',
             infra_type: 'redis',
-            schematic_template: 'bo_nho_dem_redis'
+            schematic_template: 'bo_nho_dem_redis',
+            schematic_params: { cache: 'REDIS RAM MESH', ttl: '60s CACHE', limit: '10 req/s IP' },
+            ban_chat: 'Phân hệ Redis chỉ đóng vai trò bộ nhớ đệm tăng tốc độ đọc (Compiled Promotion Rules) và kiểm soát tần suất gọi API (Sliding Window Rate Limiter). Tuyệt đối không dùng Redis để quyết định hạn mức ngân sách hoặc quota tài chính cốt lõi.',
+            ca_thuc_te: [
+              'Cache danh sách promotion definitions đã compile với TTL 60s, phản hồi trong 1ms.',
+              'Giới hạn 10 req/s cho mỗi khách hàng/IP nhằm ngăn chặn botnet quét vét mã khuyến mãi.'
+            ],
+            rui_ro: [
+              'Hiện tượng Cache Stampede khi mã khuyến mãi hot hết hạn TTL cùng một tích tắc.',
+              'Dữ liệu cache không nhất quán nếu thiếu cơ chế chủ động xóa cache (Cache Invalidation Event).'
+            ],
+            chuoi_sup_do: [
+              '1. Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache.',
+              '2. Cache Stampede xảy ra, toàn bộ request lọt thẳng xuống PostgreSQL.',
+              '3. I/O Database tăng vọt 500%, CPU chạm ngưỡng 100%.',
+              '4. Dịch vụ Promotion bị suy giảm hiệu năng nghiêm trọng.'
+            ],
+            trac_nghiem: {
+              cau_hoi: 'Nguyên tắc an toàn cốt lõi khi sử dụng Redis trong hệ thống Promotion là gì?',
+              lua_chon: ['Redis chỉ dùng tăng tốc và rate-limit, outage không được làm sai lệch quota/budget', 'Dùng Redis làm database chính để lưu toàn bộ lịch sử giao dịch'],
+              dung: 0,
+              giai_thich: 'Redis outage hoặc mất kết nối có thể xóa dựng lại từ DB, không được phép làm sai lệch số dư ngân sách hay quota thực tế.'
+            }
           });
         } else if (labelLower.includes('outbox') || labelLower.includes('worker') || labelLower.includes('queue') || labelLower.includes('async')) {
           if (!workerSubCluster) {
@@ -127,18 +169,152 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
           }
           workerSubCluster.nodes.push({
             title: label,
-            summary: `Xử lý sự kiện bất đồng bộ và outbox cho ${docTitle}`,
+            summary: 'Mẫu Transactional Outbox phát sự kiện bất đồng bộ và Background Worker giải phóng reservation hết hạn.',
             infra_type: 'kafka',
-            schematic_template: 'hang_doi_dieu_tiet'
+            schematic_template: 'hang_doi_dieu_tiet',
+            schematic_params: { pattern: 'TRANSACTIONAL OUTBOX', worker: 'BACKGROUND RECONCILER', timer: '15m EXPIRY' },
+            ban_chat: 'Đảm bảo tính nhất quán cuối cùng (Eventual Consistency) bằng cách ghi sự kiện vào bảng outbox trong cùng Transaction với dữ liệu chính, sau đó Worker nền rút ra bắn sang message bus. Worker tự động quét và giải phóng các reservation bị bỏ rơi sau 15 phút.',
+            ca_thuc_te: [
+              'Tự động hoàn trả quota mã giảm giá nếu khách hàng không hoàn tất thanh toán trong vòng 15 phút.',
+              'Bắn sự kiện PromotionRedeemedEvent sang Analytics và Notification Service mà không chặn luồng thanh toán.'
+            ],
+            rui_ro: [
+              'Worker bị lag khiến voucher bị giữ ảo quá lâu, khách hàng khác không áp dụng được.',
+              'Bắn sự kiện trùng lặp nếu phía consumer thiếu bộ lọc Idempotency.'
+            ],
+            chuoi_sup_do: [
+              '1. Worker tiến trình nền gặp sự cố sập hoặc mất kết nối DB.',
+              '2. Hàng ngàn reservation hết hạn không được nhả lại vào quỹ chung.',
+              '3. Mã khuyến mãi báo hết lượt dù thực tế đơn thanh toán đã bị hủy.',
+              '4. Thất thoát doanh thu và gây bức xúc lớn cho người mua hàng.'
+            ],
+            trac_nghiem: {
+              cau_hoi: 'Mẫu thiết kế Transactional Outbox giải quyết bài toán cốt lõi nào?',
+              lua_chon: ['Đảm bảo lưu DB thành công thì sự kiện integration event chắc chắn được phát tán', 'Tự động tăng tốc độ truy vấn cơ sở dữ liệu lên 10 lần'],
+              dung: 0,
+              giai_thich: 'Transactional Outbox ghi event vào bảng outbox cùng transaction với entity, đảm bảo tính nguyên tử giữa Database write và Message Publishing.'
+            }
           });
         } else {
           const isPublic = labelLower.includes('http') || labelLower.includes('express') || labelLower.includes('gateway') || labelLower.includes('ingress') || serviceNodes.length === 0;
-          serviceNodes.push({
-            title: label,
-            summary: `Thành phần xử lý nghiệp vụ ${label} trong ${docTitle}`,
-            is_public_interface: isPublic,
-            schematic_template: isPublic ? 'zero_trust_pep' : 'default'
-          });
+
+          if (labelLower.includes('http') || labelLower.includes('express')) {
+            serviceNodes.push({
+              title: label,
+              summary: 'Cổng tiếp nhận HTTP, Zod validation, xác thực người dùng và serialize tiền tệ Minor-Unit BigInt dạng chuỗi.',
+              is_public_interface: true,
+              schematic_template: 'zero_trust_pep',
+              schematic_params: { ingress: 'EXPRESS CONTROLLER', validation: 'ZOD DTO SCHEMA', serialize: 'BIGINT STRING' },
+              ban_chat: 'Tầng biên giao tiếp HTTP cung cấp các endpoint REST API: preview, reserve, finalize, release. Thực thi Zod validation nghiêm ngặt, parse Idempotency-Key và chuyển đổi DTO sang Application Commands.',
+              ca_thuc_te: [
+                'Chuyển đổi số tiền 100.000 VND thành chuỗi "100000" trên JSON DTO để bảo toàn độ chính xác 64-bit BigInt.',
+                'Kiểm tra Idempotency-Key trên header để từ chối các request gửi lặp do timeout mạng.'
+              ],
+              rui_ro: [
+                'Tràn bộ nhớ do nhận payload giỏ hàng khổng lồ không giới hạn số lượng dòng (Line Items).',
+                'Sai số tài chính nếu controller parse số tiền qua hàm parseFloat() của JavaScript.'
+              ],
+              chuoi_sup_do: [
+                '1. Client gửi request thanh toán kèm số tiền dạng float.',
+                '2. JavaScript làm tròn số lẻ gây sai lệch vài đồng trên mỗi đơn.',
+                '3. Tổng tiền thanh toán không khớp với bảng sao kê ngân hàng.',
+                '4. Bút toán kế toán bị treo đối soát không thể đóng sổ tài chính.'
+              ],
+              trac_nghiem: {
+                cau_hoi: 'Tại sao API phải serialize số tiền minor-unit BigInt thành dạng chuỗi string trong JSON response?',
+                lua_chon: ['JavaScript JSON.parse() làm mất độ chính xác với số nguyên vượt quá 53-bit (Number.MAX_SAFE_INTEGER)', 'Để tiết kiệm băng thông đường truyền HTTP'],
+                dung: 0,
+                giai_thich: 'JavaScript Number chỉ an toàn đến 2^53 - 1; BigInt 64-bit bắt buộc phải serialize dạng chuỗi số nguyên để không bị làm tròn sai số.'
+              }
+            });
+          } else if (labelLower.includes('engine') || labelLower.includes('pure')) {
+            serviceNodes.push({
+              title: label,
+              summary: 'Bộ tính toán giảm giá thuần Domain (0 I/O), thực thi Stacking Policy, Exclusive Matrix và Split Allocation.',
+              is_public_interface: false,
+              schematic_template: 'default',
+              schematic_params: { engine: 'PURE DOMAIN ENGINE', io: '0 I/O DETERMINISTIC', math: 'EXACT SPLIT ALLOCATION' },
+              ban_chat: 'Pure Domain Engine là trái tim thuật toán độc lập 100% với DB/Redis/Network. Nhận PriceableCheckoutSnapshot và danh sách PromotionDefinition để đánh giá điều kiện, ma trận stacking và phân bổ giảm giá đa người bán (Multi-Seller Split Allocation).',
+              ca_thuc_te: [
+                'Tính toán phân bổ voucher sàn 50.000đ cho 3 gian hàng khác nhau bảo toàn chính xác tổng số tiền (Penny Rounding Balance).',
+                'Tự động từ chối mã không hợp lệ theo ma trận Stacking Rules mà không cần gọi thêm bất kỳ I/O mạng nào.'
+              ],
+              rui_ro: [
+                'Nghẽn CPU nếu giỏ hàng có quá nhiều tổ hợp khuyến mãi cần đánh giá combinatorial.',
+                'Sai lệch phân bổ chiết khấu giữa các seller dẫn đến khiếu nại tài chính.'
+              ],
+              chuoi_sup_do: [
+                '1. Giỏ hàng chứa 20 mặt hàng từ 5 seller với 6 mã voucher khác nhau.',
+                '2. Thuật toán phân bổ gặp lỗi chia lẻ tiền tệ không bảo toàn tổng.',
+                '3. Một seller bị trừ quá số tiền chiết khấu thực tế phải chịu.',
+                '4. Tranh chấp settlement giữa sàn thương mại và người bán hàng.'
+              ],
+              trac_nghiem: {
+                cau_hoi: 'Lợi ích cốt lõi của việc thiết kế Promotion Engine dạng Pure Domain Service (0 I/O) là gì?',
+                lua_chon: ['Hoàn toàn Deterministic, test cực nhanh, dễ dàng audit và replay lại mọi kết quả giá trong quá khứ', 'Tự động lưu trực tiếp dữ liệu vào ổ cứng'],
+                dung: 0,
+                giai_thich: 'Pure Engine không phụ thuộc I/O giúp unit test chạy trong vài mili-giây, kết quả hoàn toàn dự đoán được và có thể replay chính xác khi cần kiểm toán.'
+              }
+            });
+          } else if (labelLower.includes('application') || labelLower.includes('service')) {
+            serviceNodes.push({
+              title: label,
+              summary: 'Điều phối luồng nghiệp vụ 2 pha (Reserve 15m -> Finalize/Release), quản lý Transaction Boundaries.',
+              is_public_interface: false,
+              schematic_template: 'default',
+              schematic_params: { flow: 'TWO-PHASE ALLOCATION', phase1: 'RESERVE 15M', phase2: 'FINALIZE / RELEASE' },
+              ban_chat: 'Thực thi giao diện PromotionsFacade, điều phối chu trình 2 pha: Khóa giữ mã tạm thời (Reservation) khi checkout $\to$ Chuyển thành bút toán tiêu dùng vĩnh viễn (Redemption) khi thanh toán thành công, hoặc Release khi đơn bị hủy.',
+              ca_thuc_te: [
+                'Tạo reservation với hạn sử dụng 15 phút, tự động gia hạn nếu người dùng vẫn đang ở bước cổng thanh toán.',
+                'Ghi nhận OrderPromotionSnapshot bất biến để phục vụ quy trình đổi trả/hoàn tiền sau này.'
+              ],
+              rui_ro: [
+                'Deadlock nếu thứ tự lock các promotion trong giỏ hàng không được chuẩn hóa.',
+                'Rò rỉ reservation nếu không có cơ chế timeout dọn dẹp định kỳ.'
+              ],
+              chuoi_sup_do: [
+                '1. Khách hàng bấm thanh toán và chuyển sang cổng ngân hàng.',
+                '2. Người dùng tắt trình duyệt bỏ ngang không thanh toán đơn.',
+                '3. Quota voucher bị treo giữ không được nhả lại kịp thời.',
+                '4. Khách hàng khác mất cơ hội săn sale dù ngân sách vẫn còn.'
+              ],
+              trac_nghiem: {
+                cau_hoi: 'Chu trình 2 pha (Two-Phase Reservation) giải quyết bài toán gì trong áp mã khuyến mãi?',
+                lua_chon: ['Giữ quota tạm thời trong lúc khách hàng thanh toán và nhả lại nếu đơn bị hủy', 'Tự động trừ tiền trong tài khoản ngân hàng của khách'],
+                dung: 0,
+                giai_thich: 'Two-phase reservation giữ voucher trong thời gian ngắn (15 phút) để khách thanh toán an toàn, tránh việc trừ quota vĩnh viễn khi giao dịch chưa thành công.'
+              }
+            });
+          } else {
+            serviceNodes.push({
+              title: label,
+              summary: `Cổng kết nối tích hợp liên module (Ports & Adapters) cho ${docTitle}.`,
+              is_public_interface: false,
+              schematic_template: 'default',
+              schematic_params: { port: 'HEXAGONAL ADAPTER', target: label.toUpperCase() },
+              ban_chat: `Triển khai kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters) định nghĩa ranh giới giao tiếp giữa Promotion module với ${label} mà không gây phụ thuộc ngược (Dependency Inversion).`,
+              ca_thuc_te: [
+                `Tra cứu metadata SKU và Seller thông qua Catalog Port theo lô (Batch Resolver).`,
+                `Xác thực trạng thái OTP và tài khoản thông qua Identity Port.`
+              ],
+              rui_ro: [
+                'Phụ thuộc mạng (Network latency) nếu các module bên ngoài phản hồi chậm.',
+                'Lỗi cascade nếu port bên ngoài bị timeout.'
+              ],
+              chuoi_sup_do: [
+                `1. Module ${label} gặp sự cố quá tải hoặc mất kết nối.`,
+                '2. Các lệnh tra cứu qua Port bị treo quá thời gian timeout 3s.',
+                '3. Luồng tính giá khuyến mãi bị nghẽn lại.',
+                '4. Toàn bộ trang giỏ hàng và checkout của khách bị gián đoạn.'
+              ],
+              trac_nghiem: {
+                cau_hoi: 'Mục đích của việc sử dụng Ports & Adapters trong modular monolith là gì?',
+                lua_chon: ['Ngăn chặn các module import trực tiếp database/implementation của nhau', 'Gộp tất cả module vào chung một bảng cơ sở dữ liệu'],
+                dung: 0,
+                giai_thich: 'Ports & Adapters bảo vệ ranh giới module, đảm bảo Promotion module chỉ giao tiếp qua interface trừu tượng.'
+              }
+            });
+          }
         }
       }
 
@@ -254,7 +430,7 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
     }
   }
 
-  // 4. Fallback thông minh: nếu là tài liệu Markdown tổng quát với tiêu đề # hoặc ##
+  // 4. Fallback thông minh
   if (serviceNodes.length === 0 && subClusters.length === 0) {
     const titleMatch = text.match(/^#\s+([^\n]+)/m);
     if (titleMatch) {
@@ -262,7 +438,6 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
       domainId = 'domain-' + clusterName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     }
 
-    // Trích xuất các đề mục H2 hoặc H3 làm node
     const headingMatches = [...text.matchAll(/#+\s+([\d\.]*\s*[^\n]+)/g)];
     const validHeadings = headingMatches
       .map(m => m[1].replace(/^[\d\.]+\s*/, '').trim())
