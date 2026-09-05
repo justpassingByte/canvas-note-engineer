@@ -4,6 +4,20 @@ import { ConceptNode } from '../NodePod/ConceptNode.js';
 import { calculateEdgePath } from '../../utils/geometry.js';
 import { computeClusters, TopicCluster } from '../../utils/clusterEngine.js';
 import { FloatingToolbar } from '../Toolbar/FloatingToolbar.js';
+import { TECHNICAL_DICTIONARY } from '../../dictionary/technicalDictionary.js';
+
+function getEdgeKeywordTooltip(edge: any): string {
+  const textToScan = `${edge.nhan} ${edge.giai_thich || ''}`.toLowerCase();
+  for (const [key, def] of Object.entries(TECHNICAL_DICTIONARY)) {
+    if (textToScan.includes(key.toLowerCase())) {
+      return `${edge.nhan} [${key.toUpperCase()}]\n\n▸ Giải nghĩa kỹ thuật: ${def}${edge.giai_thich ? `\n\n▸ Bản chất luồng: ${edge.giai_thich}` : ''}`;
+    }
+  }
+  if (edge.giai_thich) {
+    return `${edge.nhan}\n\n▸ Bản chất luồng: ${edge.giai_thich}`;
+  }
+  return `${edge.nhan}\n\n(Click để xem chi tiết liên kết kiến trúc trong Sổ tay)`;
+}
 
 export const SvgGridCanvas: React.FC = () => {
   const {
@@ -408,6 +422,7 @@ export const SvgGridCanvas: React.FC = () => {
               style={{ cursor: 'pointer' }}
               className="nhom-duong-noi-svg"
             >
+              <title>{getEdgeKeywordTooltip(item.edge)}</title>
               {/* Vùng đệm bắt sự kiện click chuột rộng hơn (20px) */}
               <path
                 d={item.pathD}
@@ -464,7 +479,7 @@ export const SvgGridCanvas: React.FC = () => {
                   strokeWidth: item.isEdgeSelected || item.isCascadeEdge ? 2 : 1.3
                 }}
               />
-              <title>{item.edge.nhan}</title>
+              <title>{getEdgeKeywordTooltip(item.edge)}</title>
               <text
                 className="chu-nhan-svg"
                 x={item.midX}

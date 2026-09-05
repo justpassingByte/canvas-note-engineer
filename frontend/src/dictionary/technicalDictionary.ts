@@ -56,6 +56,17 @@ export const TECHNICAL_DICTIONARY: Record<string, string> = {
   "jwt": "JSON Web Token: Chuỗi mã hóa ký số chứa danh tính người dùng và quyền hạn truy cập truyền qua HTTP Header.",
   "token revocation list": "Danh sách thu hồi token: Danh sách đen (blacklist) trên RAM Redis lưu các JWT bị vô hiệu hóa trước hạn.",
   "lateral movement": "Hành vi leo thang di chuyển ngang của hacker bên trong mạng nội bộ sau khi chiếm được 1 máy chủ biên.",
+  "oidc": "OpenID Connect: Tầng định danh trên nền OAuth 2.0 cấp phát ID Token chuẩn hóa thông tin người dùng.",
+  "oauth2": "OAuth 2.0: Khung giao thức ủy quyền tiêu chuẩn ngành cho phép ứng dụng truy cập an toàn tài nguyên qua Access Token.",
+  "oauth 2.0": "OAuth 2.0: Khung giao thức ủy quyền tiêu chuẩn ngành cho phép ứng dụng truy cập an toàn tài nguyên qua Access Token.",
+  "rs256": "RSA Signature SHA-256: Thuật toán ký số bất đối xứng với Private Key trên Auth Server và Public Key công khai qua JWKS.",
+  "jwks": "JSON Web Key Set: Endpoint công khai chứa các khóa công khai để các dịch vụ tự động thẩm định chữ ký JWT mà không cần gọi auth server.",
+  "rbac": "Role-Based Access Control: Mô hình kiểm soát truy cập dựa trên vai trò phân quyền tĩnh của người dùng trong hệ thống.",
+  "abac": "Attribute-Based Access Control: Phân quyền động theo ngữ cảnh và thuộc tính (IP, thời gian, thiết bị, phòng ban).",
+  "jti": "JWT ID: Khóa định danh UUID duy nhất của mỗi token, dùng làm key để tra cứu trạng thái thu hồi trong Redis Blacklist.",
+  "bearer token": "Mã xác thực Bearer: Bất kỳ ai sở hữu token này đều được cấp quyền tương ứng, thường truyền qua Header 'Authorization: Bearer <token>'.",
+  "blacklist": "Danh sách đen: Cơ chế lưu trữ các token bị thu hồi trước hạn trên RAM Redis để từ chối truy cập ngay lập tức.",
+  "redis": "Hệ thống lưu trữ cấu trúc dữ liệu trên bộ nhớ RAM tốc độ cao (In-Memory Data Store), độ trễ phản hồi dưới 1 mili-giây.",
 
   // Audit Log & Cryptographic Ledger (Mới)
   "audit log": "Nhật ký kiểm toán: Bản ghi bất biến ghi chép chi tiết ai đã thao tác gì, vào thời điểm nào và thay đổi ra sao.",
