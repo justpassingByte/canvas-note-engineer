@@ -134,7 +134,7 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
   return sanitized;
 }
 
-export const MAX_GRAPH_NODES = 12;
+export const MAX_GRAPH_NODES = 24;
 
 export interface SpawnPayload {
   concept_type: string;
