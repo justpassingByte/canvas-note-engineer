@@ -418,17 +418,40 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             infra_type: 'postgres',
             schematic_template: 'table_row_lock',
             schematic_params: { db: 'POSTGRESQL', lock: 'ROW LOCK FOR UPDATE', isolation: 'SERIALIZABLE' },
-            incident_dossier: {
-              boi_canh_tai: '0h Flash Voucher: 10.000 requests/giây cùng tranh chấp áp 1 mã khuyến mãi toàn sàn.',
-              nguyen_nhan_goc_re: 'Pessimistic Row-Level Lock giữ connection quá 150ms gây cạn kiệt Connection Pool (Starvation).',
-              ban_kinh_anh_huong: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
-              chien_luoc_phong_thu: 'Khóa theo thứ tự ID tăng dần + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
-            },
+            incident_cases: [
+              {
+                id: 'case_pg_lock_contention',
+                title: 'Row-Level Lock Contention On Flash Voucher 0h',
+                traffic_profile: '0h mở bán Flash Voucher giảm 50% cho 1.000 người đầu tiên, 10.000 requests/giây cùng dội vào khóa dòng voucher #99.',
+                root_cause_analysis: 'Pessimistic Row-Level Lock (SELECT ... FOR UPDATE) trên cùng 1 dòng voucher giữ connection quá 150ms làm cạn kiệt Connection Pool (Starvation).',
+                blast_radius: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
+                cascading_failure_path: [
+                  '[Trigger]: 10.000 request dồn dập tranh nhau khóa dòng cùng 1 voucher lúc 0h.',
+                  '[Saturation]: Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
+                  '[Failure Cascade]: Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
+                  '[Blast Radius]: Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
+                ],
+                mitigation_strategy: 'Khóa theo thứ tự ID tăng dần cố định + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
+              },
+              {
+                id: 'case_pg_deadlock',
+                title: 'Deadlock Cycle On Multi-Voucher Checkout',
+                traffic_profile: '5.000 transaction đồng thời áp cặp voucher [Voucher Sàn A + Voucher Shop B] trên các giỏ hàng khác nhau.',
+                root_cause_analysis: 'Transaction 1 khóa A chờ B, trong khi Transaction 2 khóa B chờ A kẹt chéo tạo thành chu trình Deadlock.',
+                blast_radius: 'PostgreSQL Deadlock Detector tự động abort transaction, khách hàng bị báo lỗi thanh toán dù voucher còn lượt.',
+                cascading_failure_path: [
+                  '[Trigger]: Hai transaction áp cùng cặp voucher theo thứ tự duyệt giỏ hàng ngẫu nhiên.',
+                  '[Deadlock Cycle]: Transaction 1 khóa A chờ B; Transaction 2 khóa B chờ A kẹt chéo.',
+                  '[Failure Cascade]: PostgreSQL phát hiện sau 1.000ms và buộc abort transaction.',
+                  '[Blast Radius]: Khách hàng bị văng lỗi thanh toán và mất lượt mua hàng oan.'
+                ],
+                mitigation_strategy: 'Bắt buộc sắp xếp mảng ID các voucher cần khóa theo thứ tự từ điển tăng dần trước khi SELECT FOR UPDATE.'
+              }
+            ],
             ban_chat: 'Cơ sở dữ liệu quan hệ PostgreSQL đóng vai trò Single Source of Truth cho definitions, quota, budget, reservation và immutable redemption ledger. Toàn bộ thao tác ghi tài chính đều bọc trong Transaction và khóa dòng (SELECT ... FOR UPDATE) theo thứ tự ID cố định chống deadlock.',
             ca_thuc_te: [
-              'Khóa dòng record promotion theo thứ tự ID bảng tăng dần khi có 10.000 request áp mã Flash Voucher 0h.',
-              'Lưu trữ Minor-unit BigInt và Basis Points (10.000 = 100%) triệt tiêu hoàn toàn sai số dấu phẩy động (Floating-Point).',
-              'Lưu vết hoàn tiền (Refund) dựa trên Order snapshot bất biến mà không chạy lại Promotion Engine.'
+              'Sự cố tranh chấp khóa dòng 0h: 10.000 request cùng tranh khóa 1 voucher làm connection pool cạn kiệt, sập cổng checkout.',
+              'Sự cố Deadlock đối soát: Hai transaction hoàn tiền và thanh toán khóa tài nguyên ngược chiều nhau khiến DB abort hàng loạt.'
             ],
             rui_ro: [
               'Row lock contention tăng cao nếu hàng ngàn giao dịch cùng tranh chấp một mã giảm giá toàn sàn.',
@@ -463,12 +486,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             infra_type: 'redis',
             schematic_template: 'cache_ttl_lock',
             schematic_params: { cache: 'REDIS RAM MESH', ttl: '60s CACHE', limit: '10 req/s IP' },
-            incident_dossier: {
-              boi_canh_tai: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
-              nguyen_nhan_goc_re: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng.',
-              ban_kinh_anh_huong: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
-              chien_luoc_phong_thu: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
-            },
+            incident_cases: [
+              {
+                id: 'case_redis_stampede',
+                title: 'Cache Stampede On Viral Campaign Expiration',
+                traffic_profile: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
+                root_cause_analysis: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng và sập pool.',
+                blast_radius: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
+                cascading_failure_path: [
+                  '[Trigger]: Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache lúc 0h.',
+                  '[Cache Stampede]: Toàn bộ request lọt thẳng xuống tầng cơ sở dữ liệu quan hệ PostgreSQL.',
+                  '[Failure Cascade]: I/O Database tăng vọt 500%, Connection Pool bị cạn kiệt.',
+                  '[Blast Radius]: Dịch vụ Promotion và Checkout bị suy giảm hiệu năng nghiêm trọng.'
+                ],
+                mitigation_strategy: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
+              },
+              {
+                id: 'case_redis_botnet',
+                title: 'Botnet Request Flood & Token Drain',
+                traffic_profile: '5.000 IP botnet tự động gửi 50.000 request/giây nhằm quét vét mã voucher có giá trị cao.',
+                root_cause_analysis: 'Thiếu bộ lọc Sliding Window Rate Limiter ở tầng biên khiến lưu lượng ảo tràn vào hệ thống.',
+                blast_radius: 'Băng thông mạng bị nghẽn, người dùng thật bị chậm phản hồi và không kịp săn mã sale.',
+                cascading_failure_path: [
+                  '[Trigger]: Botnet đồng loạt dội bão request quét mã voucher lúc mở cổng sale.',
+                  '[Network Saturation]: Băng thông mạng và CPU Redis bị chiếm dụng 90%.',
+                  '[Failure Cascade]: Request của người dùng thật bị xếp hàng sau và timeout.',
+                  '[Blast Radius]: Trải nghiệm khách hàng bị phá hủy, voucher bị bot gom sạch.'
+                ],
+                mitigation_strategy: 'Thiết lập Sliding Window Counter 10 req/s mỗi IP + WAF IP Reputation Filter chặn đứng botnet từ tầng biên.'
+              }
+            ],
             ban_chat: 'Phân hệ Redis chỉ đóng vai trò bộ nhớ đệm tăng tốc độ đọc (Compiled Promotion Rules) và kiểm soát tần suất gọi API (Sliding Window Rate Limiter). Tuyệt đối không dùng Redis để quyết định hạn mức ngân sách hoặc quota tài chính cốt lõi.',
             ca_thuc_te: [
               'Sự cố Cache Stampede đêm 11.11: Key voucher hot hết hạn TTL làm 100.000 request ùa xuống DB trong 1 tích tắc, CPU DB chạm ngưỡng 100%.',
@@ -506,12 +553,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             infra_type: 'kafka',
             schematic_template: 'queue_outbox_conveyor',
             schematic_params: { pattern: 'TRANSACTIONAL OUTBOX', worker: 'BACKGROUND RECONCILER', timer: '15m EXPIRY' },
-            incident_dossier: {
-              boi_canh_tai: 'Đêm mở bán vé: 25.000 đơn hàng thanh toán thành công trong 10 phút cao điểm.',
-              nguyen_nhan_goc_re: 'DB Transaction commit thành công nhưng kết nối Message Broker bị ngắt 5s làm event bị thất lạc.',
-              ban_kinh_anh_huong: 'Hệ thống Analytics và Kho quà tặng không nhận được event trừ tồn kho, gây lệch số liệu báo cáo tài chính.',
-              chien_luoc_phong_thu: 'Mẫu Transactional Outbox ghi event vào cùng 1 DB Transaction với Entity + Background Reconciler quét dọn reservation quá hạn 15m.'
-            },
+            incident_cases: [
+              {
+                id: 'case_outbox_event_loss',
+                title: 'Dual-Write Silent Event Loss',
+                traffic_profile: 'Đêm mở bán vé: 25.000 đơn hàng thanh toán thành công trong 10 phút cao điểm.',
+                root_cause_analysis: 'DB Transaction commit thành công nhưng kết nối Message Broker bị ngắt 5s làm event bị thất lạc vĩnh viễn.',
+                blast_radius: 'Hệ thống Analytics và Kho quà tặng không nhận được event trừ tồn kho, gây lệch số liệu báo cáo tài chính.',
+                cascading_failure_path: [
+                  '[Trigger]: Kết nối Kafka chập chờn 5s đúng lúc 1.200 đơn hàng thanh toán xong.',
+                  '[Dual-Write Failure]: DB lưu thành công nhưng bắn Kafka thất bại, không có outbox lưu trữ.',
+                  '[Failure Cascade]: Kho quà không nhận được lệnh trừ tồn kho, quà bị phát vượt hạn ngạch.',
+                  '[Blast Radius]: Sai lệch báo cáo tài chính và khiếu nại thiếu quà tặng từ khách.'
+                ],
+                mitigation_strategy: 'Mẫu Transactional Outbox ghi event vào cùng 1 DB Transaction với Entity + Worker ngầm phát tán tin cậy.'
+              },
+              {
+                id: 'case_worker_lag_quota_leak',
+                title: 'Worker Crash & Zombie Reservation Leak',
+                traffic_profile: '8.000 khách hàng bấm giữ voucher 15 phút rồi tắt trình duyệt bỏ đơn.',
+                root_cause_analysis: 'Background Worker bị crash khiến reservation quá hạn 15m không được giải phóng nhả lại vào quỹ.',
+                blast_radius: 'Voucher bị "treo giữ ảo" suốt 48h, làm sụt giảm 1.8 tỷ doanh thu do khách khác không áp được mã.',
+                cascading_failure_path: [
+                  '[Trigger]: Background Worker quét dọn reservation hết hạn bị crash.',
+                  '[Resource Leak]: 8.000 reservation quá hạn 15m không được nhả lại vào quỹ chung.',
+                  '[Failure Cascade]: Mã khuyến mãi báo hết lượt dù thực tế đơn thanh toán đã bị hủy.',
+                  '[Blast Radius]: Thất thoát doanh thu và gây bức xúc lớn cho người mua hàng.'
+                ],
+                mitigation_strategy: 'Chạy Worker dạng Multi-Pod Reconciler phân tán với cờ khóa phân tán và cảnh báo tự động khi Lag > 2 phút.'
+              }
+            ],
             ban_chat: 'Đảm bảo tính nhất quán cuối cùng (Eventual Consistency) bằng cách ghi sự kiện vào bảng outbox trong cùng Transaction với dữ liệu chính, sau đó Worker nền rút ra bắn sang message bus. Worker tự động quét và giải phóng các reservation bị bỏ rơi sau 15 phút.',
             ca_thuc_te: [
               'Sự cố mất event tích điểm: Kết nối Kafka chập chờn 5 giây khiến 1.200 đơn hàng thanh toán không được tích điểm thưởng cho người mua.',
@@ -544,12 +615,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               is_public_interface: true,
               schematic_template: 'pipeline_filter',
               schematic_params: { ingress: 'EXPRESS CONTROLLER', validation: 'ZOD DTO SCHEMA', serialize: 'BIGINT STRING' },
-              incident_dossier: {
-                boi_canh_tai: 'Đêm siêu sale 11.11: 50.000 requests/giây dội vào cổng Ingress Gateway.',
-                nguyen_nhan_goc_re: 'Khách gửi số tiền dạng float (Number 100000.50), JavaScript tự động làm tròn số lẻ 53-bit làm lệch tiền.',
-                ban_kinh_anh_huong: 'Lệch 50đ mỗi đơn trên 500.000 giao dịch, sai lệch 25 triệu đồng so với sao kê ngân hàng, bị phong tỏa đóng sổ kế toán.',
-                chien_luoc_phong_thu: 'Serialize số tiền Minor-Unit BigInt thành chuỗi số nguyên "100000" trên JSON DTO và dùng Zod validation nghiêm ngặt.'
-              },
+              incident_cases: [
+                {
+                  id: 'case_express_float_loss',
+                  title: 'IEEE 754 Float Precision Loss On Payment DTO',
+                  traffic_profile: 'Đêm siêu sale 11.11: 50.000 requests/giây dội vào cổng Ingress Gateway.',
+                  root_cause_analysis: 'Khách gửi số tiền dạng float (Number 100000.50), JavaScript tự động làm tròn số lẻ 53-bit làm lệch tiền.',
+                  blast_radius: 'Lệch 50đ mỗi đơn trên 500.000 giao dịch, sai lệch 25 triệu đồng so với sao kê ngân hàng, bị phong tỏa đóng sổ kế toán.',
+                  cascading_failure_path: [
+                    '[Trigger]: Client gửi request thanh toán kèm số tiền dạng float.',
+                    '[Calculation Error]: JavaScript làm tròn số lẻ gây sai lệch vài đồng trên mỗi đơn.',
+                    '[Failure Cascade]: Tổng tiền thanh toán không khớp với bảng sao kê ngân hàng.',
+                    '[Blast Radius]: Bút toán kế toán bị treo đối soát không thể đóng sổ tài chính.'
+                  ],
+                  mitigation_strategy: 'Serialize số tiền Minor-Unit BigInt thành chuỗi số nguyên "100000" trên JSON DTO và dùng Zod validation nghiêm ngặt.'
+                },
+                {
+                  id: 'case_express_webhook_retry',
+                  title: 'Idempotency Bypass On Webhook Retry Storm',
+                  traffic_profile: 'Mạng cổng ngân hàng chập chờn 1.2s kích hoạt phát lại 10.000 Webhook thanh toán đồng thời.',
+                  root_cause_analysis: 'Cổng Ingress thiếu bộ lọc Idempotency-Key UUID v4, xử lý gói tin retry như một giao dịch mới.',
+                  blast_radius: 'Tài khoản của 1.200 khách hàng bị trừ tiền 2 lần, tạo ra các khoản khiếu nại tài chính nghiêm trọng.',
+                  cascading_failure_path: [
+                    '[Trigger]: Cổng thanh toán gửi retry tự động khi mạng trễ 1.2s.',
+                    '[Duplicate Execution]: Server coi gói tin là request mới do thiếu khóa chặn lặp.',
+                    '[Failure Cascade]: Hai tiến trình song song cùng rút tiền từ tài khoản.',
+                    '[Blast Radius]: Thất thoát tài chính thực tế không thể rollback tự động.'
+                  ],
+                  mitigation_strategy: 'Gắn Idempotency-Key UUID v4 trên Header + SETNX trong Redis 120s trả về kết quả cũ đã lưu khi nhận lặp.'
+                }
+              ],
               ban_chat: 'Tầng biên giao tiếp HTTP cung cấp các endpoint REST API: preview, reserve, finalize, release. Thực thi Zod validation nghiêm ngặt, parse Idempotency-Key và chuyển đổi DTO sang Application Commands.',
               ca_thuc_te: [
                 'Sự cố lệch sổ kế toán: JavaScript float làm tròn sai số lẻ trên 500.000 đơn hàng khiến đối soát ngân hàng bị lệch 25.000.000đ.',
@@ -579,12 +674,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               is_public_interface: false,
               schematic_template: 'split_allocation',
               schematic_params: { engine: 'PURE DOMAIN ENGINE', io: '0 I/O DETERMINISTIC', math: 'EXACT SPLIT ALLOCATION' },
-              incident_dossier: {
-                boi_canh_tai: 'Đêm Flash Sale 11.11: Giỏ hàng 15 món từ 4 gian hàng (Multi-Seller Cart), áp Voucher sàn -100k.',
-                nguyen_nhan_goc_re: 'Lỗi làm tròn Float (Penny Rounding): Chia 100k cho 3 seller dư 1đ (33.333,33đ) gây lệch sổ cái đối soát.',
-                ban_kinh_anh_huong: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm.',
-                chien_luoc_phong_thu: 'Thuật toán Largest Remainder + Minor-Unit BigInt dồn phần dư 1đ vào seller có giá trị đơn cao nhất.'
-              },
+              incident_cases: [
+                {
+                  id: 'case_engine_penny_rounding',
+                  title: 'Penny Rounding On Multi-Seller Split Allocation',
+                  traffic_profile: 'Đêm Flash Sale 11.11, giỏ hàng 1 đơn gồm 15 món từ 3 shop độc lập (Shop A: 100k, Shop B: 100k, Shop C: 100k), áp Voucher sàn -100.000đ.',
+                  root_cause_analysis: 'Voucher 100.000đ chia đều cho 3 shop ra 33.333,333...đ mỗi shop. Nếu làm tròn số lẻ Float, tổng tiền chiết khấu thành 99.999đ hoặc 100.001đ.',
+                  blast_radius: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm, 1 shop gửi đơn khiếu nại sàn ăn chặn tiền chiết khấu.',
+                  cascading_failure_path: [
+                    '[Trigger]: Khách bấm thanh toán giỏ hàng chứa sản phẩm của 3 Seller độc lập.',
+                    '[Calculation Error]: JavaScript chia số thực Float làm tròn sai lệch vài đồng mỗi đơn hàng.',
+                    '[Failure Cascade]: Tổng tiền từng shop cộng lại không khớp với tổng tiền khách thanh toán.',
+                    '[Blast Radius]: Bút toán đối soát ngân hàng bị lệch, tạm dừng giải ngân cho Seller.'
+                  ],
+                  mitigation_strategy: 'Áp dụng Thuật toán Largest Remainder + Minor-Unit BigInt dồn chính xác phần dư 1đ vào seller có giá trị đơn hàng cao nhất.'
+                },
+                {
+                  id: 'case_engine_combinatorial_explosion',
+                  title: 'Combinatorial Explosion On Stacking Rules',
+                  traffic_profile: 'Giỏ hàng chứa 20 mặt hàng, khách thu thập 15 mã voucher khác nhau (Voucher sàn, Shop voucher, Free ship, Member bonus).',
+                  root_cause_analysis: 'Thuật toán vét cạn tổ hợp O(2^N) chạy trong luồng chính (Main Thread) làm nghẽn 100% CPU máy chủ trong 8 giây.',
+                  blast_radius: 'Node.js Event Loop bị block hoàn toàn, hàng ngàn request của người dùng khác bị timeout 504 Gateway Timeout.',
+                  cascading_failure_path: [
+                    '[Trigger]: Giỏ hàng chứa 15 mã giảm giá kích hoạt thuật toán vét cạn tổ hợp O(2^N).',
+                    '[CPU Starvation]: Node.js Event Loop bị block hoàn toàn 100% CPU trong 8 giây.',
+                    '[Failure Cascade]: Các request checkout song song bị dồn ứ hàng đợi và timeout 504.',
+                    '[Blast Radius]: Toàn bộ trang giỏ hàng và thanh toán của khách bị gián đoạn.'
+                  ],
+                  mitigation_strategy: 'Thiết kế ma trận Stacking Matrix loại trừ sớm (Early Pruning) + Giới hạn số lượng voucher tối đa được áp dụng cùng lúc.'
+                }
+              ],
               ban_chat: 'Pure Domain Engine là trái tim thuật toán độc lập 100% với DB/Redis/Network. Nhận PriceableCheckoutSnapshot và danh sách PromotionDefinition để đánh giá điều kiện, ma trận stacking và phân bổ giảm giá đa người bán (Multi-Seller Split Allocation).',
               ca_thuc_te: [
                 'Sự cố tranh chấp Seller: Voucher sàn 50.000đ chia cho 3 shop bị làm tròn thiếu 1đ khiến 1 shop kiện sàn ăn chặn tiền chiết khấu.',
@@ -614,12 +733,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               is_public_interface: false,
               schematic_template: 'two_phase_state_machine',
               schematic_params: { flow: 'TWO-PHASE ALLOCATION', phase1: 'RESERVE 15M', phase2: 'FINALIZE / RELEASE' },
-              incident_dossier: {
-                boi_canh_tai: '10.000 khách hàng bấm áp mã voucher lúc 0h rồi chuyển sang cổng ngân hàng.',
-                nguyen_nhan_goc_re: 'Khách hàng tắt trình duyệt bỏ ngang không thanh toán đơn nhưng hệ thống thiếu cơ chế Reservation Timeout.',
-                ban_kinh_anh_huong: 'Quota voucher bị treo giữ ảo suốt 48h, sàn thương mại sụt giảm 1.8 tỷ đồng doanh thu do khách khác không áp được mã.',
-                chien_luoc_phong_thu: 'Chu trình Two-Phase Reservation có hạn 15 phút, kết hợp Background Worker tự động thu hồi quota khi đơn bị hủy.'
-              },
+              incident_cases: [
+                {
+                  id: 'case_app_quota_leak',
+                  title: 'Two-Phase Reservation Quota Leak',
+                  traffic_profile: '10.000 khách hàng bấm áp mã voucher lúc 0h rồi chuyển sang cổng ngân hàng.',
+                  root_cause_analysis: 'Khách hàng tắt trình duyệt bỏ ngang không thanh toán đơn nhưng hệ thống thiếu cơ chế Reservation Timeout.',
+                  blast_radius: 'Quota voucher bị treo giữ ảo suốt 48h, sàn thương mại sụt giảm 1.8 tỷ đồng doanh thu do khách khác không áp được mã.',
+                  cascading_failure_path: [
+                    '[Trigger]: Khách hàng bấm thanh toán và chuyển sang cổng ngân hàng.',
+                    '[Abandonment]: Người dùng tắt trình duyệt bỏ ngang không thanh toán đơn.',
+                    '[Failure Cascade]: Quota voucher bị treo giữ không được nhả lại kịp thời.',
+                    '[Blast Radius]: Khách hàng khác mất cơ hội săn sale dù ngân sách vẫn còn.'
+                  ],
+                  mitigation_strategy: 'Chu trình Two-Phase Reservation có hạn 15 phút, kết hợp Background Worker tự động thu hồi quota khi đơn bị hủy.'
+                },
+                {
+                  id: 'case_app_deadlock',
+                  title: 'Order Settlement Deadlock',
+                  traffic_profile: '5.000 transaction đồng thời thực hiện hoàn tiền và thanh toán đơn hàng.',
+                  root_cause_analysis: 'Hai transaction cùng tranh chấp khóa đơn hàng theo thứ tự ngược nhau gây Deadlock chu trình.',
+                  blast_radius: 'Đơn hàng bị treo trạng thái PROCESSING không thể hoàn tất thanh toán.',
+                  cascading_failure_path: [
+                    '[Trigger]: Hai transaction hoàn tiền và thanh toán cùng chạm 1 đơn hàng.',
+                    '[Lock Conflict]: Khóa tài nguyên theo thứ tự ngược nhau gây Deadlock chu trình.',
+                    '[Failure Cascade]: PostgreSQL Deadlock Detector buộc abort transaction.',
+                    '[Blast Radius]: Trạng thái đơn hàng bị kẹt lơ lửng không thể tiếp tục.'
+                  ],
+                  mitigation_strategy: 'Chuẩn hóa thứ tự khóa đơn hàng tăng dần + Cơ chế Retry có Exponential Backoff.'
+                }
+              ],
               ban_chat: 'Thực thi giao diện PromotionsFacade, điều phối chu trình 2 pha: Khóa giữ mã tạm thời (Reservation) khi checkout ➔ Chuyển thành bút toán tiêu dùng vĩnh viễn (Redemption) khi thanh toán thành công, hoặc Release khi đơn bị hủy.',
               ca_thuc_te: [
                 'Sự cố treo giữ Quota ảo: 8.000 khách hàng bỏ giỏ hàng giữa chừng làm voucher báo hết lượt dù ngân sách thực tế vẫn còn 40%.',
@@ -649,12 +792,36 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               is_public_interface: false,
               schematic_template: 'hexagonal_ports',
               schematic_params: { port: 'HEXAGONAL ADAPTER', target: label.toUpperCase() },
-              incident_dossier: {
-                boi_canh_tai: '30.000 request checkout/giây đồng thời gọi Catalog Port tra cứu thông tin SKU.',
-                nguyen_nhan_goc_re: 'Truy vấn N+1: Mỗi sản phẩm trong giỏ hàng phát 1 request mạng riêng lẻ làm ngập kết nối.',
-                ban_kinh_anh_huong: 'Catalog Service bị nghẽn mạng, toàn bộ giỏ hàng bị đơ và không hiển thị được giá.',
-                chien_luoc_phong_thu: 'Sử dụng Batch Resolver gom 100 SKU vào 1 request duy nhất + Circuit Breaker timeout 1.5s.'
-              },
+              incident_cases: [
+                {
+                  id: 'case_port_n_plus_one',
+                  title: 'N+1 Network Latency On Catalog Port',
+                  traffic_profile: '30.000 request checkout/giây đồng thời gọi Catalog Port tra cứu thông tin SKU.',
+                  root_cause_analysis: 'Truy vấn N+1: Mỗi sản phẩm trong giỏ hàng phát 1 request mạng riêng lẻ làm ngập kết nối.',
+                  blast_radius: 'Catalog Service bị nghẽn mạng, toàn bộ giỏ hàng bị đơ và không hiển thị được giá.',
+                  cascading_failure_path: [
+                    `1. [Trigger]: Giỏ hàng 20 món phát 20 request tra cứu Catalog riêng lẻ.`,
+                    '2. [Network Saturation]: Socket kết nối bị ngập lụt, độ trễ tăng từ 50ms lên 3.200ms.',
+                    '3. [Failure Cascade]: Luồng tính giá khuyến mãi bị nghẽn lại.',
+                    '4. [Blast Radius]: Toàn bộ trang giỏ hàng và checkout của khách bị gián đoạn.'
+                  ],
+                  mitigation_strategy: 'Sử dụng Batch Resolver gom 100 SKU vào 1 request duy nhất + Circuit Breaker timeout 1.5s.'
+                },
+                {
+                  id: 'case_port_payment_timeout',
+                  title: 'Payment Port Cascading Timeout',
+                  traffic_profile: 'Cổng thanh toán đối tác bị nghẽn mạng làm treo các lệnh xác nhận thanh toán.',
+                  root_cause_analysis: 'Thiếu cơ chế Circuit Breaker và Timeout chặt chẽ trên Payment Port.',
+                  blast_radius: 'Luồng tính giá và giữ chỗ bị treo cứng theo, làm tê liệt toàn bộ quy trình mua hàng.',
+                  cascading_failure_path: [
+                    '[Trigger]: Cổng thanh toán đối tác bị chậm phản hồi quá 10 giây.',
+                    '[Thread Pool Starvation]: Các luồng xử lý bị chiếm dụng chờ đợi phản hồi.',
+                    '[Failure Cascade]: Không còn worker để xử lý các yêu cầu checkout mới.',
+                    '[Blast Radius]: Tỷ lệ lỗi 504 Gateway Timeout tăng vọt lên 80%.'
+                  ],
+                  mitigation_strategy: 'Thiết lập Timeout 2s + Circuit Breaker tự động chuyển sang Fallback Mode khi tỷ lệ lỗi vượt 20%.'
+                }
+              ],
               ban_chat: `Triển khai kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters) định nghĩa ranh giới giao tiếp giữa Promotion module với ${label} mà không gây phụ thuộc ngược (Dependency Inversion).`,
               ca_thuc_te: [
                 'Sự cố nghẽn mạng N+1: Giỏ hàng 20 món phát 20 request tra cứu Catalog làm tăng độ trễ checkout từ 50ms lên 3.200ms.',

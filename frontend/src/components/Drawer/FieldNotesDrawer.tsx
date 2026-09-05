@@ -340,50 +340,12 @@ export const FieldNotesDrawer: React.FC = () => {
           </div>
         </div>
 
-        {/* Khối 3: Production War Stories & Incident Dossier */}
+        {/* Khối 3: Unified Incident Post-Mortem & Failure Simulator (Hồ sơ sự cố khép kín theo từng Case) */}
         <div className="khoi-noi-dung">
-          <div className="tieu-de-khoi" style={{ color: '#DC2626' }}>
-            <AlertTriangle className="lucide-icon-sm" />
-            <span>PRODUCTION WAR STORIES & BLAST RADIUS</span>
-          </div>
-
-          {c.incident_dossier && (
-            <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '10px 12px', marginBottom: '10px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div>
-                <span style={{ fontWeight: 800, color: '#991B1B' }}>📊 TRAFFIC LOAD PROFILE: </span>
-                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.boi_canh_tai}</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: 800, color: '#991B1B' }}>🔍 ROOT CAUSE (RCA): </span>
-                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.nguyen_nhan_goc_re}</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: 800, color: '#991B1B' }}>💥 BLAST RADIUS: </span>
-                <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.ban_kinh_anh_huong}</span>
-              </div>
-              <div>
-                <span style={{ fontWeight: 800, color: '#065F46' }}>🛡️ MITIGATION & DEFENSE: </span>
-                <span style={{ color: '#064E3B' }}>{c.incident_dossier.chien_luoc_phong_thu}</span>
-              </div>
-            </div>
-          )}
-
-          <ul className="danh-sach-chi-tiet">
-            {c.ca_thuc_te.map((item, idx) => (
-              <li key={idx} className="dong-chi-tiet su-co">
-                <ChevronRight className="lucide-icon-sm" />
-                <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(item) }} />
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* Khối 4: Incident Post-Mortem & Cascading Failure Modes */}
-        <div className="khoi-noi-dung">
-          <div className="tieu-de-khoi" style={{ color: '#D97706', justifyContent: 'space-between', display: 'flex' }}>
+          <div className="tieu-de-khoi" style={{ color: '#DC2626', justifyContent: 'space-between', display: 'flex' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldAlert className="lucide-icon-sm" />
-              <span>INCIDENT POST-MORTEM & FAILURE MODES</span>
+              <AlertTriangle className="lucide-icon-sm" />
+              <span>INCIDENT POST-MORTEM & FAILURE SIMULATOR</span>
             </div>
             <button
               onClick={toggleWhatBreaks}
@@ -392,9 +354,9 @@ export const FieldNotesDrawer: React.FC = () => {
                 color: isWhatBreaksActive ? '#FFFFFF' : '#DC2626',
                 border: '1px solid #DC2626',
                 borderRadius: '4px',
-                padding: '2px 8px',
+                padding: '3px 9px',
                 fontSize: '11px',
-                fontWeight: 600,
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -403,80 +365,149 @@ export const FieldNotesDrawer: React.FC = () => {
               title="Mô phỏng hiệu ứng lan truyền sự cố (Failure Cascade) trên canvas"
             >
               <Zap size={12} />
-              <span>{isWhatBreaksActive ? 'Tắt Failure Cascade' : 'Mô phỏng Failure Cascade'}</span>
+              <span>{isWhatBreaksActive ? 'Tắt Mô Phỏng' : 'Mô Phỏng Sự Cố 🐛'}</span>
             </button>
           </div>
 
-          {/* Nếu chế độ What Breaks đang bật, hiển thị kịch bản Failure Cascade Chain */}
-          {isWhatBreaksActive && c.chuoi_sup_do && (
-            <div style={{
-              background: '#FFF1F2',
-              border: '1px solid #FECDD3',
-              borderRadius: '6px',
-              padding: '10px 12px',
-              marginBottom: '12px',
-              fontSize: '12.5px',
-              lineHeight: '1.5'
-            }}>
-              <div style={{ fontWeight: 700, color: '#9F1239', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <AlertCircle size={14} />
-                <span>KỊCH BẢN LAN TRUYỀN SỰ CỐ DÂY CHUYỀN (CASCADING FAILURE CHAIN)</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '6px' }}>
-                {c.chuoi_sup_do.map((step, sIdx) => {
-                  const cleanStep = step.replace(/^[\d\.]+\s*/, '').trim();
-                  return (
-                    <div key={sIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#881337' }}>
-                      <span style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        background: '#FECDD3',
-                        color: '#9F1239',
-                        fontSize: '9.5px',
-                        fontWeight: 800,
-                        marginTop: '1px'
-                      }}>
-                        {sIdx + 1}
-                      </span>
-                      <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(cleanStep) }} />
+          {/* Danh sách các Incident Case độc lập khép kín (Accordion per Case) */}
+          {c.incident_cases && c.incident_cases.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {c.incident_cases.map((item, caseIdx) => (
+                <div
+                  key={item.id || caseIdx}
+                  style={{
+                    border: '1.5px solid #FECACA',
+                    borderRadius: '7px',
+                    background: '#FEF2F2',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {/* Case Header */}
+                  <div
+                    style={{
+                      padding: '8px 12px',
+                      background: '#FEE2E2',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #FECACA'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 800, color: '#991B1B' }}>
+                      <AlertCircle size={14} color="#DC2626" />
+                      <span>CASE {caseIdx + 1}: {item.title.toUpperCase()}</span>
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
 
-              {/* Đề xuất hướng Fix & Chiến lược phòng thủ ngay bên dưới Failure Cascade */}
-              {c.incident_dossier?.chien_luoc_phong_thu && (
-                <div style={{
-                  marginTop: '10px',
-                  padding: '8px 10px',
-                  background: '#ECFDF5',
-                  border: '1px solid #A7F3D0',
-                  borderRadius: '5px',
-                  fontSize: '11px',
-                  lineHeight: '1.45',
-                  color: '#065F46'
-                }}>
-                  <span style={{ fontWeight: 800 }}>🛡️ ĐỀ XUẤT HƯỚNG FIX & PHÒNG THỦ (MITIGATION): </span>
-                  <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(c.incident_dossier.chien_luoc_phong_thu) }} />
+                  {/* Case Body */}
+                  <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '11px' }}>
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#991B1B' }}>📊 TRAFFIC PROFILE & CONCURRENCY: </span>
+                      <span style={{ color: '#7F1D1D' }}>{item.traffic_profile}</span>
+                    </div>
+
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#991B1B' }}>🔍 ROOT CAUSE ANALYSIS (RCA): </span>
+                      <span style={{ color: '#7F1D1D' }}>{item.root_cause_analysis}</span>
+                    </div>
+
+                    <div>
+                      <span style={{ fontWeight: 800, color: '#991B1B' }}>💥 BLAST RADIUS & BUSINESS IMPACT: </span>
+                      <span style={{ color: '#7F1D1D' }}>{item.blast_radius}</span>
+                    </div>
+
+                    {item.cascading_failure_path && item.cascading_failure_path.length > 0 && (
+                      <div style={{ marginTop: '2px', background: '#FFF1F2', padding: '8px 10px', borderRadius: '5px', border: '1px solid #FECDD3' }}>
+                        <div style={{ fontWeight: 800, color: '#9F1239', marginBottom: '4px' }}>
+                          🚨 CASCADING FAILURE PATH (LAN TRUYỀN SỰ CỐ):
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          {item.cascading_failure_path.map((step, sIdx) => {
+                            const cleanStep = step.replace(/^[\d\.]+\s*/, '').trim();
+                            return (
+                              <div key={sIdx} style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '10.5px', color: '#881337' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  minWidth: '16px',
+                                  height: '16px',
+                                  borderRadius: '50%',
+                                  background: '#FECDD3',
+                                  color: '#9F1239',
+                                  fontSize: '9px',
+                                  fontWeight: 800,
+                                  marginTop: '1px'
+                                }}>
+                                  {sIdx + 1}
+                                </span>
+                                <span style={{ flex: 1 }} dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(cleanStep) }} />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Hộp Đề Xuất Hướng Fix & Phòng Thủ */}
+                    <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '5px', padding: '8px 10px', color: '#065F46', marginTop: '2px' }}>
+                      <span style={{ fontWeight: 800 }}>🛡️ MITIGATION & RECOVERY STRATEGY: </span>
+                      <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(item.mitigation_strategy) }} />
+                    </div>
+                  </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            /* Fallback single incident dossier format */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {c.incident_dossier && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', padding: '10px 12px', fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div>
+                    <span style={{ fontWeight: 800, color: '#991B1B' }}>📊 TRAFFIC PROFILE & CONCURRENCY: </span>
+                    <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.boi_canh_tai}</span>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 800, color: '#991B1B' }}>🔍 ROOT CAUSE ANALYSIS (RCA): </span>
+                    <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.nguyen_nhan_goc_re}</span>
+                  </div>
+                  <div>
+                    <span style={{ fontWeight: 800, color: '#991B1B' }}>💥 BLAST RADIUS: </span>
+                    <span style={{ color: '#7F1D1D' }}>{c.incident_dossier.ban_kinh_anh_huong}</span>
+                  </div>
+                  <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '5px', padding: '6px 8px', color: '#065F46', marginTop: '2px' }}>
+                    <span style={{ fontWeight: 800 }}>🛡️ MITIGATION STRATEGY: </span>
+                    <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(c.incident_dossier.chien_luoc_phong_thu) }} />
+                  </div>
+                </div>
+              )}
+
+              {c.ca_thuc_te && c.ca_thuc_te.length > 0 && (
+                <ul className="danh-sach-chi-tiet">
+                  {c.ca_thuc_te.map((item, idx) => (
+                    <li key={idx} className="dong-chi-tiet su-co">
+                      <ChevronRight className="lucide-icon-sm" />
+                      <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(item) }} />
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}
 
-          <ul className="danh-sach-chi-tiet">
-            {c.rui_ro.map((item, idx) => (
-              <li key={idx} className="dong-chi-tiet rui-ro">
-                <AlertCircle className="lucide-icon-sm" />
-                <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(item) }} />
-              </li>
-            ))}
-          </ul>
+          {/* Rủi ro tồn đọng cần kiểm soát */}
+          {c.rui_ro && c.rui_ro.length > 0 && (
+            <ul className="danh-sach-chi-tiet" style={{ marginTop: '8px' }}>
+              {c.rui_ro.map((item, idx) => (
+                <li key={idx} className="dong-chi-tiet rui-ro">
+                  <AlertCircle className="lucide-icon-sm" />
+                  <span dangerouslySetInnerHTML={{ __html: enrichHtmlWithTooltips(item) }} />
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-
         {/* Khối 5: Chuỗi 5 câu hỏi phản xạ kỹ sư thực chiến */}
         {isReflexQuizOpen && (node.trac_nghiem || node.trac_nghiem_list) && (
           <ReflexQuizCard quiz={node.trac_nghiem} quizList={node.trac_nghiem_list} />

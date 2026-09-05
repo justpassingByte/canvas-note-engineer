@@ -9,7 +9,8 @@ import {
   SpawnClusterPayload,
   CompactSubCluster,
   ReflexQuizItem,
-  IncidentDossier
+  IncidentDossier,
+  IncidentCase
 } from '../types/graphTypes.js';
 
 export function generate5StepReflexDrill(title: string, summary: string, clusterName: string): ReflexQuizItem[] {
@@ -399,6 +400,123 @@ export function generateIncidentDossier(title: string, summary: string, clusterN
     ban_kinh_anh_huong: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên quan.`,
     chien_luoc_phong_thu: `Kích hoạt cơ chế Circuit Breaker, giới hạn tần suất Rate Limiting và đệm dữ liệu bất đồng bộ.`
   };
+}
+
+
+export function generateDefaultIncidentCases(title: string, summary: string, clusterName: string): IncidentCase[] {
+  const t = title.toLowerCase();
+  if (t.includes('pure') || t.includes('engine') || t.includes('tính toán')) {
+    return [
+      {
+        id: 'case_engine_penny_rounding',
+        title: 'Penny Rounding On Multi-Seller Split Allocation',
+        traffic_profile: 'Đêm Flash Sale 11.11, giỏ hàng 1 đơn gồm 15 món từ 3 shop độc lập (Shop A: 100k, Shop B: 100k, Shop C: 100k), áp Voucher sàn -100.000đ.',
+        root_cause_analysis: 'Voucher 100.000đ chia đều cho 3 shop ra 33.333,333...đ mỗi shop. Nếu làm tròn số lẻ Float, tổng tiền chiết khấu thành 99.999đ hoặc 100.001đ.',
+        blast_radius: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm, 1 shop gửi đơn khiếu nại sàn ăn chặn tiền chiết khấu.',
+        cascading_failure_path: [
+          '[Trigger]: Khách bấm thanh toán giỏ hàng chứa sản phẩm của 3 Seller độc lập.',
+          '[Calculation Error]: JavaScript chia số thực Float làm tròn sai lệch vài đồng mỗi đơn hàng.',
+          '[Failure Cascade]: Tổng tiền từng shop cộng lại không khớp với tổng tiền khách thanh toán.',
+          '[Blast Radius]: Bút toán đối soát ngân hàng bị lệch, tạm dừng giải ngân cho Seller.'
+        ],
+        mitigation_strategy: 'Áp dụng Thuật toán Largest Remainder + Minor-Unit BigInt dồn chính xác phần dư 1đ vào seller có giá trị đơn hàng cao nhất.'
+      },
+      {
+        id: 'case_engine_combinatorial_explosion',
+        title: 'Combinatorial Explosion On Stacking Rules',
+        traffic_profile: 'Giỏ hàng chứa 20 mặt hàng, khách thu thập 15 mã voucher khác nhau (Voucher sàn, Shop voucher, Free ship, Member bonus).',
+        root_cause_analysis: 'Thuật toán vét cạn tổ hợp O(2^N) chạy trong luồng chính (Main Thread) làm nghẽn 100% CPU máy chủ trong 8 giây.',
+        blast_radius: 'Node.js Event Loop bị block hoàn toàn, hàng ngàn request của người dùng khác bị timeout 504 Gateway Timeout.',
+        cascading_failure_path: [
+          '[Trigger]: Giỏ hàng chứa 15 mã giảm giá kích hoạt thuật toán vét cạn tổ hợp O(2^N).',
+          '[CPU Starvation]: Node.js Event Loop bị block hoàn toàn 100% CPU trong 8 giây.',
+          '[Failure Cascade]: Các request checkout song song bị dồn ứ hàng đợi và timeout 504.',
+          '[Blast Radius]: Toàn bộ trang giỏ hàng và thanh toán của khách bị gián đoạn.'
+        ],
+        mitigation_strategy: 'Thiết kế ma trận Stacking Matrix loại trừ sớm (Early Pruning) + Giới hạn số lượng voucher tối đa được áp dụng cùng lúc.'
+      }
+    ];
+  }
+  if (t.includes('postgres') || t.includes('database') || t.includes('db') || t.includes('acid') || t.includes('storage')) {
+    return [
+      {
+        id: 'case_pg_lock_contention',
+        title: 'Row-Level Lock Contention On Flash Voucher 0h',
+        traffic_profile: '0h mở bán Flash Voucher giảm 50% cho 1.000 người đầu tiên, 10.000 requests/giây cùng dội vào khóa dòng voucher #99.',
+        root_cause_analysis: 'Pessimistic Row-Level Lock (SELECT ... FOR UPDATE) trên cùng 1 dòng voucher giữ connection quá 150ms làm cạn kiệt Connection Pool (Starvation).',
+        blast_radius: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
+        cascading_failure_path: [
+          '[Trigger]: 10.000 request dồn dập tranh nhau khóa dòng cùng 1 voucher lúc 0h.',
+          '[Saturation]: Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
+          '[Failure Cascade]: Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
+          '[Blast Radius]: Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
+        ],
+        mitigation_strategy: 'Khóa theo thứ tự ID tăng dần cố định + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
+      },
+      {
+        id: 'case_pg_deadlock',
+        title: 'Deadlock Cycle On Multi-Voucher Checkout',
+        traffic_profile: '5.000 transaction đồng thời áp cặp voucher [Voucher Sàn A + Voucher Shop B] trên các giỏ hàng khác nhau.',
+        root_cause_analysis: 'Transaction 1 khóa A chờ B, trong khi Transaction 2 khóa B chờ A kẹt chéo tạo thành chu trình Deadlock.',
+        blast_radius: 'PostgreSQL Deadlock Detector tự động abort transaction, khách hàng bị báo lỗi thanh toán dù voucher còn lượt.',
+        cascading_failure_path: [
+          '[Trigger]: Hai transaction áp cùng cặp voucher theo thứ tự duyệt giỏ hàng ngẫu nhiên.',
+          '[Deadlock Cycle]: Transaction 1 khóa A chờ B; Transaction 2 khóa B chờ A kẹt chéo.',
+          '[Failure Cascade]: PostgreSQL phát hiện sau 1.000ms và buộc abort transaction.',
+          '[Blast Radius]: Khách hàng bị văng lỗi thanh toán và mất lượt mua hàng oan.'
+        ],
+        mitigation_strategy: 'Bắt buộc sắp xếp mảng ID các voucher cần khóa theo thứ tự từ điển tăng dần trước khi SELECT FOR UPDATE.'
+      }
+    ];
+  }
+  if (t.includes('redis') || t.includes('cache') || t.includes('rate') || t.includes('lock')) {
+    return [
+      {
+        id: 'case_redis_stampede',
+        title: 'Cache Stampede On Viral Campaign Expiration',
+        traffic_profile: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
+        root_cause_analysis: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng và sập pool.',
+        blast_radius: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
+        cascading_failure_path: [
+          '[Trigger]: Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache lúc 0h.',
+          '[Cache Stampede]: Toàn bộ request lọt thẳng xuống tầng cơ sở dữ liệu quan hệ PostgreSQL.',
+          '[Failure Cascade]: I/O Database tăng vọt 500%, Connection Pool bị cạn kiệt.',
+          '[Blast Radius]: Dịch vụ Promotion và Checkout bị suy giảm hiệu năng nghiêm trọng.'
+        ],
+        mitigation_strategy: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
+      },
+      {
+        id: 'case_redis_botnet',
+        title: 'Botnet Request Flood & Token Drain',
+        traffic_profile: '5.000 IP botnet tự động gửi 50.000 request/giây nhằm quét vét mã voucher có giá trị cao.',
+        root_cause_analysis: 'Thiếu bộ lọc Sliding Window Rate Limiter ở tầng biên khiến lưu lượng ảo tràn vào hệ thống.',
+        blast_radius: 'Băng thông mạng bị nghẽn, người dùng thật bị chậm phản hồi và không kịp săn mã sale.',
+        cascading_failure_path: [
+          '[Trigger]: Botnet đồng loạt dội bão request quét mã voucher lúc mở cổng sale.',
+          '[Network Saturation]: Băng thông mạng và CPU Redis bị chiếm dụng 90%.',
+          '[Failure Cascade]: Request của người dùng thật bị xếp hàng sau và timeout.',
+          '[Blast Radius]: Trải nghiệm khách hàng bị phá hủy, voucher bị bot gom sạch.'
+        ],
+        mitigation_strategy: 'Thiết lập Sliding Window Counter 10 req/s mỗi IP + WAF IP Reputation Filter chặn đứng botnet từ tầng biên.'
+      }
+    ];
+  }
+  return [
+    {
+      id: `case_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_overload`,
+      title: `${title} Overload & Resource Saturation`,
+      traffic_profile: `Lưu lượng đỉnh 50.000 req/s dồn vào thành phần ${title} trong phân hệ ${clusterName}.`,
+      root_cause_analysis: `Nghẽn cổ chai xử lý do ${summary.slice(0, 55)}...`,
+      blast_radius: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên quan.`,
+      cascading_failure_path: [
+        `1. [Trigger]: Bão request 50.000 req/s dồn dập vào ${title}.`,
+        `2. [Resource Saturation]: Hàng đợi xử lý bị đầy, CPU/RAM chạm ngưỡng 95%.`,
+        `3. [Failure Cascade]: Các dịch vụ gọi phụ thuộc phía sau bị timeout 504.`,
+        `4. [Blast Radius]: Phân hệ ${clusterName} rơi vào trạng thái suy giảm hiệu năng.`
+      ],
+      mitigation_strategy: `Kích hoạt Circuit Breaker ngắt mạch tự động + Thiết lập Rate Limiting và đệm hàng đợi bất đồng bộ.`
+    }
+  ];
 }
 
 
@@ -1396,7 +1514,8 @@ export const toolHandlers = {
             '3. [Failure Cascade]: Bộ đệm bộ nhớ bị đầy làm tăng độ trễ toàn hệ thống.',
             `4. [Blast Radius]: Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
           ],
-          incident_dossier: cNode.incident_dossier || generateIncidentDossier(cNode.title, cNode.summary, payload.cluster_name)
+          incident_dossier: cNode.incident_dossier || generateIncidentDossier(cNode.title, cNode.summary, payload.cluster_name),
+          incident_cases: cNode.incident_cases || generateDefaultIncidentCases(cNode.title, cNode.summary, payload.cluster_name)
         },
         trac_nghiem: cNode.trac_nghiem || {
           cau_hoi: `Vai trò kỹ thuật chính của '${cNode.title}' là gì?`,
@@ -1486,7 +1605,8 @@ export const toolHandlers = {
                 `3. [Failure Cascade]: Thời gian phản hồi vượt ngưỡng timeout cho phép.`,
                 `4. [Blast Radius]: Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
               ],
-              incident_dossier: sNode.incident_dossier || generateIncidentDossier(sNode.title, sNode.summary, sub.name)
+              incident_dossier: sNode.incident_dossier || generateIncidentDossier(sNode.title, sNode.summary, sub.name),
+              incident_cases: sNode.incident_cases || generateDefaultIncidentCases(sNode.title, sNode.summary, sub.name)
             },
             trac_nghiem: sNode.trac_nghiem || {
               cau_hoi: `Mục đích của sub-cluster '${sub.name}' là gì?`,

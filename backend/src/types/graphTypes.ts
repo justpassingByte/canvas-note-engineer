@@ -93,6 +93,16 @@ export interface AnimationParams {
   schematic_data?: SchematicData;
 }
 
+export interface IncidentCase {
+  id: string;
+  title: string;
+  traffic_profile: string;          // 📊 TRAFFIC PROFILE & CONCURRENCY
+  root_cause_analysis: string;      // 🔍 ROOT CAUSE ANALYSIS (RCA)
+  blast_radius: string;             // 💥 BLAST RADIUS & BUSINESS IMPACT
+  cascading_failure_path: string[]; // 🚨 CASCADING FAILURE PATH (4 steps)
+  mitigation_strategy: string;      // 🛡️ MITIGATION & RECOVERY STRATEGY
+}
+
 export interface IncidentDossier {
   boi_canh_tai: string;        // Traffic Scale: e.g. 50.000 req/s, P99 Latency
   nguyen_nhan_goc_re: string;   // RCA
@@ -109,6 +119,7 @@ export interface NodeDetails {
   rui_ro: string[];
   chuoi_sup_do?: string[];
   incident_dossier?: IncidentDossier;
+  incident_cases?: IncidentCase[];
 }
 
 export interface NodeEntity {
@@ -169,6 +180,7 @@ export interface CompactClusterNode {
   rui_ro?: string[];
   chuoi_sup_do?: string[];
   incident_dossier?: IncidentDossier;
+  incident_cases?: IncidentCase[];
   trac_nghiem?: ReflexQuiz;
   trac_nghiem_list?: ReflexQuizItem[];
   is_public_interface?: boolean;
