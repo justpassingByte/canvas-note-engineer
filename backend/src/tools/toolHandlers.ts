@@ -906,7 +906,8 @@ export const toolHandlers = {
     const spawnedNodes: NodeEntity[] = [];
     const newEdges: EdgeEntity[] = [];
 
-    // 1. Khởi tạo các Node trong Cụm - Giãn cách 310px giữa các node trong cụm
+    // 1. Khởi tạo các Node trong Cụm - Bố cục lưới 2D cân đối (2x2 Grid khi có >= 4 node)
+    const cols = nodesToSpawn.length >= 4 ? 2 : (nodesToSpawn.length === 3 ? 3 : 2);
     nodesToSpawn.forEach((cNode, idx) => {
       const nodeSlug = cNode.title
         .toLowerCase()
@@ -915,8 +916,10 @@ export const toolHandlers = {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/^-+|-+$/g, '') || `node-${idx}`;
       const nodeId = `node-${nodeSlug}-${timestamp}`;
-      const posX = startX + idx * 310;
-      const posY = startY;
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const posX = startX + col * 320;
+      const posY = startY + row * 260;
 
       // Nhận diện biểu tượng thích hợp
       let badge: NodeEntity['bieu_tuong'] = 'khien_bao_ve';

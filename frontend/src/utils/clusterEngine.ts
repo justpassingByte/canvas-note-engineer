@@ -22,9 +22,9 @@ export interface TopicCluster {
   };
 }
 
-// Kích thước ước tính tiêu chuẩn của thẻ Node Card (width: 220px, height: 145px)
-const CARD_WIDTH = 220;
-const CARD_HEIGHT = 145;
+// Kích thước chuẩn bao gồm cả Icon Pod tròn và Thẻ Nhãn chữ nhật bên dưới (width: 225px, height: 215px)
+const CARD_WIDTH = 225;
+const CARD_HEIGHT = 215;
 
 // Khoảng đệm rộng rãi (Generous Breathing Room) nới rộng khung cụm chống dính mép
 const PADDING_X = 52;       // Đệm rộng 52px hai bên hông (trái / phải)
