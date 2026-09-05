@@ -88,14 +88,39 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
   // Xác định class màu cho Icon Pod
   const getPodVariantClass = () => {
     switch (node.bieu_tuong) {
-      case 'su_co_canh_bao': return 'su-co';
-      case 'tranh_chap_phan_nhanh': return 'tranh-chap';
-      case 'khien_bao_ve': return 'khien';
+      case 'cong_gateway_ingress': return 'gateway';
+      case 'tuong_lua_waf': return 'waf';
+      case 'dieu_tiet_rate_limit': return 'rate-limit';
+      case 'bo_ngat_mach_circuit_breaker': return 'circuit';
+      case 'dong_co_pure_engine': return 'engine';
+      case 'dieu_phoi_service': return 'service';
+      case 'cong_ket_noi_port': return 'port';
+      case 'gom_tach_fanout_batch': return 'batch';
+      case 'dinh_danh_auth_token': return 'auth';
+      case 'xoay_vong_token_rtr': return 'rtr';
+      case 'chinh_sach_rbac_pdp': return 'rbac';
+      case 'danh_sach_den_blacklist': return 'blacklist';
+      case 'kho_khoa_bi_mat_vault': return 'vault';
+      case 'chuoi_bam_merkle_hash': return 'hash';
       case 'khoi_tru_database': return 'database';
-      case 'hop_kien_hang_domain': return 'tmdt';
-      case 'hang_doi_message_queue': return 'hang-doi';
       case 'bo_nho_dem_cache': return 'cache';
-      default: return 'khien';
+      case 'hang_doi_message_queue': return 'hang-doi';
+      case 'tien_trinh_worker_pool': return 'worker';
+      case 'ghi_chep_so_sach': return 'ledger';
+      case 'khuyen_mai_voucher': return 'voucher';
+      case 'thanh_toan_payment': return 'payment';
+      case 'tranh_chap_phan_nhanh': return 'tranh-chap';
+      case 'su_co_canh_bao': return 'su-co';
+      case 'hop_kien_hang_domain': return 'tmdt';
+      case 'ui_component_view': return 'ui-view';
+      case 'state_store_zustand': return 'state-store';
+      case 'rendering_ssr_csr': return 'ssr';
+      case 'client_cache_swr': return 'swr';
+      case 'bundle_code_split': return 'bundle';
+      case 'browser_web_worker': return 'worker';
+      case 'form_zod_validator': return 'form-zod';
+      case 'khien_bao_ve': return 'khien';
+      default: return 'service';
     }
   };
 

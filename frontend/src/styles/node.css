@@ -116,6 +116,128 @@
   color: var(--mau-bo-nho-cache);
 }
 
+/* Màu sắc theo từng loại biểu tượng kỹ thuật phong phú */
+.hop-icon-pod.gateway {
+  background: #EEF2FF;
+  color: #4F46E5;
+}
+
+.hop-icon-pod.waf {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.hop-icon-pod.rate-limit {
+  background: #FFFBEB;
+  color: #D97706;
+}
+
+.hop-icon-pod.circuit {
+  background: #FEF2F2;
+  color: #B91C1C;
+}
+
+.hop-icon-pod.engine {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.hop-icon-pod.service {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.hop-icon-pod.port {
+  background: #FFFBEB;
+  color: #D97706;
+}
+
+.hop-icon-pod.batch {
+  background: #EEF2FF;
+  color: #4338CA;
+}
+
+.hop-icon-pod.auth {
+  background: #F5F3FF;
+  color: #7C3AED;
+}
+
+.hop-icon-pod.rtr {
+  background: #F0F9FF;
+  color: #0284C7;
+}
+
+.hop-icon-pod.rbac {
+  background: #FAF5FF;
+  color: #9333EA;
+}
+
+.hop-icon-pod.blacklist {
+  background: #FEF2F2;
+  color: #DC2626;
+}
+
+.hop-icon-pod.vault {
+  background: #FFFBEB;
+  color: #B45309;
+}
+
+.hop-icon-pod.hash {
+  background: #F3F4F6;
+  color: #374151;
+}
+
+.hop-icon-pod.worker {
+  background: #F0FDFA;
+  color: #0D9488;
+}
+
+.hop-icon-pod.ledger {
+  background: #FFFBEB;
+  color: #B45309;
+}
+
+.hop-icon-pod.voucher {
+  background: #FFF1F2;
+  color: #E11D48;
+}
+
+.hop-icon-pod.payment {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.hop-icon-pod.ui-view {
+  background: #F0F9FF;
+  color: #0284C7;
+}
+
+.hop-icon-pod.state-store {
+  background: #FAF5FF;
+  color: #9333EA;
+}
+
+.hop-icon-pod.ssr {
+  background: #ECFDF5;
+  color: #059669;
+}
+
+.hop-icon-pod.swr {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.hop-icon-pod.bundle {
+  background: #FFFBEB;
+  color: #D97706;
+}
+
+.hop-icon-pod.form-zod {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+
 /* Badge số đếm khi nhánh con bị thu gọn (giữ tương thích) */
 .badge-thu-gon {
   position: absolute;

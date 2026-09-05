@@ -945,20 +945,46 @@ export const toolHandlers = {
       const posX = startX + col * 320;
       const posY = startY + row * 260;
 
-      let badge: NodeEntity['bieu_tuong'] = 'khien_bao_ve';
+      let badge: NodeEntity['bieu_tuong'] = 'dieu_phoi_service';
       const roleLower = (cNode.role || '').toLowerCase();
       const titleLower = cNode.title.toLowerCase();
       const summaryLower = (cNode.summary || '').toLowerCase();
       const combinedText = `${titleLower} ${roleLower} ${summaryLower}`;
 
-      if (combinedText.includes('audit') || combinedText.includes('kiểm toán') || combinedText.includes('sổ cái') || combinedText.includes('nhật ký')) {
-        badge = 'ghi_chep_so_sach' as any;
-      } else if (combinedText.includes('queue') || combinedText.includes('kafka') || combinedText.includes('hàng đợi')) {
+      if (combinedText.includes('http') || combinedText.includes('gateway') || combinedText.includes('ingress') || combinedText.includes('controller') || roleLower.includes('gateway')) {
+        badge = 'cong_gateway_ingress';
+      } else if (combinedText.includes('pure') || combinedText.includes('engine') || combinedText.includes('tính toán') || combinedText.includes('pricing')) {
+        badge = 'dong_co_pure_engine';
+      } else if (combinedText.includes('port') || combinedText.includes('adapter') || combinedText.includes('connector')) {
+        badge = 'cong_ket_noi_port';
+      } else if (combinedText.includes('worker') || combinedText.includes('publisher') || combinedText.includes('tiến trình')) {
+        badge = 'tien_trinh_worker_pool';
+      } else if (combinedText.includes('voucher') || combinedText.includes('promo') || combinedText.includes('khuyến mãi')) {
+        badge = 'khuyen_mai_voucher';
+      } else if (combinedText.includes('payment') || combinedText.includes('thanh toán') || combinedText.includes('ledger')) {
+        badge = 'thanh_toan_payment';
+      } else if (combinedText.includes('rtr') || combinedText.includes('rotation') || combinedText.includes('xoay vòng')) {
+        badge = 'xoay_vong_token_rtr';
+      } else if (combinedText.includes('pdp') || combinedText.includes('rbac') || combinedText.includes('policy') || combinedText.includes('phân quyền')) {
+        badge = 'chinh_sach_rbac_pdp';
+      } else if (combinedText.includes('token') || combinedText.includes('jwt') || combinedText.includes('oidc') || combinedText.includes('auth')) {
+        badge = 'dinh_danh_auth_token';
+      } else if (combinedText.includes('blacklist') || combinedText.includes('thu hồi') || combinedText.includes('jti')) {
+        badge = 'danh_sach_den_blacklist';
+      } else if (combinedText.includes('audit') || combinedText.includes('kiểm toán') || combinedText.includes('sổ cái') || combinedText.includes('nhật ký')) {
+        badge = 'ghi_chep_so_sach';
+      } else if (combinedText.includes('queue') || combinedText.includes('kafka') || combinedText.includes('outbox') || combinedText.includes('hàng đợi')) {
         badge = 'hang_doi_message_queue';
       } else if (combinedText.includes('cache') || combinedText.includes('redis') || combinedText.includes('đệm')) {
         badge = 'bo_nho_dem_cache';
       } else if (combinedText.includes('db') || combinedText.includes('database') || combinedText.includes('acid') || combinedText.includes('lưu trữ')) {
         badge = 'khoi_tru_database';
+      } else if (combinedText.includes('waf') || combinedText.includes('ddos')) {
+        badge = 'tuong_lua_waf';
+      } else if (combinedText.includes('rate') || combinedText.includes('tần suất')) {
+        badge = 'dieu_tiet_rate_limit';
+      } else {
+        badge = 'dieu_phoi_service';
       }
 
       let resolvedTemplate = cNode.schematic_template;

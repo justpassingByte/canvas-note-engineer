@@ -355,9 +355,12 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    let didMove = false;
+
     // Lưu vị trí node đơn lẻ xuống SQLite khi buông chuột
     if (nodeDragRef.current) {
       if (nodeDragRef.current.hasMoved && graph) {
+        didMove = true;
         const movedNode = graph.nodes.find(n => n.id === nodeDragRef.current?.nodeId);
         if (movedNode) {
           fetch('/api/graph/update-positions', {
@@ -374,6 +377,7 @@ export const SvgGridCanvas: React.FC = () => {
     // Lưu vị trí cụm mới xuống SQLite khi buông chuột
     if (clusterDragRef.current) {
       if (clusterDragRef.current.hasMoved && graph) {
+        didMove = true;
         const movedNodeIds = Array.from(clusterDragRef.current.initialPositions.keys());
         const positionsToSave = graph.nodes
           .filter(n => movedNodeIds.includes(n.id))
@@ -388,6 +392,14 @@ export const SvgGridCanvas: React.FC = () => {
       clusterDragRef.current = null;
       setIsDraggingCluster(false);
     }
+
+    if (didMove) {
+      wasJustDraggedRef.current = true;
+      setTimeout(() => {
+        wasJustDraggedRef.current = false;
+      }, 180);
+    }
+
     setIsPanning(false);
   };
 
@@ -486,7 +498,10 @@ export const SvgGridCanvas: React.FC = () => {
                   pointerEvents: isMacroView ? 'all' : 'none',
                   zIndex: isOuterCluster ? 1 : 2
                 }}
-                onClick={() => isMacroView && focusCluster(cluster)}
+                onClick={() => {
+                  if (wasJustDraggedRef.current) return;
+                  if (isMacroView) focusCluster(cluster);
+                }}
                 title={isMacroView ? `Bấm để phóng to vào cụm ${cluster.ten_cum}` : undefined}
               >
                 {/* Thẻ Tiêu đề Cụm Topic - Có thể Kéo Thả (Drag & Drop) để sắp xếp vị trí cụm */}
@@ -504,9 +519,8 @@ export const SvgGridCanvas: React.FC = () => {
                     onMouseDown={(e) => handleClusterDragStart(e, cluster)}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (!clusterDragRef.current?.hasMoved) {
-                        focusCluster(cluster);
-                      }
+                      if (wasJustDraggedRef.current) return;
+                      focusCluster(cluster);
                     }}
                     title={`Kéo chuột để di chuyển cụm "${cluster.ten_cum}" | Click để căn giữa`}
                   >

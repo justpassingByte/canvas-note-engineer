@@ -1,12 +1,42 @@
 export type NodeBadgeType = 
-  | 'su_co_canh_bao'
-  | 'tranh_chap_phan_nhanh'
-  | 'khien_bao_ve'
+  // Core Gateway & Ingress
+  | 'cong_gateway_ingress'
+  | 'tuong_lua_waf'
+  | 'dieu_tiet_rate_limit'
+  | 'bo_ngat_mach_circuit_breaker'
+  // Domain Core & Compute
+  | 'dong_co_pure_engine'
+  | 'dieu_phoi_service'
+  | 'cong_ket_noi_port'
+  | 'gom_tach_fanout_batch'
+  // Security, Identity & Policy
+  | 'dinh_danh_auth_token'
+  | 'xoay_vong_token_rtr'
+  | 'chinh_sach_rbac_pdp'
+  | 'danh_sach_den_blacklist'
+  | 'kho_khoa_bi_mat_vault'
+  | 'chuoi_bam_merkle_hash'
+  // Storage, Cache & Messaging
   | 'khoi_tru_database'
-  | 'hop_kien_hang_domain'
-  | 'hang_doi_message_queue'
   | 'bo_nho_dem_cache'
-  | 'ghi_chep_so_sach';
+  | 'hang_doi_message_queue'
+  | 'tien_trinh_worker_pool'
+  | 'ghi_chep_so_sach'
+  // Business, Marketplace & Incidents
+  | 'khuyen_mai_voucher'
+  | 'thanh_toan_payment'
+  | 'tranh_chap_phan_nhanh'
+  | 'su_co_canh_bao'
+  | 'hop_kien_hang_domain'
+  | 'khien_bao_ve'
+  // Frontend & Browser Architecture
+  | 'ui_component_view'
+  | 'state_store_zustand'
+  | 'rendering_ssr_csr'
+  | 'client_cache_swr'
+  | 'bundle_code_split'
+  | 'browser_web_worker'
+  | 'form_zod_validator';
 
 export interface ReflexQuizItem {
   cau_hoi: string;
