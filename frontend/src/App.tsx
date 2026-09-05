@@ -7,12 +7,23 @@ import './styles/drawer.css';
 import { SvgGridCanvas } from './components/Canvas/SvgGridCanvas.js';
 import { FieldNotesDrawer } from './components/Drawer/FieldNotesDrawer.js';
 import { useGraphStore } from './store/useGraphStore.js';
+import { setDynamicDictionary } from './dictionary/technicalDictionary.js';
 
 export const App: React.FC = () => {
   const { graph, setGraph, fetchCurrentGraph, pollCurrentGraph } = useGraphStore();
 
   useEffect(() => {
-    // 1. Tải đồ thị ban đầu
+    // 1. Nạp từ điển thuật ngữ động từ RAG documents
+    fetch('/api/rag/dictionary')
+      .then(res => res.json())
+      .then(data => {
+        if (data.dictionary) {
+          setDynamicDictionary(data.dictionary);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Tải đồ thị ban đầu
     fetchCurrentGraph().then(() => {
       if (!useGraphStore.getState().graph) {
         setGraph({

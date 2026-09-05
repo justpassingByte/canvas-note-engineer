@@ -1,14 +1,10 @@
 import React from 'react';
-import { AnimationParams } from '../../types/graphTypes.js';
+import { AnimationParams, SchematicArchetype, SchematicData } from '../../types/graphTypes.js';
 
 interface DynamicSchematicProps {
   params: AnimationParams;
 }
 
-/**
- * Hàm hỗ trợ ngắt dòng thông minh trong SVG:
- * Không cắt cụt từ (không dùng slice/truncate), tự động chia 2 dòng cân đối và căn giữa (textAnchor="middle").
- */
 function renderSvgMultiLine(
   rawText: string | undefined,
   centerX: number,
@@ -67,437 +63,442 @@ function renderSvgMultiLine(
 
 export const DynamicSchematic: React.FC<DynamicSchematicProps> = ({ params }) => {
   const p = params?.tham_so || {};
-  const mau = params?.mau || 'default';
+  const mau = (params?.schematic_layout || params?.mau || 'default') as SchematicArchetype;
+  const d = params?.schematic_data || {};
 
   switch (mau) {
-    case 'chan_loc_khien': {
-      const actorLabel = p.nguon || p.actor || 'CLIENT';
-      const shieldLabel = p.vat_can || p.component || 'KHIÊN LOCK';
-      const targetLabel = p.dich || p.target || 'DATABASE';
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 1: INGRESS PIPELINE & TRAFFIC FILTER (Gateway, PEP, WAF, Zod)
+    // ------------------------------------------------------------------------
+    case 'pipeline_filter':
+    case 'rate_limit_sliding':
+    case 'zero_trust_pep': {
+      const clientLabel = p.client || p.ingress || d.actor || 'CLIENT APP';
+      const gatewayLabel = p.gateway || p.pep || p.waf || d.component || 'PEP GATEWAY';
+      const targetLabel = p.auth_server || p.target || d.target || 'INTERNAL MESH';
+      const statusLabel = p.status || p.pass || d.status || 'VERIFIED 200 OK';
 
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Actor Trái */}
-          <rect x="15" y="32" width="85" height="58" rx="4" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(actorLabel, 57.5, 54, '#1A1D24', 8.5, 800, 11)}
-          <text x="57.5" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#6B7280">{p.chu_nguon || 'Gửi lệnh'}</text>
+          {/* Client Pod */}
+          <rect x="15" y="32" width="85" height="58" rx="5" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
+          {renderSvgMultiLine(clientLabel, 57.5, 54, '#1A1D24', 8.5, 800, 11)}
+          <text x="57.5" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">HTTPS / mTLS</text>
 
-          {/* Luồng 1 (Hợp lệ qua khiên) */}
-          <path d="M 100 48 L 220 48" stroke="#059669" strokeWidth="1.8" strokeDasharray="4 4" />
-          <rect x="100" y="40" width="52" height="16" rx="3" fill="#059669">
-            <animate attributeName="x" values="100;220;220" keyTimes="0;0.5;1" dur="4s" repeatCount="indefinite" />
+          {/* Dòng hạt request di chuyển */}
+          <path d="M 100 48 L 220 48" stroke="#4F46E5" strokeWidth="1.8" strokeDasharray="4 4" />
+          <rect x="100" y="40" width="54" height="16" rx="3" fill="#4F46E5">
+            <animate attributeName="x" values="100;220;220" keyTimes="0;0.5;1" dur="3.5s" repeatCount="indefinite" />
           </rect>
-          <text x="105" y="52" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#FFF" fontWeight="800">
-            {p.goi_1 || 'GÓI 1'}
-            <animate attributeName="x" values="105;225;225" keyTimes="0;0.5;1" dur="4s" repeatCount="indefinite" />
+          <text x="106" y="51.5" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#FFF" fontWeight="800">
+            {p.token || 'BEARER DTO'}
+            <animate attributeName="x" values="106;226;226" keyTimes="0;0.5;1" dur="3.5s" repeatCount="indefinite" />
           </text>
 
-          {/* Luồng 2 (Trùng lặp bị dội ngược) */}
+          {/* Drop 429 animation */}
           <path d="M 100 78 L 220 78" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="4 4" />
-          <rect x="100" y="70" width="52" height="16" rx="3" fill="#DC2626">
-            <animate attributeName="x" values="100;220;140;140" keyTimes="0;0.5;0.75;1" dur="4s" repeatCount="indefinite" />
+          <rect x="100" y="70" width="50" height="16" rx="3" fill="#DC2626">
+            <animate attributeName="x" values="100;220;140;140" keyTimes="0;0.5;0.75;1" dur="3.5s" repeatCount="indefinite" />
           </rect>
-          <text x="105" y="82" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#FFF" fontWeight="800">
-            {p.goi_2 || 'GÓI 2'}
-            <animate attributeName="x" values="105;225;145;145" keyTimes="0;0.5;0.75;1" dur="4s" repeatCount="indefinite" />
+          <text x="106" y="81.5" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#FFF" fontWeight="800">
+            {p.drop || '429 FLOOD'}
+            <animate attributeName="x" values="106;226;146;146" keyTimes="0;0.5;0.75;1" dur="3.5s" repeatCount="indefinite" />
           </text>
 
-          {/* Khiên Chắn ở giữa */}
-          <path d="M 220 25 L 290 25 L 290 78 Q 255 110 220 78 Z" fill="#D1FAE5" stroke="#059669" strokeWidth="2" />
-          {renderSvgMultiLine(shieldLabel, 255, 52, '#065F46', 8.5, 900, 10)}
-          <text x="255" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="700" fill="#047857">{p.chu_vat_can || 'IDEMPOTENT'}</text>
+          {/* Central PEP Filter Pod */}
+          <polygon points="220,25 295,25 305,61 295,97 220,97 210,61" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="2" />
+          {renderSvgMultiLine(gatewayLabel, 257.5, 52, '#3730A3', 8.5, 900, 11)}
+          <text x="257.5" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="700" fill="#4F46E5">ZOD / PEP FILTER</text>
 
-          {/* Actor Đích Phải */}
-          <path d="M 290 52 L 345 52" stroke="#2563EB" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <rect x="345" y="32" width="90" height="58" rx="4" fill="#EFF6FF" stroke="#2563EB" strokeWidth="1.8" />
-          {renderSvgMultiLine(targetLabel, 390, 54, '#1E40AF', 8.5, 800, 11)}
-          <text x="390" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#059669" fontWeight="800">{p.ket_qua || 'GHI 1 LẦN'}</text>
+          {/* Target Mesh Pod */}
+          <path d="M 305 61 L 345 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="345" y="32" width="90" height="58" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          {renderSvgMultiLine(targetLabel, 390, 54, '#065F46', 8.5, 800, 11)}
+          <text x="390" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">{statusLabel}</text>
         </svg>
       );
     }
 
-    case 'va_cham_song_song': {
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 2: PURE COMPUTE & SPLIT ALLOCATION MATRIX (Promotion Engine)
+    // ------------------------------------------------------------------------
+    case 'split_allocation': {
+      const engineLabel = p.engine || d.component || 'PURE PROMOTION ENGINE';
+      const items = d.items || [
+        { label: 'Seller A (-30k)', status: 'ok' },
+        { label: 'Seller B (-70k)', status: 'ok' }
+      ];
+
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          <rect x="15" y="18" width="85" height="34" rx="4" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.8" />
-          <text x="57.5" y="39" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#92400E">{p.luong_1 || 'LUỒNG A'}</text>
+          {/* Cart Snapshot Input */}
+          <rect x="15" y="32" width="95" height="60" rx="5" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.8" />
+          <text x="62.5" y="48" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#92400E">CART SNAPSHOT</text>
+          <text x="62.5" y="62" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#B45309">{p.amount || 'TOTAL: 100K'}</text>
+          <rect x="25" y="72" width="75" height="14" rx="2" fill="#FDE68A" />
+          <text x="62.5" y="82" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="700" fill="#78350F">VOUCHER: -100K</text>
 
-          <rect x="15" y="72" width="85" height="34" rx="4" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.8" />
-          <text x="57.5" y="93" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#92400E">{p.luong_2 || 'LUỒNG B'}</text>
-
-          <path d="M 100 35 L 220 54" stroke="#D97706" strokeWidth="1.8" strokeDasharray="4 4" />
-          <path d="M 100 89 L 220 70" stroke="#D97706" strokeWidth="1.8" strokeDasharray="4 4" />
-
-          <circle r="6" fill="#D97706">
-            <animateMotion path="M 100 35 L 220 54" dur="4.5s" repeatCount="indefinite" />
-          </circle>
-          <circle r="6" fill="#DC2626">
-            <animateMotion path="M 100 89 L 220 70" dur="4.5s" repeatCount="indefinite" />
+          {/* Dòng tính toán vào Engine */}
+          <path d="M 110 62 L 180 62" stroke="#D97706" strokeWidth="2" strokeDasharray="3 3" />
+          <circle cx="145" cy="62" r="5" fill="#D97706">
+            <animate attributeName="cx" values="110;180" dur="2s" repeatCount="indefinite" />
           </circle>
 
-          {/* Vùng va chạm */}
-          <circle cx="225" cy="62" r="28" fill="#FEE2E2" stroke="#DC2626" strokeWidth="2" strokeDasharray="3 3" />
-          <text x="225" y="60" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#DC2626">VA CHẠM</text>
-          <text x="225" y="72" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#991B1B">SỐ DƯ 10TR</text>
+          {/* Pure Engine Center (100% 0 I/O) */}
+          <rect x="180" y="24" width="125" height="76" rx="6" fill="#EFF6FF" stroke="#2563EB" strokeWidth="2" />
+          {renderSvgMultiLine(engineLabel, 242.5, 48, '#1E40AF', 8.5, 900, 13)}
+          <rect x="190" y="65" width="105" height="16" rx="3" fill="#DBEAFE" />
+          <text x="242.5" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#1D4ED8">
+            {p.io || '0 I/O DETERMINISTIC'}
+          </text>
+          <text x="242.5" y="93" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#6B7280">Penny Rounding: 0đ</text>
 
-          <path d="M 255 62 L 340 62" stroke="#DC2626" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <rect x="340" y="35" width="95" height="54" rx="4" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.8" />
-          <text x="387.5" y="56" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800" fill="#DC2626">RÚT 16 TRIỆU</text>
-          <text x="387.5" y="72" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#7F1D1D">ÂM -6 TRIỆU!</text>
+          {/* Phân bổ Split Output ra các Seller */}
+          <path d="M 305 48 L 345 36" stroke="#059669" strokeWidth="1.8" markerEnd="url(#mui-ten-xanh)" />
+          <path d="M 305 76 L 345 88" stroke="#059669" strokeWidth="1.8" markerEnd="url(#mui-ten-xanh)" />
+
+          <rect x="345" y="18" width="90" height="34" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.5" />
+          <text x="390" y="32" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#065F46">{items[0]?.label || 'Seller A (-30k)'}</text>
+          <text x="390" y="44" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#047857">ALLOCATED OK</text>
+
+          <rect x="345" y="72" width="90" height="34" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.5" />
+          <text x="390" y="86" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#065F46">{items[1]?.label || 'Seller B (-70k)'}</text>
+          <text x="390" y="98" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#047857">ALLOCATED OK</text>
         </svg>
       );
     }
 
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 3: FINITE STATE MACHINE & 2-PHASE LIFECYCLE (Reservation 15m)
+    // ------------------------------------------------------------------------
+    case 'two_phase_state_machine': {
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* Phase 1: Reservation */}
+          <circle cx="70" cy="62" r="38" fill="#FEF3C7" stroke="#D97706" strokeWidth="2" />
+          <text x="70" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#92400E">PHASE 1</text>
+          <text x="70" y="64" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#B45309">RESERVE</text>
+          <text x="70" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#78350F">TTL: 15 MINS</text>
+
+          {/* Path Sang Phase 2: Finalize */}
+          <path d="M 108 45 Q 225 15 342 45" fill="none" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="185" y="16" width="80" height="16" rx="3" fill="#ECFDF5" stroke="#059669" strokeWidth="1" />
+          <text x="225" y="27.5" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#065F46">PAID ➔ REDEEM</text>
+
+          {/* Path Sang Release (Cancel/Timeout) */}
+          <path d="M 108 79 Q 225 110 342 79" fill="none" stroke="#DC2626" strokeWidth="2" strokeDasharray="3 3" markerEnd="url(#mui-ten-den)" />
+          <rect x="185" y="93" width="80" height="16" rx="3" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1" />
+          <text x="225" y="104.5" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#991B1B">TIMEOUT ➔ RELEASE</text>
+
+          {/* Phase 2: Final State */}
+          <circle cx="380" cy="62" r="38" fill="#ECFDF5" stroke="#059669" strokeWidth="2" />
+          <text x="380" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#065F46">PHASE 2</text>
+          <text x="380" y="64" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#047857">LEDGER</text>
+          <text x="380" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#064E3B">IMMUTABLE</text>
+        </svg>
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 4: ACID TRANSACTION & ROW LOCK TABLE (PostgreSQL Ledger)
+    // ------------------------------------------------------------------------
+    case 'table_row_lock':
     case 'luu_tru_acid': {
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          <rect x="15" y="35" width="90" height="55" rx="4" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
-          <text x="60" y="58" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800">{p.lenh || 'TX WRITE'}</text>
-          <text x="60" y="74" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#6B7280">{p.chu_lenh || 'Ghi dữ liệu'}</text>
+          <rect x="15" y="25" width="95" height="75" rx="5" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
+          <text x="62.5" y="46" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#1A1D24">{p.lenh || 'TX WRITE'}</text>
+          <text x="62.5" y="62" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">{p.lock || 'FOR UPDATE'}</text>
+          <rect x="25" y="72" width="75" height="16" rx="3" fill="#DBEAFE" />
+          <text x="62.5" y="83" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#1E40AF">SERIALIZABLE</text>
 
-          <path d="M 105 62 L 220 62" stroke="#2563EB" strokeWidth="2" strokeDasharray="4 4" />
-          <circle cx="105" cy="62" r="6" fill="#2563EB">
-            <animate attributeName="cx" values="105;220" dur="3s" repeatCount="indefinite" />
+          <path d="M 110 62 L 180 62" stroke="#2563EB" strokeWidth="2" strokeDasharray="4 4" />
+          <circle cx="145" cy="62" r="5" fill="#2563EB">
+            <animate attributeName="cx" values="110;180" dur="2.5s" repeatCount="indefinite" />
           </circle>
 
-          {/* Database Disk Pod */}
-          <rect x="220" y="25" width="200" height="75" rx="6" fill="#EFF6FF" stroke="#2563EB" strokeWidth="2" />
-          <text x="320" y="48" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9.5" fontWeight="900" fill="#1E40AF">B-TREE UNIQUE INDEX</text>
-          <rect x="235" y="58" width="170" height="24" rx="3" fill="#DBEAFE" stroke="#3B82F6" strokeWidth="1.2" />
-          <text x="320" y="74" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800" fill="#1E40AF">ATOMIC COMMIT: 1 LẦN</text>
+          {/* Database Disk Table Pod */}
+          <rect x="180" y="18" width="255" height="88" rx="6" fill="#EFF6FF" stroke="#2563EB" strokeWidth="2" />
+          <text x="307.5" y="36" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="900" fill="#1E40AF">POSTGRESQL ACID LEDGER</text>
+
+          {/* Row Slot 1: Locked */}
+          <rect x="195" y="44" width="225" height="24" rx="3" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.2" />
+          <circle cx="210" cy="56" r="4" fill="#D97706" />
+          <text x="220" y="59" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#92400E">ROW #101 [LOCKED]: QUOTA DECREMENT</text>
+
+          {/* Row Slot 2: Committed */}
+          <rect x="195" y="72" width="225" height="24" rx="3" fill="#DBEAFE" stroke="#3B82F6" strokeWidth="1.2" />
+          <circle cx="210" cy="84" r="4" fill="#059669" />
+          <text x="220" y="87" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#1E40AF">ROW #102 [COMMITTED]: B-TREE UNIQUE INDEX</text>
         </svg>
       );
     }
 
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 5: IN-MEMORY CACHE & DISTRIBUTED LOCK (Redis SETNX, JTI Store)
+    // ------------------------------------------------------------------------
+    case 'cache_ttl_lock':
+    case 'bo_nho_dem_redis':
+    case 'token_blacklist': {
+      const storeLabel = p.store || p.cache || d.component || 'REDIS RAM CACHE';
+
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* Request Ingress */}
+          <rect x="15" y="32" width="90" height="60" rx="5" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.8" />
+          <text x="60" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#92400E">APP REQUEST</text>
+          <text x="60" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#B45309">KEY LOOKUP</text>
+
+          {/* Cache Hit / Miss Branch */}
+          <path d="M 105 50 L 180 50" stroke="#059669" strokeWidth="2" strokeDasharray="3 3" />
+          <circle cx="142.5" cy="50" r="5" fill="#059669">
+            <animate attributeName="cx" values="105;180" dur="1.5s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Redis RAM Grid */}
+          <rect x="180" y="20" width="160" height="85" rx="6" fill="#FEF2F2" stroke="#DC2626" strokeWidth="2" />
+          {renderSvgMultiLine(storeLabel, 260, 42, '#991B1B', 8.5, 900, 15)}
+          <rect x="195" y="55" width="130" height="18" rx="3" fill="#FEE2E2" />
+          <text x="260" y="67" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#B91C1C">SETNX ATOMIC 1ms</text>
+          <text x="260" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#7F1D1D">{p.ttl || 'TTL EXPIRY: 60s'}</text>
+
+          {/* Hit Result */}
+          <path d="M 340 62 L 375 62" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="375" y="32" width="60" height="60" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="405" y="56" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#065F46">CACHE</text>
+          <text x="405" y="70" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#047857">HIT 1ms</text>
+        </svg>
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 6: MESSAGE QUEUE & OUTBOX CONVEYOR (Kafka, Outbox Worker)
+    // ------------------------------------------------------------------------
+    case 'queue_outbox_conveyor':
     case 'hang_doi_dieu_tiet': {
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          <rect x="15" y="32" width="80" height="58" rx="4" fill="#E0F2FE" stroke="#0284C7" strokeWidth="1.8" />
-          <text x="55" y="55" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#0369A1">{p.dau_vao || 'PRODUCER'}</text>
-          <text x="55" y="71" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#DC2626" fontWeight="700">{p.tai_cao || '10k req/s'}</text>
+          {/* Producer / DB Outbox */}
+          <rect x="15" y="32" width="90" height="60" rx="5" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.8" />
+          <text x="60" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#92400E">OUTBOX DB</text>
+          <text x="60" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#B45309">TRANSACTIONAL</text>
 
-          {/* Băng chuyền Queue */}
-          <rect x="125" y="38" width="180" height="46" rx="6" fill="#F0F9FF" stroke="#0284C7" strokeWidth="2" />
-          <text x="215" y="56" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#0369A1">{p.vung_dem || 'QUEUE BUFFER'}</text>
-          
-          <rect x="135" y="64" width="22" height="12" rx="2" fill="#0284C7">
-            <animate attributeName="x" values="135;275" dur="3s" repeatCount="indefinite" />
-          </rect>
-          <rect x="185" y="64" width="22" height="12" rx="2" fill="#0284C7">
-            <animate attributeName="x" values="185;275;135" dur="3s" repeatCount="indefinite" />
-          </rect>
+          {/* Conveyor Belt (Băng chuyền sự kiện) */}
+          <rect x="135" y="38" width="180" height="48" rx="24" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="2" />
+          <text x="225" y="30" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#1A1D24">EVENT STREAM BUS</text>
 
-          {/* Thợ Worker */}
-          <rect x="335" y="32" width="95" height="58" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          <text x="382.5" y="55" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="800" fill="#065F46">{p.tho || 'WORKER'}</text>
-          <text x="382.5" y="71" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#059669" fontWeight="800">{p.dieu_tiet || '100 req/s'}</text>
+          {/* Event Packets di chuyển trên băng chuyền */}
+          <circle cx="165" cy="62" r="10" fill="#3B82F6">
+            <animate attributeName="cx" values="165;285;165" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="205" cy="62" r="10" fill="#6366F1">
+            <animate attributeName="cx" values="205;285;165;205" dur="4s" repeatCount="indefinite" />
+          </circle>
+          <circle cx="245" cy="62" r="10" fill="#8B5CF6">
+            <animate attributeName="cx" values="245;285;165;245" dur="4s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Worker Pool Đích */}
+          <path d="M 315 62 L 350 62" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="350" y="32" width="85" height="60" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="392.5" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#065F46">WORKER POOL</text>
+          <text x="392.5" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#047857">ASYNC REPLAY</text>
         </svg>
       );
     }
 
-    case 'doc_cache_nhanh':
-    case 'bo_nho_dem_redis':
-    case 'bo_nho_dem_cache':
-    case 'redis_cache': {
-      const reqLabel = p.yeu_cau || p.actor || 'REQUEST';
-      const cacheLabel = p.cache || p.component || 'REDIS RAM CACHE';
-
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 7: HEXAGONAL PORTS & EXTERNAL ADAPTERS (Ports & Adapters)
+    // ------------------------------------------------------------------------
+    case 'hexagonal_ports': {
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          <rect x="15" y="38" width="85" height="48" rx="4" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(reqLabel, 57.5, 64, '#1A1D24', 8.5, 800, 11)}
+          {/* Lục giác trung tâm (Domain Core) */}
+          <polygon points="180,62 210,25 270,25 300,62 270,99 210,99" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="2.2" />
+          <text x="240" y="58" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#3730A3">PROMOTION</text>
+          <text x="240" y="70" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#4F46E5">DOMAIN CORE</text>
 
-          {/* Redis RAM */}
-          <rect x="155" y="18" width="165" height="44" rx="5" fill="#FFEDD5" stroke="#EA580C" strokeWidth="2" />
-          {renderSvgMultiLine(cacheLabel, 237.5, 36, '#C2410C', 8.5, 900, 15)}
-          <text x="237.5" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#059669">{p.toc_do || p.status || 'RAM LATENCY: 1ms'}</text>
+          {/* Port 1: Catalog Port (Trái) */}
+          <path d="M 120 40 L 185 45" stroke="#D97706" strokeWidth="1.8" strokeDasharray="3 3" />
+          <rect x="15" y="24" width="105" height="32" rx="4" fill="#FEF3C7" stroke="#D97706" strokeWidth="1.5" />
+          <text x="67.5" y="44" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#92400E">CATALOG PORT</text>
 
-          <path d="M 100 55 L 155 40" stroke="#EA580C" strokeWidth="2" strokeDasharray="3 3" />
+          {/* Port 2: Payment Port (Trái dưới) */}
+          <path d="M 120 85 L 185 80" stroke="#059669" strokeWidth="1.8" strokeDasharray="3 3" />
+          <rect x="15" y="70" width="105" height="32" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.5" />
+          <text x="67.5" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#065F46">PAYMENT PORT</text>
 
-          {/* DB Disk Bị Bỏ Qua */}
-          <rect x="155" y="70" width="165" height="42" rx="5" fill="#F3F4F6" stroke="#9CA3AF" strokeWidth="1.5" strokeDasharray="3 3" />
-          <text x="237.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#9CA3AF">{p.dia_cung || 'DATABASE DISK'}</text>
-          <text x="237.5" y="102" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">{p.trang_thai_db || 'Bỏ qua đĩa (0 I/O Load)'}</text>
+          {/* Port 3: Checkout Port (Phải) */}
+          <path d="M 295 45 L 360 40" stroke="#2563EB" strokeWidth="1.8" strokeDasharray="3 3" />
+          <rect x="330" y="24" width="105" height="32" rx="4" fill="#EFF6FF" stroke="#2563EB" strokeWidth="1.5" />
+          <text x="382.5" y="44" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#1E40AF">CHECKOUT PORT</text>
+
+          {/* Port 4: Identity Port (Phải dưới) */}
+          <path d="M 295 80 L 360 85" stroke="#7C3AED" strokeWidth="1.8" strokeDasharray="3 3" />
+          <rect x="330" y="70" width="105" height="32" rx="4" fill="#F5F3FF" stroke="#7C3AED" strokeWidth="1.5" />
+          <text x="382.5" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#5B21B6">IDENTITY PORT</text>
         </svg>
       );
     }
 
-    case 'zero_trust_pep': {
-      const clientLabel = p.client || p.actor || 'CLIENT mTLS';
-      const gatewayLabel = p.gateway || p.component || 'PEP GATEWAY';
-      const authServerLabel = p.auth_server || p.target || 'INTERNAL MESH';
-
-      return (
-        <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Client mTLS */}
-          <rect x="15" y="30" width="90" height="62" rx="4" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.8" />
-          {renderSvgMultiLine(clientLabel, 60, 52, '#3730A3', 8, 800, 11)}
-          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6366F1" fontWeight="700">mTLS Cert: OK</text>
-
-          {/* Đường truyền Token */}
-          <path d="M 105 61 L 175 61" stroke="#4F46E5" strokeWidth="2" strokeDasharray="4 4" />
-          <circle r="5" fill="#4F46E5">
-            <animateMotion path="M 105 61 L 175 61" dur="2.8s" repeatCount="indefinite" />
-          </circle>
-
-          {/* PEP Gateway Shield */}
-          <path d="M 175 24 L 265 24 L 265 78 Q 220 110 175 78 Z" fill="#E0E7FF" stroke="#4338CA" strokeWidth="2" />
-          {renderSvgMultiLine(gatewayLabel, 220, 48, '#312E81', 8, 900, 12)}
-          <text x="220" y="74" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#059669">{p.status || 'JWT VERIFIED'}</text>
-
-          {/* Đường sang Internal Mesh */}
-          <path d="M 265 61 L 335 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <circle r="5" fill="#059669">
-            <animateMotion path="M 265 61 L 335 61" dur="2.8s" begin="1.4s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Internal Mesh Destination */}
-          <rect x="335" y="30" width="100" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          {renderSvgMultiLine(authServerLabel, 385, 52, '#065F46', 8, 800, 12)}
-          <text x="385" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#047857" fontWeight="800">SECURE BUS</text>
-        </svg>
-      );
-    }
-
-    case 'oauth2_oidc':
-    case 'oauth2_token_server': {
-      const clientLabel = p.client || 'CLIENT APP';
-      const authServerLabel = p.auth_server || p.component || 'OIDC PROVIDER';
-      const tokenLabel = p.token || 'JWT TOKENS';
-
-      return (
-        <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Client Application */}
-          <rect x="15" y="30" width="90" height="62" rx="4" fill="#F8FAFC" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(clientLabel, 60, 52, '#1A1D24', 8, 800, 11)}
-          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">Login / Auth Code</text>
-
-          {/* Luồng gọi cấp token */}
-          <path d="M 105 61 L 175 61" stroke="#7C3AED" strokeWidth="2" strokeDasharray="4 4" />
-          <circle r="5" fill="#7C3AED">
-            <animateMotion path="M 105 61 L 175 61" dur="2.6s" repeatCount="indefinite" />
-          </circle>
-
-          {/* OIDC Identity Provider Box */}
-          <rect x="175" y="20" width="145" height="78" rx="6" fill="#F5F3FF" stroke="#7C3AED" strokeWidth="2" />
-          {renderSvgMultiLine(authServerLabel, 247.5, 42, '#5B21B6', 8.5, 900, 14)}
-          <rect x="185" y="52" width="125" height="18" rx="3" fill="#EDE9FE" stroke="#8B5CF6" strokeWidth="1" />
-          <text x="247.5" y="65" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#6D28D9">RS256 KEY SIGNING</text>
-          <text x="247.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#7C3AED">JWKS Key Keystore</text>
-
-          {/* Luồng trả Access Token */}
-          <path d="M 320 61 L 345 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <circle r="5" fill="#059669">
-            <animateMotion path="M 320 61 L 345 61" dur="2.6s" begin="1.3s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Issued Token Box */}
-          <rect x="345" y="30" width="95" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          {renderSvgMultiLine(tokenLabel, 392.5, 50, '#065F46', 8, 900, 11)}
-          <text x="392.5" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">EXP: 3600S</text>
-          <text x="392.5" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#047857">Claims: sub, jti</text>
-        </svg>
-      );
-    }
-
-    case 'token_blacklist':
-    case 'redis_blacklist': {
-      const tokenLabel = p.token_jti || 'BEARER TOKEN';
-      const cacheLabel = p.cache_store || p.component || 'REDIS BLACKLIST';
-
-      return (
-        <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Bearer Token Input */}
-          <rect x="15" y="30" width="90" height="62" rx="4" fill="#F8FAFC" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(tokenLabel, 60, 52, '#1A1D24', 8, 800, 11)}
-          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">JTI: UUID-v4</text>
-
-          {/* Đường dẫn tới Redis */}
-          <path d="M 105 61 L 165 61" stroke="#EA580C" strokeWidth="2" strokeDasharray="4 4" />
-          <circle r="5" fill="#EA580C">
-            <animateMotion path="M 105 61 L 165 61" dur="2.2s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Redis Blacklist Cache */}
-          <rect x="165" y="20" width="150" height="80" rx="6" fill="#FFF7ED" stroke="#EA580C" strokeWidth="2" />
-          {renderSvgMultiLine(cacheLabel, 240, 42, '#C2410C', 8.5, 900, 14)}
-          <rect x="175" y="54" width="130" height="20" rx="3" fill="#FED7AA" stroke="#F97316" strokeWidth="1" />
-          <text x="240" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#9A3412">O(1) JTI LOOKUP: &lt;1MS</text>
-          <text x="240" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#EA580C">Revocation Check</text>
-
-          {/* Nhánh 1: Bị Revoke (Đỏ) */}
-          <path d="M 315 42 L 350 32" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="3 3" />
-          <rect x="350" y="20" width="90" height="34" rx="3" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.5" />
-          <text x="395" y="36" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="900" fill="#991B1B">401 REVOKED</text>
-          <text x="395" y="48" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#DC2626">Từ chối truy cập</text>
-
-          {/* Nhánh 2: Hợp Lệ (Xanh) */}
-          <path d="M 315 78 L 350 86" stroke="#059669" strokeWidth="1.8" />
-          <rect x="350" y="70" width="90" height="34" rx="3" fill="#ECFDF5" stroke="#059669" strokeWidth="1.5" />
-          <text x="395" y="86" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="900" fill="#065F46">200 ALLOW</text>
-          <text x="395" y="98" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#059669">Chuyển tiếp API</text>
-        </svg>
-      );
-    }
-
-    case 'pdp_policy':
-    case 'policy_decision_point': {
-      const subjectLabel = p.subject || 'USER CLAIMS';
-      const pdpEngineLabel = p.engine || p.component || 'PDP POLICY ENGINE';
-      const decisionLabel = p.decision || 'PERMIT ACCESS';
-
-      return (
-        <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* User Subject Claims */}
-          <rect x="15" y="30" width="90" height="62" rx="4" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.8" />
-          {renderSvgMultiLine(subjectLabel, 60, 52, '#3730A3', 8, 800, 11)}
-          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6366F1">Role, Dept, IP</text>
-
-          {/* Luồng sang PDP */}
-          <path d="M 105 61 L 165 61" stroke="#4F46E5" strokeWidth="2" strokeDasharray="4 4" />
-          <circle r="5" fill="#4F46E5">
-            <animateMotion path="M 105 61 L 165 61" dur="2.5s" repeatCount="indefinite" />
-          </circle>
-
-          {/* PDP Decision Engine */}
-          <rect x="165" y="20" width="150" height="80" rx="6" fill="#F0FDF4" stroke="#16A34A" strokeWidth="2" />
-          {renderSvgMultiLine(pdpEngineLabel, 240, 42, '#15803D', 8.5, 900, 14)}
-          <rect x="175" y="54" width="130" height="20" rx="3" fill="#DCFCE7" stroke="#22C55E" strokeWidth="1" />
-          <text x="240" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#166534">RBAC &amp; ABAC REGO RULES</text>
-          <text x="240" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#16A34A">Least Privilege Evaluation</text>
-
-          {/* Luồng ra kết quả */}
-          <path d="M 315 61 L 345 61" stroke="#16A34A" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <circle r="5" fill="#16A34A">
-            <animateMotion path="M 315 61 L 345 61" dur="2.5s" begin="1.2s" repeatCount="indefinite" />
-          </circle>
-
-          {/* Decision Outcome */}
-          <rect x="345" y="30" width="95" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          {renderSvgMultiLine(decisionLabel, 392.5, 52, '#065F46', 8, 900, 11)}
-          <text x="392.5" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">ENFORCE ACTION</text>
-        </svg>
-      );
-    }
-
-    case 'rate_limit_sliding': {
-      const clientLabel = p.client || p.actor || 'FLOOD TRAFFIC';
-      const wafLabel = p.waf || p.component || 'WAF RATE LIMIT';
-
-      return (
-        <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Client Requests Flood */}
-          <rect x="15" y="25" width="85" height="70" rx="4" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.8" />
-          {renderSvgMultiLine(clientLabel, 57.5, 48, '#991B1B', 8.5, 800, 11)}
-          <text x="57.5" y="74" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#DC2626" fontWeight="800">50.000 req/s</text>
-
-          {/* Packet Hợp Lệ (Xanh) */}
-          <path d="M 100 45 L 185 45" stroke="#059669" strokeWidth="1.8" strokeDasharray="3 3" />
-          <rect x="100" y="38" width="45" height="14" rx="2" fill="#059669">
-            <animate attributeName="x" values="100;185;185" keyTimes="0;0.5;1" dur="3s" repeatCount="indefinite" />
-          </rect>
-          <text x="105" y="49" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#FFF" fontWeight="800">
-            {p.pass || 'REQ OK'}
-            <animate attributeName="x" values="105;190;190" keyTimes="0;0.5;1" dur="3s" repeatCount="indefinite" />
-          </text>
-
-          {/* Packet Spam Bị Drop (Đỏ) */}
-          <path d="M 100 75 L 185 75" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="3 3" />
-          <rect x="100" y="68" width="45" height="14" rx="2" fill="#DC2626">
-            <animate attributeName="x" values="100;185;135;135" keyTimes="0;0.5;0.75;1" dur="3s" repeatCount="indefinite" />
-          </rect>
-          <text x="105" y="79" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#FFF" fontWeight="800">
-            {p.drop || '429 DROP'}
-            <animate attributeName="x" values="105;190;140;140" keyTimes="0;0.5;0.75;1" dur="3s" repeatCount="indefinite" />
-          </text>
-
-          {/* WAF Sliding Window Box */}
-          <rect x="185" y="20" width="145" height="78" rx="6" fill="#F8FAFC" stroke="#4338CA" strokeWidth="2" />
-          {renderSvgMultiLine(wafLabel, 257.5, 42, '#312E81', 8.5, 900, 14)}
-          <rect x="195" y="52" width="125" height="18" rx="3" fill="#EEF2FF" stroke="#6366F1" strokeWidth="1" />
-          <text x="257.5" y="65" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#4338CA">TOKEN BUCKET: 10/s</text>
-          <text x="257.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">{p.cache || 'Redis Key: IP:TTL'}</text>
-
-          {/* Đích Nội Bộ */}
-          <path d="M 330 45 L 360 45" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <rect x="360" y="28" width="80" height="64" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          <text x="400" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="800" fill="#065F46">INTERNAL</text>
-          <text x="400" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fill="#059669" fontWeight="800">AN TOÀN</text>
-        </svg>
-      );
-    }
-
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 8: CRYPTOGRAPHIC HASH CHAIN & MERKLE TREE (Audit Trail)
+    // ------------------------------------------------------------------------
+    case 'cryptographic_hash_chain':
     case 'audit_hash_chain': {
-      const eventLabel = p.event || p.actor || 'TX EVENT';
-      const hashLabel = p.hash_node || p.component || 'SHA-256 HMAC';
-
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Event Ingress */}
-          <rect x="15" y="32" width="85" height="58" rx="4" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(eventLabel, 57.5, 54, '#1A1D24', 8.5, 800, 11)}
-          <text x="57.5" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">Giao dịch mới</text>
+          {/* Block 1 */}
+          <rect x="15" y="28" width="115" height="68" rx="5" fill="#F9FAFB" stroke="#1A1D24" strokeWidth="1.8" />
+          <text x="72.5" y="46" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#1A1D24">BLOCK #001</text>
+          <text x="72.5" y="60" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#6B7280">PREV: 0x00000</text>
+          <rect x="25" y="68" width="95" height="18" rx="2" fill="#DBEAFE" />
+          <text x="72.5" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#1E40AF">HASH: 0x8F3A2</text>
 
-          {/* Luồng ký số */}
-          <path d="M 100 61 L 165 61" stroke="#059669" strokeWidth="2" strokeDasharray="3 3" />
-          <circle r="5" fill="#059669">
-            <animateMotion path="M 100 61 L 165 61" dur="2.5s" repeatCount="indefinite" />
-          </circle>
+          {/* Link Hash */}
+          <path d="M 130 62 L 165 62" stroke="#2563EB" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
 
-          {/* Hasher Box */}
-          <rect x="165" y="26" width="140" height="70" rx="6" fill="#ECFDF5" stroke="#059669" strokeWidth="2" />
-          {renderSvgMultiLine(hashLabel, 235, 46, '#065F46', 8.5, 900, 14)}
-          <rect x="175" y="58" width="120" height="20" rx="3" fill="#D1FAE5" stroke="#10B981" strokeWidth="1" />
-          <text x="235" y="72" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#047857">HASH CHAIN LINK</text>
+          {/* Block 2 */}
+          <rect x="165" y="28" width="115" height="68" rx="5" fill="#EFF6FF" stroke="#2563EB" strokeWidth="2" />
+          <text x="222.5" y="46" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#1E40AF">BLOCK #002</text>
+          <text x="222.5" y="60" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#3B82F6">PREV: 0x8F3A2</text>
+          <rect x="175" y="68" width="95" height="18" rx="2" fill="#BFDBFE" />
+          <text x="222.5" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#1E40AF">HASH: 0xC49E1</text>
 
-          {/* Chained to Immutable Append-only DB */}
-          <path d="M 305 61 L 345 61" stroke="#2563EB" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <rect x="345" y="25" width="95" height="72" rx="6" fill="#EFF6FF" stroke="#2563EB" strokeWidth="2" />
-          <text x="392.5" y="48" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="900" fill="#1E40AF">IMMUTABLE</text>
-          <rect x="352" y="56" width="80" height="20" rx="3" fill="#DBEAFE" stroke="#3B82F6" strokeWidth="1" />
-          <text x="392.5" y="70" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#1E40AF">APPEND-ONLY</text>
-          <text x="392.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">B-Tree ACID</text>
+          {/* Link Hash */}
+          <path d="M 280 62 L 315 62" stroke="#2563EB" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
+
+          {/* Block 3 */}
+          <rect x="315" y="28" width="120" height="68" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="375" y="46" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#065F46">BLOCK #003</text>
+          <text x="375" y="60" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#059669">PREV: 0xC49E1</text>
+          <rect x="325" y="68" width="100" height="18" rx="2" fill="#A7F3D0" />
+          <text x="375" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#064E3B">TAMPER-PROOF</text>
         </svg>
       );
     }
 
-    default: {
-      const mainColor = p.mau_chu_dao || '#4F46E5';
-      const actorName = p.nguon || p.client || p.actor || 'TIẾP NHẬN';
-      const engineName = p.quy_trinh || p.gateway || p.component || 'BỘ XỬ LÝ';
-      const targetName = p.dich || p.tai_nguyen || p.target || 'TẦNG DỮ LIỆU';
-      const statusLabel = p.ket_qua || p.status || 'THỰC THI XONG';
-
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 9: RBAC POLICY DECISION MATRIX (Role Hierarchy & Any-Of Check)
+    // ------------------------------------------------------------------------
+    case 'rbac_policy_matrix':
+    case 'pdp_policy': {
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
-          {/* Khối 1: Ingress / Actor */}
-          <rect x="15" y="30" width="90" height="62" rx="5" fill="#F8FAFC" stroke="#1A1D24" strokeWidth="1.8" />
-          {renderSvgMultiLine(actorName, 60, 52, '#1A1D24', 8, 800, 11)}
-          <text x="60" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">Request Stream</text>
+          {/* User Subject */}
+          <rect x="15" y="32" width="90" height="60" rx="5" fill="#F5F3FF" stroke="#7C3AED" strokeWidth="1.8" />
+          <text x="60" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="900" fill="#5B21B6">PRINCIPAL</text>
+          <text x="60" y="66" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6D28D9">ROLES: [SELLER]</text>
+          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#7C3AED">TENANT: VN_SHOP</text>
 
-          {/* Đường dẫn truyền hạt 1 */}
-          <path d="M 105 61 L 165 61" stroke={mainColor} strokeWidth="2" strokeDasharray="4 4" />
-          <circle r="5" fill={mainColor}>
-            <animateMotion path="M 105 61 L 165 61" dur="2.6s" repeatCount="indefinite" />
+          {/* Flow sang PDP Engine */}
+          <path d="M 105 62 L 175 62" stroke="#7C3AED" strokeWidth="2" strokeDasharray="3 3" />
+          <circle cx="140" cy="62" r="5" fill="#7C3AED">
+            <animate attributeName="cx" values="105;175" dur="1.8s" repeatCount="indefinite" />
           </circle>
 
-          {/* Khối 2: Central Processing Engine */}
-          <rect x="165" y="22" width="150" height="78" rx="6" fill="#F3F4F6" stroke={mainColor} strokeWidth="2.2" />
-          {renderSvgMultiLine(engineName, 240, 44, mainColor, 8.5, 900, 14)}
-          <rect x="175" y="54" width="130" height="22" rx="3" fill="#FFFFFF" stroke={mainColor} strokeWidth="1" />
-          <text x="240" y="69" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#1A1D24">PIPELINE VERIFIED</text>
-          <text x="240" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">Auto-Adaptive Engine</text>
+          {/* PDP Decision Matrix Engine */}
+          <rect x="175" y="20" width="150" height="85" rx="6" fill="#EDE9FE" stroke="#6D28D9" strokeWidth="2" />
+          <text x="250" y="38" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#4C1D95">RBAC PDP ENGINE</text>
+          <rect x="185" y="48" width="130" height="22" rx="3" fill="#DDD6FE" />
+          <text x="250" y="62" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#5B21B6">ANY-OF (ROLE MATCH)</text>
+          <text x="250" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#6D28D9">Hierarchy: Admin &gt; User</text>
 
-          {/* Đường dẫn truyền hạt 2 */}
-          <path d="M 315 61 L 345 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
-          <circle r="5" fill="#059669">
-            <animateMotion path="M 315 61 L 345 61" dur="2.6s" begin="1.3s" repeatCount="indefinite" />
-          </circle>
+          {/* Permit / Deny Output */}
+          <path d="M 325 62 L 365 62" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="365" y="32" width="70" height="60" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="400" y="56" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#065F46">PERMIT</text>
+          <text x="400" y="72" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#047857">ACCESS GRANTED</text>
+        </svg>
+      );
+    }
 
-          {/* Khối 3: Target Resource */}
-          <rect x="345" y="30" width="95" height="62" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
-          {renderSvgMultiLine(targetName, 392.5, 52, '#065F46', 8, 800, 12)}
-          <text x="392.5" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">{statusLabel}</text>
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 10: RESILIENCE, BACKOFF & CIRCUIT BREAKER (Exponential Backoff)
+    // ------------------------------------------------------------------------
+    case 'circuit_breaker_backoff':
+    case 'va_cham_song_song': {
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="15" y="32" width="90" height="60" rx="5" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.8" />
+          <text x="60" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#991B1B">TIMEOUT 1.2s</text>
+          <text x="60" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#B91C1C">RETRY STORM</text>
+
+          {/* Exponential Backoff Curve */}
+          <path d="M 105 80 Q 175 80 210 35" fill="none" stroke="#D97706" strokeWidth="2.5" />
+          <text x="175" y="30" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#D97706">BACKOFF + JITTER (1s, 2s, 4s)</text>
+
+          {/* Circuit Breaker State Pod */}
+          <rect x="250" y="24" width="185" height="76" rx="6" fill="#FEF3C7" stroke="#D97706" strokeWidth="2" />
+          <text x="342.5" y="46" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="9" fontWeight="900" fill="#92400E">CIRCUIT BREAKER</text>
+          <rect x="265" y="56" width="155" height="24" rx="3" fill="#FDE68A" />
+          <text x="342.5" y="72" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#78350F">STATE: HALF-OPEN (PROBING)</text>
+        </svg>
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 11: TOKEN LINEAGE & RTR FAMILY TREE (Refresh Token Rotation)
+    // ------------------------------------------------------------------------
+    case 'token_family_tree':
+    case 'oauth2_oidc': {
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* Token #1 (Revoked) */}
+          <rect x="15" y="32" width="100" height="60" rx="5" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.8" />
+          <text x="65" y="50" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8" fontWeight="800" fill="#991B1B">REFRESH TOKEN #1</text>
+          <rect x="25" y="62" width="80" height="16" rx="2" fill="#FEE2E2" />
+          <text x="65" y="73" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#DC2626">REVOKED (USED)</text>
+
+          {/* Rotation Arrow */}
+          <path d="M 115 62 L 165 62" stroke="#4F46E5" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
+          <text x="140" y="54" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fontWeight="800" fill="#4F46E5">1-TIME</text>
+
+          {/* Token #2 (Active in Family ID) */}
+          <rect x="165" y="24" width="125" height="76" rx="6" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="2" />
+          <text x="227.5" y="44" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="8.5" fontWeight="900" fill="#3730A3">REFRESH TOKEN #2</text>
+          <rect x="175" y="54" width="105" height="18" rx="3" fill="#DBEAFE" />
+          <text x="227.5" y="66" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#1E40AF">ACTIVE PAIR</text>
+          <text x="227.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="6.5" fill="#6B7280">FAMILY ID: fam_8f3a92</text>
+
+          {/* Replay Attack Detection Guard */}
+          <path d="M 290 62 L 340 62" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="340" y="32" width="95" height="60" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          <text x="387.5" y="52" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#065F46">REPLAY GUARD</text>
+          <text x="387.5" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#047857">AUTO-REVOKE ALL</text>
+        </svg>
+      );
+    }
+
+    // ------------------------------------------------------------------------
+    // ARCHETYPE 12: FAN-OUT / FAN-IN & BATCH AGGREGATOR (Batch Resolvers)
+    // ------------------------------------------------------------------------
+    case 'fanout_batch_aggregator':
+    default: {
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          <rect x="15" y="35" width="90" height="55" rx="5" fill="#F3F4F6" stroke="#1A1D24" strokeWidth="1.8" />
+          {renderSvgMultiLine(p.actor || 'INGRESS', 60, 56, '#1A1D24', 8.5, 800, 11)}
+          <text x="60" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">BATCH INPUT</text>
+
+          {/* Fan-out Arrows */}
+          <path d="M 105 50 L 175 35" stroke="#4F46E5" strokeWidth="1.8" strokeDasharray="3 3" />
+          <path d="M 105 62 L 175 62" stroke="#4F46E5" strokeWidth="1.8" strokeDasharray="3 3" />
+          <path d="M 105 75 L 175 90" stroke="#4F46E5" strokeWidth="1.8" strokeDasharray="3 3" />
+
+          {/* Central Process Node */}
+          <rect x="175" y="20" width="150" height="85" rx="6" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="2" />
+          {renderSvgMultiLine(p.component || 'BATCH AGGREGATOR', 250, 48, '#3730A3', 8.5, 900, 14)}
+          <rect x="190" y="68" width="120" height="18" rx="3" fill="#E0E7FF" />
+          <text x="250" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#4338CA">
+            {p.status || 'RESOLVED (100%)'}
+          </text>
+
+          {/* Fan-in Output */}
+          <path d="M 325 62 L 360 62" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-xanh)" />
+          <rect x="360" y="35" width="75" height="55" rx="5" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          {renderSvgMultiLine(p.target || 'DOWNSTREAM', 397.5, 56, '#065F46', 8, 800, 10)}
+          <text x="397.5" y="76" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">DONE</text>
         </svg>
       );
     }

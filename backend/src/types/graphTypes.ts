@@ -15,9 +15,49 @@ export interface ReflexQuiz {
   giai_thich: string;
 }
 
+export type SchematicArchetype =
+  | 'pipeline_filter'
+  | 'split_allocation'
+  | 'two_phase_state_machine'
+  | 'table_row_lock'
+  | 'cache_ttl_lock'
+  | 'queue_outbox_conveyor'
+  | 'hexagonal_ports'
+  | 'cryptographic_hash_chain'
+  | 'rbac_policy_matrix'
+  | 'circuit_breaker_backoff'
+  | 'token_family_tree'
+  | 'fanout_batch_aggregator'
+  | 'chan_loc_khien'
+  | 'va_cham_song_song'
+  | 'luu_tru_acid'
+  | 'hang_doi_dieu_tiet'
+  | 'bo_nho_dem_redis'
+  | 'rate_limit_sliding'
+  | 'zero_trust_pep'
+  | 'oauth2_oidc'
+  | 'token_blacklist'
+  | 'pdp_policy'
+  | 'audit_hash_chain'
+  | 'default';
+
+export interface SchematicData {
+  actor?: string;
+  component?: string;
+  target?: string;
+  status?: string;
+  metric?: string;
+  items?: Array<{ label: string; value?: string; status?: 'ok' | 'warn' | 'error' | 'info' }>;
+  steps?: Array<{ title: string; desc?: string; active?: boolean }>;
+  table?: { name: string; columns: string[]; lock_mode?: string };
+  metrics?: Record<string, string | number>;
+}
+
 export interface AnimationParams {
-  mau: string;
+  mau: SchematicArchetype | string;
   tham_so: Record<string, string>;
+  schematic_layout?: SchematicArchetype;
+  schematic_data?: SchematicData;
 }
 
 export interface NodeDetails {
@@ -42,13 +82,13 @@ export interface NodeEntity {
   parent_id?: string;
 
   // Phân cấp kiến trúc 3 tầng (Hierarchical Domain & Cluster Isolation)
-  domain_id?: string;        // e.g. 'domain-auth', 'domain-payment', 'domain-shared-infra'
-  cluster_id?: string;       // e.g. 'cum-oidc-service', 'cum-webhook-pipeline', 'cum-shared-infrastructure'
-  sub_cluster_id?: string;   // e.g. 'sub-auth-redis', 'sub-payment-lock', 'sub-audit-vault'
+  domain_id?: string;
+  cluster_id?: string;
+  sub_cluster_id?: string;
 
   // Cổng đối ngoại & Phân loại hạ tầng thực tế
-  is_public_interface?: boolean; // True nếu là Gateway / PEP / JWKS endpoint đại diện công khai cho cụm
-  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker'; // Phân loại hạ tầng cốt lõi
+  is_public_interface?: boolean;
+  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker';
 
   is_collapsed?: boolean;
   collapsed_count?: number;
@@ -81,6 +121,7 @@ export interface CompactClusterNode {
   summary: string;
   schematic_template?: string;
   schematic_params?: Record<string, string>;
+  schematic_data?: SchematicData;
   ban_chat?: string;
   ca_thuc_te?: string[];
   rui_ro?: string[];

@@ -138,6 +138,15 @@ app.get('/api/rag/documents', (req, res) => {
   }
 });
 
+app.get('/api/rag/dictionary', (req, res) => {
+  try {
+    const glossary = brainstormRAG.extractDynamicGlossary();
+    res.json({ dictionary: glossary });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/rag/document/:filename', async (req, res) => {
   try {
     const content = await brainstormRAG.getDocumentContent(req.params.filename);

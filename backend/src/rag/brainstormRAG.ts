@@ -857,5 +857,44 @@ export const brainstormRAG = {
     const fullPath = path.join(ragDir, safeFilename);
     fs.writeFileSync(fullPath, content, 'utf8');
     return this.ingestDocument(content, safeFilename);
+  },
+
+  extractDynamicGlossary(): Record<string, string> {
+    const ragDir = getRagDir();
+    if (!fs.existsSync(ragDir)) return {};
+    const files = fs.readdirSync(ragDir);
+    const glossary: Record<string, string> = {};
+
+    for (const filename of files) {
+      if (!filename.endsWith('.md') && !filename.endsWith('.txt')) continue;
+      const content = fs.readFileSync(path.join(ragDir, filename), 'utf8');
+      const lines = content.split('\n');
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+
+        if (line.startsWith('|') && line.endsWith('|') && !line.includes('---')) {
+          const cells = line.split('|').map(c => c.trim()).filter(Boolean);
+          if (cells.length >= 2) {
+            const term = cells[0].replace(/[*`_]/g, '').trim().toLowerCase();
+            const desc = cells[1].replace(/[*`_]/g, '').trim();
+            if (term && desc && term.length > 2 && term.length < 35 && desc.length > 5 && !term.includes('property') && !term.includes('id') && !term.includes('quyết định')) {
+              glossary[term] = desc;
+            }
+          }
+        }
+
+        const boldMatch = line.match(/^[-*•]?\s*\*\*([^*:]+)\*\*:\s*(.+)$/);
+        if (boldMatch) {
+          const term = boldMatch[1].trim().toLowerCase();
+          const desc = boldMatch[2].trim();
+          if (term.length > 2 && term.length < 40 && desc.length > 6) {
+            glossary[term] = desc;
+          }
+        }
+      }
+    }
+
+    return glossary;
   }
 };

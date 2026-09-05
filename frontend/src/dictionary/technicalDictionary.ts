@@ -1,7 +1,12 @@
+/**
+ * BẢNG TỪ ĐIỂN THUẬT NGỮ KỸ THUẬT CỐT LÕI (CORE TECHNICAL GLOSSARY)
+ * 80+ Thuật ngữ chuẩn ngành cho Hệ thống Phân tán, Xác thực, Phân quyền, Tài chính & Khuyến mãi.
+ */
 export const TECHNICAL_DICTIONARY: Record<string, string> = {
-  // Concurrency & Locks
+  // Concurrency & Distributed Locks
   "race condition": "Tranh chấp đồng thời khi nhiều luồng cùng đọc và sửa 1 bản ghi trong cùng một mili-giây dẫn đến sai lệch số dư.",
   "idempotency": "Tính lũy thừa: Thực thi nhiều lần vẫn chỉ sinh ra kết quả của đúng một lần duy nhất (f(f(x)) = f(x)), bảo vệ toàn vẹn tài chính.",
+  "idempotency-key": "Chuỗi UUID duy nhất đính kèm HTTP Header để máy chủ nhận diện lệnh lặp và hoàn trả kết quả cũ mà không trừ tiền lần 2.",
   "idempotency key": "Chuỗi UUID duy nhất đính kèm HTTP Header để máy chủ nhận diện lệnh lặp và hoàn trả kết quả cũ mà không trừ tiền lần 2.",
   "distributed lock": "Cơ chế khóa đồng bộ tài nguyên dùng chung giữa nhiều máy chủ phân tán (qua Redis hoặc Zookeeper).",
   "redlock": "Thuật toán khóa phân tán trên cụm nhiều node Redis độc lập của tác giả Antirez, đảm bảo an toàn chịu lỗi.",
@@ -9,36 +14,91 @@ export const TECHNICAL_DICTIONARY: Record<string, string> = {
   "ttl": "Time-To-Live: Thời hạn tự động giải phóng khóa trên RAM để chống rơi vào bẫy Deadlock khi tiến trình thợ bị crash.",
   "deadlock": "Tình huống hai transaction cùng giữ tài nguyên của nhau và chờ nhau vô tận, làm tê liệt hoàn toàn hệ thống.",
   "row lock": "Khóa mức dòng (SELECT FOR UPDATE) trong cơ sở dữ liệu, buộc các transaction sau phải xếp hàng chờ cho tới khi commit.",
+  "row-level locking": "Khóa mức dòng trong cơ sở dữ liệu ngăn chặn transaction khác sửa đổi dòng đang xử lý.",
   "optimistic locking": "Khóa lạc quan dùng cột version để kiểm tra: Nếu version thay đổi giữa lúc đọc và ghi thì từ chối giao dịch.",
   "pessimistic locking": "Khóa bi quan: Giữ chặt bản ghi ngay từ đầu không cho ai đọc/sửa cho tới khi kết thúc transaction.",
+  "pessimistic lock": "Khóa bi quan khóa cứng bản ghi tại tầng cơ sở dữ liệu trong suốt thời gian transaction.",
+  "overselling": "Sự cố bán vượt quá tồn kho thực tế do nhiều khách hàng cùng thanh toán món hàng cuối cùng mà thiếu khóa đồng thời.",
+  "two-phase commit": "Giao thức cam kết 2 pha đảm bảo giao dịch phân tán giữa nhiều cơ sở dữ liệu cùng commit hoặc cùng rollback.",
+  "two-phase reservation": "Chu trình 2 pha: Khóa giữ tạm thời quota voucher (15 phút) khi checkout và chuyển thành redemption vĩnh viễn khi thanh toán.",
 
-  // Database & Storage
+  // Database & Storage & Transactions
   "unique index": "Cấu trúc B-Tree trên đĩa cứng cơ sở dữ liệu đảm bảo không bao giờ có 2 dòng trùng khóa được ghi nhận thành công.",
+  "unique constraint": "Ràng buộc duy nhất tại tầng cơ sở dữ liệu ngăn chặn ghi trùng lặp dữ liệu.",
   "acid": "4 thuộc tính vàng của DB: Nguyên tử (Atomicity), Nhất quán (Consistency), Cô lập (Isolation) và Bền vững (Durability).",
   "atomic commit": "Ghi nhận giao dịch nguyên tử: Tất cả các bước đều thành công trọn vẹn hoặc rollback về trạng thái ban đầu.",
   "uuid v4": "Chuỗi định danh ngẫu nhiên 128-bit độc nhất toàn cầu, xác suất trùng lặp gần như bằng 0 (1 trên hàng tỷ).",
   "isolation level": "Mức độ cô lập giao dịch trong DB (Read Committed, Repeatable Read, Serializable) để cân bằng tốc độ và tính đúng đắn.",
   "wal": "Write-Ahead Logging: Kỹ thuật ghi nhật ký trước khi ghi đĩa giúp tăng tốc độ ghi và phục hồi sau sự cố sập nguồn.",
+  "source of truth": "Nguồn chân lý dữ liệu duy nhất và có thẩm quyền cao nhất của toàn hệ thống (Single Source of Truth).",
+  "connection pool": "Tập hợp các kết nối cơ sở dữ liệu được mở sẵn để tái sử dụng, tránh chi phí thiết lập kết nối TCP liên tục.",
+  "connection starvation": "Hiện tượng cạn kiệt connection pool khiến các yêu cầu API mới bị timeout và sập hàng loạt.",
 
-  // Network & Transport
-  "webhook": "Cơ chế HTTP callback tự động gửi gói tin JSON từ cổng thanh toán/đối tác sang máy chủ khi phát sinh sự kiện.",
-  "automatic retry": "Cơ chế tự động phát lại gói tin khi phát hiện timeout hoặc chập chờn kết nối mạng.",
-  "retry storm": "Cơn bão gửi lại yêu cầu dồn dập từ hàng triệu client khi hệ thống chập chờn, đánh sập hoàn toàn backend.",
-  "exponential backoff": "Thuật toán lùi lũy thừa thời gian chờ (1s, 2s, 4s, 8s...) giữa các lần thử lại để giảm tải cho máy chủ.",
-  "jitter": "Độ trễ ngẫu nhiên cộng thêm vào thời gian retry để phân tán lưu lượng, chống các client cùng dội request một lúc.",
-  "timeout": "Giới hạn thời gian tối đa chờ phản hồi từ dịch vụ ngoài trước khi chủ động ngắt kết nối.",
+  // Financial, Money & Promotion Domain
+  "minor-unit": "Đơn vị tiền tệ nhỏ nhất (vd: xu, hào, đồng) dùng kiểu số nguyên BigInt để triệt tiêu hoàn toàn sai số làm tròn float.",
+  "minor-unit bigint": "Lưu trữ và tính toán tiền tệ bằng số nguyên 64-bit BigInt thay vì số thực Number để không bị sai lệch số dư.",
+  "basis points": "Đơn vị phần vạn (1 basis point = 0.01%, 10.000 bps = 100%), dùng biểu diễn tỷ lệ chiết khấu chính xác tuyệt đối.",
+  "basispoints": "Đơn vị phần vạn (10.000 basis points = 100%) dùng trong tính toán chiết khấu và lãi suất tài chính.",
+  "stacking policy": "Chính sách xếp chồng khuyến mãi: Quy định những voucher/benefit nào được phép áp dụng đồng thời trong cùng 1 đơn hàng.",
+  "exclusive matrix": "Ma trận loại trừ: Bảng quy tắc ngăn chặn các voucher cùng phân loại hoặc xung đột được kích hoạt chung.",
+  "split allocation": "Thuật toán phân bổ chiết khấu: Chia sẻ số tiền giảm giá của voucher sàn cho nhiều người bán (Multi-Seller) bảo toàn tổng tiền.",
+  "penny rounding": "Kỹ thuật làm tròn bảo toàn số lẻ (Penny Rounding Balance): Bù trừ số dư chênh lệch vào dòng hàng cuối cùng để tổng chiết khấu luôn khớp 100%.",
+  "redemption ledger": "Sổ cái tiêu dùng khuyến mãi bất biến (Immutable Ledger): Ghi nhận bút toán áp mã thực tế phục vụ đối soát tài chính.",
+  "reservation": "Hành động giữ chỗ/khóa tạm thời hạn mức voucher trong lúc người dùng thực hiện thanh toán (thời hạn 15 phút).",
+  "quota": "Hạn ngạch số lần sử dụng tối đa của mã khuyến mãi trên toàn hệ thống hoặc cho từng khách hàng.",
+  "budget": "Tổng ngân sách tối đa được phân bổ cho chiến dịch khuyến mãi, kiểm soát chặt chẽ chống bội chi (Overspend).",
+  "priceable snapshot": "Ảnh chụp trạng thái giỏ hàng và giá cố định bất biến tại thời điểm đánh giá, phục vụ kiểm toán và hoàn tiền.",
 
-  // Architecture & Messaging
+  // Authentication & Tokens
+  "jwt": "JSON Web Token: Chuỗi mã hóa stateless chứa chữ ký số (Signature) và các Claims phân quyền mang theo trong request.",
+  "access token": "Mã truy cập ngắn hạn (5-15 phút) dùng để xác thực các cuộc gọi API thông thường.",
+  "refresh token": "Mã làm mới dài hạn (ngày/tuần) dùng để cấp Access Token mới mà không bắt người dùng đăng nhập lại.",
+  "httponly": "Cờ bảo mật Cookie: Ngăn chặn hoàn toàn mã JavaScript truy cập vào cookie, triệt tiêu nguy cơ đánh cắp token qua XSS.",
+  "samesite": "Thuộc tính Cookie (Strict/Lax/None) kiểm soát việc gửi cookie trong các yêu cầu chéo trang (Cross-Site), chống tấn công CSRF.",
+  "audience": "Claim 'aud' trong JWT chỉ định đích đến hợp lệ của token (ví dụ: surface 'customer' hay 'admin').",
+  "audience claim": "Xác định bề mặt ứng dụng hợp lệ mà token được phép sử dụng, ngăn chặn token khách hàng dùng trộm vào cổng quản trị.",
+  "clock skew": "Độ lệch đồng hồ chấp nhận được (thường 60 giây) giữa máy chủ cấp token và máy chủ xác thực chữ ký.",
+  "rtr": "Refresh Token Rotation: Cơ chế tự động hủy Refresh Token cũ và phát hành cặp token mới trong mỗi lần refresh.",
+  "refresh token rotation": "Cơ chế xoay vòng token 1 lần dùng: Phát hiện Replay Attack và lập tức vô hiệu hóa toàn bộ Token Family.",
+  "family id": "Mã định danh chuỗi phả hệ của Refresh Token giúp theo dõi dòng xoay vòng và thu hồi toàn bộ khi bị lộ.",
+  "token family": "Tập hợp các refresh token thuộc cùng một phiên đăng nhập, được liên kết bởi Family ID.",
+  "replay attack": "Tấn công phát lại: Kẻ xấu đánh cắp token hoặc gói tin cũ và gửi lại để mạo danh người dùng.",
+  "jti": "JWT ID: Khóa định danh UUID duy nhất của mỗi token, dùng làm key để tra cứu trạng thái thu hồi trong Redis Blacklist.",
+  "oauth2": "OAuth 2.0: Khung giao thức ủy quyền tiêu chuẩn ngành cho phép ứng dụng truy cập an toàn tài nguyên qua Access Token.",
+  "oidc": "OpenID Connect: Tầng định danh xây dựng trên OAuth 2.0 cung cấp ID Token chứa thông tin người dùng được ký số.",
+  "rs256": "RSA Signature SHA-256: Thuật toán ký số bất đối xứng với Private Key trên Auth Server và Public Key công khai qua JWKS.",
+  "es256": "ECDSA P-256 Signature SHA-256: Thuật toán chữ ký số đường cong elip siêu nhẹ và bảo mật cao.",
+  "jwks": "JSON Web Key Set: Endpoint công khai chứa các khóa công khai để các dịch vụ tự động thẩm định chữ ký JWT mà không cần gọi auth server.",
+  "bearer token": "Mã xác thực Bearer: Bất kỳ ai sở hữu token này đều được cấp quyền tương ứng qua Header 'Authorization: Bearer <token>'.",
+  "blacklist": "Danh sách đen: Cơ chế lưu trữ các JTI bị thu hồi trước hạn trên RAM Redis để từ chối truy cập ngay lập tức.",
+
+  // Authorization & Zero-Trust
+  "rbac": "Role-Based Access Control: Mô hình kiểm soát truy cập dựa trên vai trò tĩnh của người dùng trong hệ thống.",
+  "role-based access control": "Phân quyền dựa trên vai trò: Gán quyền cho vai trò (Role) và gán vai trò cho người dùng.",
+  "abac": "Attribute-Based Access Control: Phân quyền động theo ngữ cảnh và thuộc tính (IP, thời gian, thiết bị, phòng ban).",
+  "denied by default": "Nguyên tắc an ninh: Mọi yêu cầu nếu không được cấp quyền rõ ràng thì mặc định bị từ chối truy cập (403 Forbidden).",
+  "pep": "Policy Enforcement Point: Điểm kiểm soát và thực thi chính sách bảo mật ở tầng biên (Gateway / Middleware).",
+  "policy enforcement point": "Chốt chặn biên kiểm tra xác thực và ủy quyền trước khi chuyển tiếp yêu cầu vào dịch vụ nội bộ.",
+  "pdp": "Policy Decision Point: Bộ máy trung tâm đánh giá ma trận chính sách và trả về quyết định PERMIT hoặc DENY.",
+  "policy decision point": "Hệ thống chuyên trách thẩm định quyền hạn dựa trên Roles, Claims và ngữ cảnh thực tế.",
+  "role hierarchy": "Cây phân cấp vai trò: Vai trò cấp cao (SuperAdmin) tự động kế thừa toàn bộ quyền hạn của các vai trò cấp thấp (Admin, Member).",
+  "mtls": "Mutual TLS: Giao thức mã hóa 2 chiều yêu cầu cả Client và Server đều phải xuất trình chứng chỉ số X.509 để xác minh danh tính.",
+  "zero-trust": "Kiến trúc Không Tin Tưởng: 'Never Trust, Always Verify' - Mọi yêu cầu từ trong lẫn ngoài mạng nội bộ đều phải xác thực.",
+
+  // Architecture & Engineering Patterns
+  "pure domain engine": "Bộ xử lý nghiệp vụ thuần túy 100% 0 I/O (không gọi DB/Redis/Network), hoàn toàn Deterministic và dễ kiểm toán.",
+  "deterministic": "Tính tiền định: Với cùng một đầu vào, hàm luôn trả về cùng một đầu ra duy nhất mà không có tác dụng phụ (Side Effect).",
+  "transactional outbox": "Mẫu thiết kế lưu sự kiện vào bảng outbox trong cùng DB Transaction với entity để đảm bảo tính phát tán tin cậy.",
+  "outbox": "Bảng lưu trữ tạm thời các integration event trước khi được worker ngầm đẩy sang message broker.",
+  "ports and adapters": "Kiến trúc Lục giác (Hexagonal Architecture): Tách biệt domain lõi khỏi các chi tiết hạ tầng qua Interfaces/Ports.",
+  "hexagonal architecture": "Kiến trúc Lục giác giúp domain service không bị phụ thuộc vào database hay HTTP framework cụ thể.",
+  "batch resolver": "Kỹ thuật gom nhiều truy vấn đơn lẻ thành 1 truy vấn hàng loạt (Batch Query) để giải quyết vấn đề N+1.",
+  "zod": "Thư viện TypeScript-first schema validation kiểm tra tính toàn vẹn và ép kiểu an toàn cho DTO ở tầng HTTP.",
   "message queue": "Hàng đợi tin nhắn (Kafka / RabbitMQ) đệm và san phẳng lưu lượng truy cập cao điểm, bảo vệ database phía sau.",
-  "worker pool": "Nhóm tiến trình thợ chạy ngầm rút từng gói tác vụ trong hàng đợi ra xử lý tuần tự theo nhịp độ an toàn.",
-  "overselling": "Sự cố bán vượt quá tồn kho thực tế do nhiều khách hàng cùng thanh toán món hàng cuối cùng mà thiếu khóa đồng thời.",
   "circuit breaker": "Bộ ngắt mạch: Tự động ngắt kết nối đến service đang bị sập để tránh làm tê liệt dây chuyền toàn bộ hệ thống.",
-  "cache aside": "Mô hình đọc cache trước: Nếu miss thì đọc database rồi ghi ngược lại vào cache.",
-  "cache hit": "Dữ liệu được tìm thấy ngay trên bộ nhớ RAM đệm, phản hồi tức thì trong mili-giây.",
-  "cache miss": "Dữ liệu không có trên RAM, hệ thống buộc phải đọc đĩa cứng Database mất nhiều thời gian hơn.",
-  "eventual consistency": "Tính nhất quán cuối cùng: Dữ liệu giữa các node phân tán có thể lệch nhau vài giây nhưng chắc chắn sẽ đồng nhất.",
+  "cache stampede": "Hiện tượng hàng ngàn request cùng ùa xuống Database khi một khóa cache phổ biến bị hết hạn cùng một thời điểm.",
 
-  // Edge Defense & Rate Limiting (Mới)
+  // Edge Defense & Rate Limiting
   "waf": "Web Application Firewall: Lá chắn tường lửa tầng ứng dụng L7 phát hiện và chặn đứng tấn công độc hại trước khi đến Gateway.",
   "ddos": "Distributed Denial of Service: Tấn công từ chối dịch vụ phân tán dội hàng triệu request ảo nhằm đánh sập máy chủ.",
   "rate limiting": "Kỹ thuật kiểm soát lưu lượng request từ mỗi IP hoặc User trong một đơn vị thời gian để bảo vệ máy chủ.",
@@ -47,28 +107,7 @@ export const TECHNICAL_DICTIONARY: Record<string, string> = {
   "sliding window": "Thuật toán cửa sổ trượt: Đếm số lượng request chính xác theo thời gian thực trượt, triệt tiêu lỗi biên thời gian.",
   "leaky bucket": "Thuật toán xô rò rỉ: Rót request vào xô và xử lý đầu ra với tốc độ cố định hoàn toàn phẳng.",
 
-  // Zero-Trust & Security Auth (Mới)
-  "zero-trust": "Kiến trúc an ninh Zero-Trust: Nguyên tắc 'Never Trust, Always Verify' - xác thực mọi truy cập từ trong lẫn ngoài mạng.",
-  "zero trust": "Kiến trúc an ninh Zero-Trust: Nguyên tắc 'Never Trust, Always Verify' - xác thực mọi truy cập từ trong lẫn ngoài mạng.",
-  "mtls": "Mutual TLS: Giao thức mã hóa 2 chiều, cả client và server đều phải trình chứng chỉ số X.509 để xác thực lẫn nhau.",
-  "pep": "Policy Enforcement Point: Điểm thực thi chính sách ở tầng biên, kiểm tra token và chuyển tiếp hoặc chặn yêu cầu.",
-  "pdp": "Policy Decision Point: Máy chủ trung tâm thẩm định quyền hạn người dùng dựa trên luật phân quyền RBAC/ABAC.",
-  "jwt": "JSON Web Token: Chuỗi mã hóa ký số chứa danh tính người dùng và quyền hạn truy cập truyền qua HTTP Header.",
-  "token revocation list": "Danh sách thu hồi token: Danh sách đen (blacklist) trên RAM Redis lưu các JWT bị vô hiệu hóa trước hạn.",
-  "lateral movement": "Hành vi leo thang di chuyển ngang của hacker bên trong mạng nội bộ sau khi chiếm được 1 máy chủ biên.",
-  "oidc": "OpenID Connect: Tầng định danh trên nền OAuth 2.0 cấp phát ID Token chuẩn hóa thông tin người dùng.",
-  "oauth2": "OAuth 2.0: Khung giao thức ủy quyền tiêu chuẩn ngành cho phép ứng dụng truy cập an toàn tài nguyên qua Access Token.",
-  "oauth 2.0": "OAuth 2.0: Khung giao thức ủy quyền tiêu chuẩn ngành cho phép ứng dụng truy cập an toàn tài nguyên qua Access Token.",
-  "rs256": "RSA Signature SHA-256: Thuật toán ký số bất đối xứng với Private Key trên Auth Server và Public Key công khai qua JWKS.",
-  "jwks": "JSON Web Key Set: Endpoint công khai chứa các khóa công khai để các dịch vụ tự động thẩm định chữ ký JWT mà không cần gọi auth server.",
-  "rbac": "Role-Based Access Control: Mô hình kiểm soát truy cập dựa trên vai trò phân quyền tĩnh của người dùng trong hệ thống.",
-  "abac": "Attribute-Based Access Control: Phân quyền động theo ngữ cảnh và thuộc tính (IP, thời gian, thiết bị, phòng ban).",
-  "jti": "JWT ID: Khóa định danh UUID duy nhất của mỗi token, dùng làm key để tra cứu trạng thái thu hồi trong Redis Blacklist.",
-  "bearer token": "Mã xác thực Bearer: Bất kỳ ai sở hữu token này đều được cấp quyền tương ứng, thường truyền qua Header 'Authorization: Bearer <token>'.",
-  "blacklist": "Danh sách đen: Cơ chế lưu trữ các token bị thu hồi trước hạn trên RAM Redis để từ chối truy cập ngay lập tức.",
-  "redis": "Hệ thống lưu trữ cấu trúc dữ liệu trên bộ nhớ RAM tốc độ cao (In-Memory Data Store), độ trễ phản hồi dưới 1 mili-giây.",
-
-  // Audit Log & Cryptographic Ledger (Mới)
+  // Audit Log & Cryptographic Ledger
   "audit log": "Nhật ký kiểm toán: Bản ghi bất biến ghi chép chi tiết ai đã thao tác gì, vào thời điểm nào và thay đổi ra sao.",
   "merkle tree": "Cây Merkle: Cấu trúc cây mã hóa băm nhị phân giúp xác thực tính toàn vẹn của hàng triệu bản ghi chỉ bằng Merkle Root.",
   "hmac sha-256": "Thuật toán băm có khóa bí mật (Hash-based Message Authentication Code) dùng SHA-256 đảm bảo tính chống giả mạo.",
@@ -78,17 +117,44 @@ export const TECHNICAL_DICTIONARY: Record<string, string> = {
   "tamper-proof": "Khả năng chống can thiệp trái phép: Mọi hành vi sửa đổi dữ liệu dù là 1 byte đều lập tức bị phát hiện."
 };
 
+/**
+ * Danh sách từ điển động được trích xuất từ tài liệu RAG nạp vào runtime
+ */
+let DYNAMIC_DICTIONARY: Record<string, string> = {};
+
+export function setDynamicDictionary(dynamicTerms: Record<string, string>): void {
+  DYNAMIC_DICTIONARY = { ...dynamicTerms };
+  rebuildRegex();
+}
+
+let SORTED_KEYS: string[] = [];
+let KEYWORD_REGEX: RegExp = new RegExp('');
+
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// Tạo regex tổng hợp quét tất cả từ khóa, ưu tiên từ dài trước
-const SORTED_KEYS = Object.keys(TECHNICAL_DICTIONARY).sort((a, b) => b.length - a.length);
-const KEYWORD_REGEX = new RegExp(`\\b(${SORTED_KEYS.map(escapeRegex).join('|')})\\b`, 'gi');
+function rebuildRegex(): void {
+  const mergedKeys = Array.from(new Set([
+    ...Object.keys(TECHNICAL_DICTIONARY),
+    ...Object.keys(DYNAMIC_DICTIONARY)
+  ])).sort((a, b) => b.length - a.length);
+
+  SORTED_KEYS = mergedKeys;
+  if (mergedKeys.length > 0) {
+    KEYWORD_REGEX = new RegExp(`\\b(${mergedKeys.map(escapeRegex).join('|')})\\b`, 'gi');
+  }
+}
+
+rebuildRegex();
+
+export function getTechnicalTermDefinition(term: string): string | undefined {
+  const clean = term.trim().toLowerCase();
+  return DYNAMIC_DICTIONARY[clean] || TECHNICAL_DICTIONARY[clean];
+}
 
 /**
  * Tự động gắn tooltip cho các thẻ <u>Thuật ngữ</u> và tự động phát hiện từ khóa trong text thuần.
- * Chạy 100% cục bộ trên client, 0 token, 0 độ trễ (Hybrid Zero-Token).
  */
 export function enrichHtmlWithTooltips(htmlText: string): string {
   if (!htmlText) return '';
@@ -99,12 +165,16 @@ export function enrichHtmlWithTooltips(htmlText: string): string {
       return match;
     }
     const cleanKey = content.trim().toLowerCase();
-    const definition = TECHNICAL_DICTIONARY[cleanKey];
+    const definition = getTechnicalTermDefinition(cleanKey);
     if (definition) {
       return `<u data-tooltip="${definition}">${content}</u>`;
     }
     return match;
   });
+
+  if (!KEYWORD_REGEX || SORTED_KEYS.length === 0) {
+    return step1;
+  }
 
   // Bước 2: Tự động quét từ khóa trong các đoạn văn bản thuần bên ngoài thẻ HTML
   const tokens = step1.split(/(<[^>]+>)/g);
@@ -113,7 +183,6 @@ export function enrichHtmlWithTooltips(htmlText: string): string {
   const enrichedTokens = tokens.map((token) => {
     if (!token) return '';
 
-    // Kiểm tra nếu là thẻ HTML
     if (token.startsWith('<') && token.endsWith('>')) {
       const lower = token.toLowerCase();
       if (lower.startsWith('<u ') || lower === '<u>') {
@@ -124,19 +193,16 @@ export function enrichHtmlWithTooltips(htmlText: string): string {
       return token;
     }
 
-    // Nếu đang nằm trong thẻ <u>, không bọc lồng thêm thẻ <u> khác
     if (inUTag) {
       return token;
     }
 
-    // Quét và bọc tự động từ khóa chưa có thẻ
-    return token.replace(KEYWORD_REGEX, (match) => {
-      const cleanKey = match.trim().toLowerCase();
-      const definition = TECHNICAL_DICTIONARY[cleanKey];
-      if (definition) {
-        return `<u data-tooltip="${definition}">${match}</u>`;
+    return token.replace(KEYWORD_REGEX, (matched) => {
+      const def = getTechnicalTermDefinition(matched);
+      if (def) {
+        return `<u data-tooltip="${def}">${matched}</u>`;
       }
-      return match;
+      return matched;
     });
   });
 
