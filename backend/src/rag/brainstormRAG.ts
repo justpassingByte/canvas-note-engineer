@@ -461,22 +461,28 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             title: label,
             summary: 'Bộ nhớ đệm RAM tốc độ cao cache rules đã compile và Rate Limiting trượt 10 req/s mỗi IP.',
             infra_type: 'redis',
-            schematic_template: 'bo_nho_dem_redis',
+            schematic_template: 'cache_ttl_lock',
             schematic_params: { cache: 'REDIS RAM MESH', ttl: '60s CACHE', limit: '10 req/s IP' },
+            incident_dossier: {
+              boi_canh_tai: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
+              nguyen_nhan_goc_re: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng.',
+              ban_kinh_anh_huong: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
+              chien_luoc_phong_thu: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
+            },
             ban_chat: 'Phân hệ Redis chỉ đóng vai trò bộ nhớ đệm tăng tốc độ đọc (Compiled Promotion Rules) và kiểm soát tần suất gọi API (Sliding Window Rate Limiter). Tuyệt đối không dùng Redis để quyết định hạn mức ngân sách hoặc quota tài chính cốt lõi.',
             ca_thuc_te: [
-              'Cache danh sách promotion definitions đã compile với TTL 60s, phản hồi trong 1ms.',
-              'Giới hạn 10 req/s cho mỗi khách hàng/IP nhằm ngăn chặn botnet quét vét mã khuyến mãi.'
+              'Sự cố Cache Stampede đêm 11.11: Key voucher hot hết hạn TTL làm 100.000 request ùa xuống DB trong 1 tích tắc, CPU DB chạm ngưỡng 100%.',
+              'Sự cố Botnet Spam: 5.000 IP botnet quét vét mã giảm giá liên tục 50 req/s làm nghẽn băng thông tầng mạng.'
             ],
             rui_ro: [
               'Hiện tượng Cache Stampede khi mã khuyến mãi hot hết hạn TTL cùng một tích tắc.',
               'Dữ liệu cache không nhất quán nếu thiếu cơ chế chủ động xóa cache (Cache Invalidation Event).'
             ],
             chuoi_sup_do: [
-              '1. Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache.',
-              '2. Cache Stampede xảy ra, toàn bộ request lọt thẳng xuống PostgreSQL.',
-              '3. I/O Database tăng vọt 500%, CPU chạm ngưỡng 100%.',
-              '4. Dịch vụ Promotion bị suy giảm hiệu năng nghiêm trọng.'
+              '1. [Trigger]: Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache lúc 0h.',
+              '2. [Cache Stampede]: Toàn bộ request lọt thẳng xuống tầng cơ sở dữ liệu quan hệ PostgreSQL.',
+              '3. [Failure Cascade]: I/O Database tăng vọt 500%, Connection Pool bị cạn kiệt.',
+              '4. [Blast Radius]: Dịch vụ Promotion và Checkout bị suy giảm hiệu năng nghiêm trọng.'
             ],
             trac_nghiem: {
               cau_hoi: 'Nguyên tắc an toàn cốt lõi khi sử dụng Redis trong hệ thống Promotion là gì?',
@@ -498,22 +504,28 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
             title: label,
             summary: 'Mẫu Transactional Outbox phát sự kiện bất đồng bộ và Background Worker giải phóng reservation hết hạn.',
             infra_type: 'kafka',
-            schematic_template: 'hang_doi_dieu_tiet',
+            schematic_template: 'queue_outbox_conveyor',
             schematic_params: { pattern: 'TRANSACTIONAL OUTBOX', worker: 'BACKGROUND RECONCILER', timer: '15m EXPIRY' },
+            incident_dossier: {
+              boi_canh_tai: 'Đêm mở bán vé: 25.000 đơn hàng thanh toán thành công trong 10 phút cao điểm.',
+              nguyen_nhan_goc_re: 'DB Transaction commit thành công nhưng kết nối Message Broker bị ngắt 5s làm event bị thất lạc.',
+              ban_kinh_anh_huong: 'Hệ thống Analytics và Kho quà tặng không nhận được event trừ tồn kho, gây lệch số liệu báo cáo tài chính.',
+              chien_luoc_phong_thu: 'Mẫu Transactional Outbox ghi event vào cùng 1 DB Transaction với Entity + Background Reconciler quét dọn reservation quá hạn 15m.'
+            },
             ban_chat: 'Đảm bảo tính nhất quán cuối cùng (Eventual Consistency) bằng cách ghi sự kiện vào bảng outbox trong cùng Transaction với dữ liệu chính, sau đó Worker nền rút ra bắn sang message bus. Worker tự động quét và giải phóng các reservation bị bỏ rơi sau 15 phút.',
             ca_thuc_te: [
-              'Tự động hoàn trả quota mã giảm giá nếu khách hàng không hoàn tất thanh toán trong vòng 15 phút.',
-              'Bắn sự kiện PromotionRedeemedEvent sang Analytics và Notification Service mà không chặn luồng thanh toán.'
+              'Sự cố mất event tích điểm: Kết nối Kafka chập chờn 5 giây khiến 1.200 đơn hàng thanh toán không được tích điểm thưởng cho người mua.',
+              'Sự cố nghẽn Worker: Background Worker bị crash khiến 8.000 voucher hết hạn thanh toán không được nhả lại vào quỹ chung suốt 2 ngày.'
             ],
             rui_ro: [
               'Worker bị lag khiến voucher bị giữ ảo quá lâu, khách hàng khác không áp dụng được.',
               'Bắn sự kiện trùng lặp nếu phía consumer thiếu bộ lọc Idempotency.'
             ],
             chuoi_sup_do: [
-              '1. Worker tiến trình nền gặp sự cố sập hoặc mất kết nối DB.',
-              '2. Hàng ngàn reservation hết hạn không được nhả lại vào quỹ chung.',
-              '3. Mã khuyến mãi báo hết lượt dù thực tế đơn thanh toán đã bị hủy.',
-              '4. Thất thoát doanh thu và gây bức xúc lớn cho người mua hàng.'
+              '1. [Trigger]: Worker tiến trình nền gặp sự cố sập hoặc mất kết nối DB.',
+              '2. [Resource Leak]: Hàng ngàn reservation hết hạn không được nhả lại vào quỹ chung.',
+              '3. [Failure Cascade]: Mã khuyến mãi báo hết lượt dù thực tế đơn thanh toán đã bị hủy.',
+              '4. [Blast Radius]: Thất thoát doanh thu và gây bức xúc lớn cho người mua hàng.'
             ],
             trac_nghiem: {
               cau_hoi: 'Mẫu thiết kế Transactional Outbox giải quyết bài toán cốt lõi nào?',
@@ -530,22 +542,28 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               title: label,
               summary: 'Cổng tiếp nhận HTTP, Zod validation, xác thực người dùng và serialize tiền tệ Minor-Unit BigInt dạng chuỗi.',
               is_public_interface: true,
-              schematic_template: 'zero_trust_pep',
+              schematic_template: 'pipeline_filter',
               schematic_params: { ingress: 'EXPRESS CONTROLLER', validation: 'ZOD DTO SCHEMA', serialize: 'BIGINT STRING' },
+              incident_dossier: {
+                boi_canh_tai: 'Đêm siêu sale 11.11: 50.000 requests/giây dội vào cổng Ingress Gateway.',
+                nguyen_nhan_goc_re: 'Khách gửi số tiền dạng float (Number 100000.50), JavaScript tự động làm tròn số lẻ 53-bit làm lệch tiền.',
+                ban_kinh_anh_huong: 'Lệch 50đ mỗi đơn trên 500.000 giao dịch, sai lệch 25 triệu đồng so với sao kê ngân hàng, bị phong tỏa đóng sổ kế toán.',
+                chien_luoc_phong_thu: 'Serialize số tiền Minor-Unit BigInt thành chuỗi số nguyên "100000" trên JSON DTO và dùng Zod validation nghiêm ngặt.'
+              },
               ban_chat: 'Tầng biên giao tiếp HTTP cung cấp các endpoint REST API: preview, reserve, finalize, release. Thực thi Zod validation nghiêm ngặt, parse Idempotency-Key và chuyển đổi DTO sang Application Commands.',
               ca_thuc_te: [
-                'Chuyển đổi số tiền 100.000 VND thành chuỗi "100000" trên JSON DTO để bảo toàn độ chính xác 64-bit BigInt.',
-                'Kiểm tra Idempotency-Key trên header để từ chối các request gửi lặp do timeout mạng.'
+                'Sự cố lệch sổ kế toán: JavaScript float làm tròn sai số lẻ trên 500.000 đơn hàng khiến đối soát ngân hàng bị lệch 25.000.000đ.',
+                'Sự cố lặp Webhook: Mạng ngân hàng timeout 1.2s gửi lại webhook thanh toán 2 lần, thiếu Idempotency làm trừ tiền 2 lần từ ví khách hàng.'
               ],
               rui_ro: [
                 'Tràn bộ nhớ do nhận payload giỏ hàng khổng lồ không giới hạn số lượng dòng (Line Items).',
                 'Sai số tài chính nếu controller parse số tiền qua hàm parseFloat() của JavaScript.'
               ],
               chuoi_sup_do: [
-                '1. Client gửi request thanh toán kèm số tiền dạng float.',
-                '2. JavaScript làm tròn số lẻ gây sai lệch vài đồng trên mỗi đơn.',
-                '3. Tổng tiền thanh toán không khớp với bảng sao kê ngân hàng.',
-                '4. Bút toán kế toán bị treo đối soát không thể đóng sổ tài chính.'
+                '1. [Trigger]: Client gửi request thanh toán kèm số tiền dạng float.',
+                '2. [Calculation Error]: JavaScript làm tròn số lẻ gây sai lệch vài đồng trên mỗi đơn.',
+                '3. [Failure Cascade]: Tổng tiền thanh toán không khớp với bảng sao kê ngân hàng.',
+                '4. [Blast Radius]: Bút toán kế toán bị treo đối soát không thể đóng sổ tài chính.'
               ],
               trac_nghiem: {
                 cau_hoi: 'Tại sao API phải serialize số tiền minor-unit BigInt thành dạng chuỗi string trong JSON response?',
@@ -569,8 +587,8 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               },
               ban_chat: 'Pure Domain Engine là trái tim thuật toán độc lập 100% với DB/Redis/Network. Nhận PriceableCheckoutSnapshot và danh sách PromotionDefinition để đánh giá điều kiện, ma trận stacking và phân bổ giảm giá đa người bán (Multi-Seller Split Allocation).',
               ca_thuc_te: [
-                'Tính toán phân bổ voucher sàn 50.000đ cho 3 gian hàng khác nhau bảo toàn chính xác tổng số tiền (Penny Rounding Balance).',
-                'Tự động từ chối mã không hợp lệ theo ma trận Stacking Rules mà không cần gọi thêm bất kỳ I/O mạng nào.'
+                'Sự cố tranh chấp Seller: Voucher sàn 50.000đ chia cho 3 shop bị làm tròn thiếu 1đ khiến 1 shop kiện sàn ăn chặn tiền chiết khấu.',
+                'Sự cố nghẽn CPU do Stacking: 15 mã giảm giá trong 1 giỏ hàng kích hoạt thuật toán vét cạn O(2^N) làm CPU server nhảy lên 100%.'
               ],
               rui_ro: [
                 'Nghẽn CPU nếu giỏ hàng có quá nhiều tổ hợp khuyến mãi cần đánh giá combinatorial.',
@@ -594,22 +612,28 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               title: label,
               summary: 'Điều phối luồng nghiệp vụ 2 pha (Reserve 15m -> Finalize/Release), quản lý Transaction Boundaries.',
               is_public_interface: false,
-              schematic_template: 'default',
+              schematic_template: 'two_phase_state_machine',
               schematic_params: { flow: 'TWO-PHASE ALLOCATION', phase1: 'RESERVE 15M', phase2: 'FINALIZE / RELEASE' },
-              ban_chat: 'Thực thi giao diện PromotionsFacade, điều phối chu trình 2 pha: Khóa giữ mã tạm thời (Reservation) khi checkout $\to$ Chuyển thành bút toán tiêu dùng vĩnh viễn (Redemption) khi thanh toán thành công, hoặc Release khi đơn bị hủy.',
+              incident_dossier: {
+                boi_canh_tai: '10.000 khách hàng bấm áp mã voucher lúc 0h rồi chuyển sang cổng ngân hàng.',
+                nguyen_nhan_goc_re: 'Khách hàng tắt trình duyệt bỏ ngang không thanh toán đơn nhưng hệ thống thiếu cơ chế Reservation Timeout.',
+                ban_kinh_anh_huong: 'Quota voucher bị treo giữ ảo suốt 48h, sàn thương mại sụt giảm 1.8 tỷ đồng doanh thu do khách khác không áp được mã.',
+                chien_luoc_phong_thu: 'Chu trình Two-Phase Reservation có hạn 15 phút, kết hợp Background Worker tự động thu hồi quota khi đơn bị hủy.'
+              },
+              ban_chat: 'Thực thi giao diện PromotionsFacade, điều phối chu trình 2 pha: Khóa giữ mã tạm thời (Reservation) khi checkout ➔ Chuyển thành bút toán tiêu dùng vĩnh viễn (Redemption) khi thanh toán thành công, hoặc Release khi đơn bị hủy.',
               ca_thuc_te: [
-                'Tạo reservation với hạn sử dụng 15 phút, tự động gia hạn nếu người dùng vẫn đang ở bước cổng thanh toán.',
-                'Ghi nhận OrderPromotionSnapshot bất biến để phục vụ quy trình đổi trả/hoàn tiền sau này.'
+                'Sự cố treo giữ Quota ảo: 8.000 khách hàng bỏ giỏ hàng giữa chừng làm voucher báo hết lượt dù ngân sách thực tế vẫn còn 40%.',
+                'Sự cố Deadlock đối soát: Hai transaction hoàn tiền và thanh toán cùng tranh chấp khóa đơn hàng theo thứ tự ngược nhau.'
               ],
               rui_ro: [
                 'Deadlock nếu thứ tự lock các promotion trong giỏ hàng không được chuẩn hóa.',
                 'Rò rỉ reservation nếu không có cơ chế timeout dọn dẹp định kỳ.'
               ],
               chuoi_sup_do: [
-                '1. Khách hàng bấm thanh toán và chuyển sang cổng ngân hàng.',
-                '2. Người dùng tắt trình duyệt bỏ ngang không thanh toán đơn.',
-                '3. Quota voucher bị treo giữ không được nhả lại kịp thời.',
-                '4. Khách hàng khác mất cơ hội săn sale dù ngân sách vẫn còn.'
+                '1. [Trigger]: Khách hàng bấm thanh toán và chuyển sang cổng ngân hàng.',
+                '2. [Abandonment]: Người dùng tắt trình duyệt bỏ ngang không thanh toán đơn.',
+                '3. [Failure Cascade]: Quota voucher bị treo giữ không được nhả lại kịp thời.',
+                '4. [Blast Radius]: Khách hàng khác mất cơ hội săn sale dù ngân sách vẫn còn.'
               ],
               trac_nghiem: {
                 cau_hoi: 'Chu trình 2 pha (Two-Phase Reservation) giải quyết bài toán gì trong áp mã khuyến mãi?',
@@ -623,22 +647,28 @@ export function parseBrainstormDocument(rawText: string, fallbackName: string = 
               title: label,
               summary: `Cổng kết nối tích hợp liên module (Ports & Adapters) cho ${docTitle}.`,
               is_public_interface: false,
-              schematic_template: 'default',
+              schematic_template: 'hexagonal_ports',
               schematic_params: { port: 'HEXAGONAL ADAPTER', target: label.toUpperCase() },
+              incident_dossier: {
+                boi_canh_tai: '30.000 request checkout/giây đồng thời gọi Catalog Port tra cứu thông tin SKU.',
+                nguyen_nhan_goc_re: 'Truy vấn N+1: Mỗi sản phẩm trong giỏ hàng phát 1 request mạng riêng lẻ làm ngập kết nối.',
+                ban_kinh_anh_huong: 'Catalog Service bị nghẽn mạng, toàn bộ giỏ hàng bị đơ và không hiển thị được giá.',
+                chien_luoc_phong_thu: 'Sử dụng Batch Resolver gom 100 SKU vào 1 request duy nhất + Circuit Breaker timeout 1.5s.'
+              },
               ban_chat: `Triển khai kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters) định nghĩa ranh giới giao tiếp giữa Promotion module với ${label} mà không gây phụ thuộc ngược (Dependency Inversion).`,
               ca_thuc_te: [
-                `Tra cứu metadata SKU và Seller thông qua Catalog Port theo lô (Batch Resolver).`,
-                `Xác thực trạng thái OTP và tài khoản thông qua Identity Port.`
+                'Sự cố nghẽn mạng N+1: Giỏ hàng 20 món phát 20 request tra cứu Catalog làm tăng độ trễ checkout từ 50ms lên 3.200ms.',
+                'Sự cố Cascading Timeout: Payment Port bị nghẽn khiến luồng tính giá khuyến mãi bị treo cứng theo.'
               ],
               rui_ro: [
                 'Phụ thuộc mạng (Network latency) nếu các module bên ngoài phản hồi chậm.',
                 'Lỗi cascade nếu port bên ngoài bị timeout.'
               ],
               chuoi_sup_do: [
-                `1. Module ${label} gặp sự cố quá tải hoặc mất kết nối.`,
-                '2. Các lệnh tra cứu qua Port bị treo quá thời gian timeout 3s.',
-                '3. Luồng tính giá khuyến mãi bị nghẽn lại.',
-                '4. Toàn bộ trang giỏ hàng và checkout của khách bị gián đoạn.'
+                `1. [Trigger]: Module ${label} gặp sự cố quá tải hoặc mất kết nối.`,
+                '2. [Port Hang]: Các lệnh tra cứu qua Port bị treo quá thời gian timeout 3s.',
+                '3. [Failure Cascade]: Luồng tính giá khuyến mãi bị nghẽn lại.',
+                '4. [Blast Radius]: Toàn bộ trang giỏ hàng và checkout của khách bị gián đoạn.'
               ],
               trac_nghiem: {
                 cau_hoi: 'Mục đích của việc sử dụng Ports & Adapters trong modular monolith là gì?',

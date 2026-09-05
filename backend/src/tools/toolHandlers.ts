@@ -351,6 +351,57 @@ export function generate5StepReflexDrill(title: string, summary: string, cluster
   ];
 }
 
+export function generateIncidentDossier(title: string, summary: string, clusterName: string): IncidentDossier {
+  const t = title.toLowerCase();
+  if (t.includes('pure') || t.includes('engine') || t.includes('tính toán')) {
+    return {
+      boi_canh_tai: 'Đêm Flash Sale 11.11: Giỏ hàng 15 món từ 4 gian hàng (Multi-Seller Cart), áp Voucher sàn -100k.',
+      nguyen_nhan_goc_re: 'Lỗi làm tròn Float (Penny Rounding): Chia 100k cho 3 seller dư 1đ (33.333,33đ) gây lệch sổ cái đối soát.',
+      ban_kinh_anh_huong: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm.',
+      chien_luoc_phong_thu: 'Thuật toán Largest Remainder + Minor-Unit BigInt dồn phần dư 1đ vào seller có giá trị đơn cao nhất.'
+    };
+  }
+  if (t.includes('postgres') || t.includes('database') || t.includes('db') || t.includes('acid') || t.includes('storage')) {
+    return {
+      boi_canh_tai: '0h Flash Voucher: 10.000 requests/giây cùng tranh chấp áp 1 mã khuyến mãi toàn sàn.',
+      nguyen_nhan_goc_re: 'Pessimistic Row-Level Lock giữ connection quá 150ms gây cạn kiệt Connection Pool (Starvation).',
+      ban_kinh_anh_huong: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
+      chien_luoc_phong_thu: 'Khóa theo thứ tự ID tăng dần + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
+    };
+  }
+  if (t.includes('redis') || t.includes('cache') || t.includes('lock')) {
+    return {
+      boi_canh_tai: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
+      nguyen_nhan_goc_re: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng.',
+      ban_kinh_anh_huong: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
+      chien_luoc_phong_thu: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
+    };
+  }
+  if (t.includes('outbox') || t.includes('queue') || t.includes('worker') || t.includes('kafka')) {
+    return {
+      boi_canh_tai: 'Đêm mở bán vé: 25.000 đơn hàng thanh toán thành công trong 10 phút cao điểm.',
+      nguyen_nhan_goc_re: 'DB Transaction commit thành công nhưng kết nối Message Broker bị ngắt 5s làm event bị thất lạc.',
+      ban_kinh_anh_huong: 'Hệ thống Analytics và Kho quà tặng không nhận được event trừ tồn kho, gây lệch số liệu báo cáo tài chính.',
+      chien_luoc_phong_thu: 'Mẫu Transactional Outbox ghi event vào cùng 1 DB Transaction với Entity + Background Reconciler quét dọn reservation quá hạn 15m.'
+    };
+  }
+  if (t.includes('application') || t.includes('service')) {
+    return {
+      boi_canh_tai: '10.000 khách hàng bấm áp mã voucher lúc 0h rồi chuyển sang cổng ngân hàng.',
+      nguyen_nhan_goc_re: 'Khách hàng tắt trình duyệt bỏ ngang không thanh toán đơn nhưng hệ thống thiếu cơ chế Reservation Timeout.',
+      ban_kinh_anh_huong: 'Quota voucher bị treo giữ ảo suốt 48h, sàn thương mại sụt giảm 1.8 tỷ đồng doanh thu do khách khác không áp được mã.',
+      chien_luoc_phong_thu: 'Chu trình Two-Phase Reservation có hạn 15 phút, kết hợp Background Worker tự động thu hồi quota khi đơn bị hủy.'
+    };
+  }
+  return {
+    boi_canh_tai: `Tải cao điểm 50.000 req/s dồn vào thành phần ${title} trong phân hệ ${clusterName}.`,
+    nguyen_nhan_goc_re: `Tắc nghẽn xử lý do ${summary.slice(0, 55)}...`,
+    ban_kinh_anh_huong: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên quan.`,
+    chien_luoc_phong_thu: `Kích hoạt cơ chế Circuit Breaker, giới hạn tần suất Rate Limiting và đệm dữ liệu bất đồng bộ.`
+  };
+}
+
+
 export const MAX_GRAPH_NODES = 36;
 
 /**
@@ -1340,11 +1391,12 @@ export const toolHandlers = {
             'Độ trễ gia tăng nếu các kết nối phụ thuộc mạng chập chờn'
           ],
           chuoi_sup_do: cNode.chuoi_sup_do || [
-            `1. Thành phần ${cNode.title} gặp sự cố quá tải hoặc mất kết nối.`,
-            '2. Các luồng xử lý phụ thuộc phía sau bị dồn ứ hàng đợi.',
-            '3. Bộ đệm bộ nhớ bị đầy làm tăng độ trễ toàn hệ thống.',
-            `4. Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
-          ]
+            `1. [Trigger]: Thành phần ${cNode.title} gặp sự cố quá tải hoặc mất kết nối.`,
+            '2. [Saturation]: Các luồng xử lý phụ thuộc phía sau bị dồn ứ hàng đợi.',
+            '3. [Failure Cascade]: Bộ đệm bộ nhớ bị đầy làm tăng độ trễ toàn hệ thống.',
+            `4. [Blast Radius]: Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
+          ],
+          incident_dossier: cNode.incident_dossier || generateIncidentDossier(cNode.title, cNode.summary, payload.cluster_name)
         },
         trac_nghiem: cNode.trac_nghiem || {
           cau_hoi: `Vai trò kỹ thuật chính của '${cNode.title}' là gì?`,
@@ -1429,11 +1481,12 @@ export const toolHandlers = {
               ca_thuc_te: sNode.ca_thuc_te || [`Lưu trữ và phục vụ nội bộ cho phân hệ ${payload.cluster_name}`],
               rui_ro: sNode.rui_ro || ['Cần đảm bảo đồng bộ trạng thái và TTL bộ nhớ'],
               chuoi_sup_do: sNode.chuoi_sup_do || [
-                `1. Phân hệ hạ tầng ${sub.name} gặp sự cố hoặc quá tải I/O.`,
-                `2. Các luồng xử lý của ${payload.cluster_name} bị dồn ứ hàng đợi.`,
-                `3. Thời gian phản hồi vượt ngưỡng timeout cho phép.`,
-                `4. Phân hệ rơi vào trạng thái suy giảm hiệu năng.`
-              ]
+                `1. [Trigger]: Phân hệ hạ tầng ${sub.name} gặp sự cố hoặc quá tải I/O.`,
+                `2. [Resource Saturation]: Các luồng xử lý của ${payload.cluster_name} bị dồn ứ hàng đợi.`,
+                `3. [Failure Cascade]: Thời gian phản hồi vượt ngưỡng timeout cho phép.`,
+                `4. [Blast Radius]: Phân hệ ${payload.cluster_name} rơi vào trạng thái suy giảm hiệu năng.`
+              ],
+              incident_dossier: sNode.incident_dossier || generateIncidentDossier(sNode.title, sNode.summary, sub.name)
             },
             trac_nghiem: sNode.trac_nghiem || {
               cau_hoi: `Mục đích của sub-cluster '${sub.name}' là gì?`,
