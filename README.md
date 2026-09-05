@@ -63,6 +63,48 @@ Mô hình dữ liệu loại bỏ tư duy phẳng hóa (Flat Architecture), tổ
 
 ---
 
+
+## 🛡️ Vòng Lặp Self-Review & Quality Gate (Tự Đánh Giá & Hiệu Chỉnh Kiến Trúc)
+
+Nhằm giải quyết triệt để lỗi sinh node sai bản chất (nhầm lẫn giữa luồng truyền tin HTTP/Cookie/Tên hàm với Thành phần Kiến trúc), hệ thống tích hợp **Quy trình Ingestion 2 Pha (2-Phase Ingestion Quality Gate)**:
+
+```text
+[Tài Liệu Brainstorm / RFC / Mermaid]
+                 │
+                 ▼
+       [Pha 1: Parser Thô]
+                 │
+                 ▼
+┌────────────────────────────────────────────────────────┐
+│ Pha 2: Self-Review & Quality Gate Auto-Correction      │
+│                                                        │
+│ 1. Bộ Lọc Anti-Pattern (Anti-Pollution Filter):        │
+│    • Phát hiện & chặn các từ khóa phi kiến trúc:       │
+│      - HTTP Verbs: POST /auth/login, GET /...          │
+│      - HTTP Status: 200 OK, 401 Unauthorized, Reject   │
+│      - Data Packets: Access cookie, Refresh cookie     │
+│      - Function Signatures: authorize(), login()       │
+│                                                        │
+│ 2. Bộ Nâng Cấp Kiến Trúc (Architectural Elevation):    │
+│    • Tự động nâng cấp sang Component DDD chuẩn mực:    │
+│      - Route/Packet  ➔  Ingress Gateway (PEP Guard)    │
+│      - Logic tính toán ➔ Pure Domain Engine (0 I/O)    │
+│      - Lưu trữ/Đệm   ➔  Dedicated Sub-Clusters         │
+│                                                        │
+│ 3. Đánh Giá & Chấm Điểm Chất Lượng (Quality Score):   │
+│    • Bounded Context & Public Interface Validation     │
+│    • Sinh 100% Deep Details, Chuỗi Sụp Đổ & Reflex Quiz│
+└────────────────────────────────────────────────────────┘
+                 │
+                 ▼ (Chỉ render khi Quality Score ≥ 95)
+    [Canvas Render & SQLite WAL Persistence]
+```
+
+### Các Nguyên Tắc Thẩm Định Của Quality Gate:
+1. **Không bao giờ đưa Packet/Status thành Node**: Gói tin (`Access cookie`), mã trạng thái (`200 OK`), hoặc tên hàm (`authorize()`) chỉ là thông điệp đường truyền, phải được chuyển hóa thành **Thành Phần Kiến Trúc** (Engine, Gateway, Store).
+2. **Deterministic Domain Core**: Các bộ tính toán nghiệp vụ lõi (như Promotion Engine) phải được bóc tách thành **Pure Domain Service (100% 0 I/O)** để dễ dàng replay và audit.
+3. **Bảo toàn tính đầy đủ của Sổ tay (Field Notes)**: Mọi node sinh ra từ Quality Gate đều tự động có đầy đủ **Bản chất kỹ thuật**, **Sơ đồ hoạt họa**, **Tình huống thực tế**, **Chuỗi sụp đổ** và **Trắc nghiệm phản xạ**.
+
 ## 🚀 Tính Năng Đột Phá
 
 ### 1. RAG Brainstorm Doc Ingestion Engine (Nạp & Tự Động Sinh Cụm)
