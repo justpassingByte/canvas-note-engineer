@@ -225,7 +225,7 @@ export const DynamicSchematic: React.FC<DynamicSchematicProps> = ({ params }) =>
     case 'zero_trust_pep': {
       const clientLabel = p.client || p.actor || 'CLIENT mTLS';
       const gatewayLabel = p.gateway || p.component || 'PEP GATEWAY';
-      const authServerLabel = p.auth_server || p.target || 'PDP ENGINE';
+      const authServerLabel = p.auth_server || p.target || 'INTERNAL MESH';
 
       return (
         <svg width="100%" height="100%" viewBox="0 0 450 125">
@@ -245,16 +245,137 @@ export const DynamicSchematic: React.FC<DynamicSchematicProps> = ({ params }) =>
           {renderSvgMultiLine(gatewayLabel, 220, 48, '#312E81', 8, 900, 12)}
           <text x="220" y="74" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#059669">{p.status || 'JWT VERIFIED'}</text>
 
-          {/* Đường sang PDP Policy Decision */}
+          {/* Đường sang Internal Mesh */}
           <path d="M 265 61 L 335 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
           <circle r="5" fill="#059669">
             <animateMotion path="M 265 61 L 335 61" dur="2.8s" begin="1.4s" repeatCount="indefinite" />
           </circle>
 
-          {/* PDP Auth / Keystore */}
+          {/* Internal Mesh Destination */}
           <rect x="335" y="30" width="100" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
           {renderSvgMultiLine(authServerLabel, 385, 52, '#065F46', 8, 800, 12)}
-          <text x="385" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#047857" fontWeight="800">{p.token || 'RBAC GRANTED'}</text>
+          <text x="385" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#047857" fontWeight="800">SECURE BUS</text>
+        </svg>
+      );
+    }
+
+    case 'oauth2_oidc':
+    case 'oauth2_token_server': {
+      const clientLabel = p.client || 'CLIENT APP';
+      const authServerLabel = p.auth_server || p.component || 'OIDC PROVIDER';
+      const tokenLabel = p.token || 'JWT TOKENS';
+
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* Client Application */}
+          <rect x="15" y="30" width="90" height="62" rx="4" fill="#F8FAFC" stroke="#1A1D24" strokeWidth="1.8" />
+          {renderSvgMultiLine(clientLabel, 60, 52, '#1A1D24', 8, 800, 11)}
+          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">Login / Auth Code</text>
+
+          {/* Luồng gọi cấp token */}
+          <path d="M 105 61 L 175 61" stroke="#7C3AED" strokeWidth="2" strokeDasharray="4 4" />
+          <circle r="5" fill="#7C3AED">
+            <animateMotion path="M 105 61 L 175 61" dur="2.6s" repeatCount="indefinite" />
+          </circle>
+
+          {/* OIDC Identity Provider Box */}
+          <rect x="175" y="20" width="145" height="78" rx="6" fill="#F5F3FF" stroke="#7C3AED" strokeWidth="2" />
+          {renderSvgMultiLine(authServerLabel, 247.5, 42, '#5B21B6', 8.5, 900, 14)}
+          <rect x="185" y="52" width="125" height="18" rx="3" fill="#EDE9FE" stroke="#8B5CF6" strokeWidth="1" />
+          <text x="247.5" y="65" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#6D28D9">RS256 KEY SIGNING</text>
+          <text x="247.5" y="88" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#7C3AED">JWKS Key Keystore</text>
+
+          {/* Luồng trả Access Token */}
+          <path d="M 320 61 L 345 61" stroke="#059669" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
+          <circle r="5" fill="#059669">
+            <animateMotion path="M 320 61 L 345 61" dur="2.6s" begin="1.3s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Issued Token Box */}
+          <rect x="345" y="30" width="95" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          {renderSvgMultiLine(tokenLabel, 392.5, 50, '#065F46', 8, 900, 11)}
+          <text x="392.5" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">EXP: 3600S</text>
+          <text x="392.5" y="80" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#047857">Claims: sub, jti</text>
+        </svg>
+      );
+    }
+
+    case 'token_blacklist':
+    case 'redis_blacklist': {
+      const tokenLabel = p.token_jti || 'BEARER TOKEN';
+      const cacheLabel = p.cache_store || p.component || 'REDIS BLACKLIST';
+
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* Bearer Token Input */}
+          <rect x="15" y="30" width="90" height="62" rx="4" fill="#F8FAFC" stroke="#1A1D24" strokeWidth="1.8" />
+          {renderSvgMultiLine(tokenLabel, 60, 52, '#1A1D24', 8, 800, 11)}
+          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6B7280">JTI: UUID-v4</text>
+
+          {/* Đường dẫn tới Redis */}
+          <path d="M 105 61 L 165 61" stroke="#EA580C" strokeWidth="2" strokeDasharray="4 4" />
+          <circle r="5" fill="#EA580C">
+            <animateMotion path="M 105 61 L 165 61" dur="2.2s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Redis Blacklist Cache */}
+          <rect x="165" y="20" width="150" height="80" rx="6" fill="#FFF7ED" stroke="#EA580C" strokeWidth="2" />
+          {renderSvgMultiLine(cacheLabel, 240, 42, '#C2410C', 8.5, 900, 14)}
+          <rect x="175" y="54" width="130" height="20" rx="3" fill="#FED7AA" stroke="#F97316" strokeWidth="1" />
+          <text x="240" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#9A3412">O(1) JTI LOOKUP: &lt;1MS</text>
+          <text x="240" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#EA580C">Revocation Check</text>
+
+          {/* Nhánh 1: Bị Revoke (Đỏ) */}
+          <path d="M 315 42 L 350 32" stroke="#DC2626" strokeWidth="1.8" strokeDasharray="3 3" />
+          <rect x="350" y="20" width="90" height="34" rx="3" fill="#FEF2F2" stroke="#DC2626" strokeWidth="1.5" />
+          <text x="395" y="36" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="900" fill="#991B1B">401 REVOKED</text>
+          <text x="395" y="48" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#DC2626">Từ chối truy cập</text>
+
+          {/* Nhánh 2: Hợp Lệ (Xanh) */}
+          <path d="M 315 78 L 350 86" stroke="#059669" strokeWidth="1.8" />
+          <rect x="350" y="70" width="90" height="34" rx="3" fill="#ECFDF5" stroke="#059669" strokeWidth="1.5" />
+          <text x="395" y="86" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="900" fill="#065F46">200 ALLOW</text>
+          <text x="395" y="98" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#059669">Chuyển tiếp API</text>
+        </svg>
+      );
+    }
+
+    case 'pdp_policy':
+    case 'policy_decision_point': {
+      const subjectLabel = p.subject || 'USER CLAIMS';
+      const pdpEngineLabel = p.engine || p.component || 'PDP POLICY ENGINE';
+      const decisionLabel = p.decision || 'PERMIT ACCESS';
+
+      return (
+        <svg width="100%" height="100%" viewBox="0 0 450 125">
+          {/* User Subject Claims */}
+          <rect x="15" y="30" width="90" height="62" rx="4" fill="#EEF2FF" stroke="#4F46E5" strokeWidth="1.8" />
+          {renderSvgMultiLine(subjectLabel, 60, 52, '#3730A3', 8, 800, 11)}
+          <text x="60" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#6366F1">Role, Dept, IP</text>
+
+          {/* Luồng sang PDP */}
+          <path d="M 105 61 L 165 61" stroke="#4F46E5" strokeWidth="2" strokeDasharray="4 4" />
+          <circle r="5" fill="#4F46E5">
+            <animateMotion path="M 105 61 L 165 61" dur="2.5s" repeatCount="indefinite" />
+          </circle>
+
+          {/* PDP Decision Engine */}
+          <rect x="165" y="20" width="150" height="80" rx="6" fill="#F0FDF4" stroke="#16A34A" strokeWidth="2" />
+          {renderSvgMultiLine(pdpEngineLabel, 240, 42, '#15803D', 8.5, 900, 14)}
+          <rect x="175" y="54" width="130" height="20" rx="3" fill="#DCFCE7" stroke="#22C55E" strokeWidth="1" />
+          <text x="240" y="68" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fontWeight="800" fill="#166534">RBAC &amp; ABAC REGO RULES</text>
+          <text x="240" y="90" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7" fill="#16A34A">Least Privilege Evaluation</text>
+
+          {/* Luồng ra kết quả */}
+          <path d="M 315 61 L 345 61" stroke="#16A34A" strokeWidth="2" markerEnd="url(#mui-ten-den)" />
+          <circle r="5" fill="#16A34A">
+            <animateMotion path="M 315 61 L 345 61" dur="2.5s" begin="1.2s" repeatCount="indefinite" />
+          </circle>
+
+          {/* Decision Outcome */}
+          <rect x="345" y="30" width="95" height="62" rx="4" fill="#ECFDF5" stroke="#059669" strokeWidth="1.8" />
+          {renderSvgMultiLine(decisionLabel, 392.5, 52, '#065F46', 8, 900, 11)}
+          <text x="392.5" y="78" textAnchor="middle" fontFamily="'JetBrains Mono', monospace" fontSize="7.5" fill="#059669" fontWeight="800">ENFORCE ACTION</text>
         </svg>
       );
     }
