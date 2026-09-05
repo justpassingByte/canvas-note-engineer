@@ -5,6 +5,7 @@ import { calculateEdgePath } from '../../utils/geometry.js';
 import { computeClusters, TopicCluster } from '../../utils/clusterEngine.js';
 import { FloatingToolbar } from '../Toolbar/FloatingToolbar.js';
 import { TECHNICAL_DICTIONARY } from '../../dictionary/technicalDictionary.js';
+import { NodeEntity, EdgeEntity } from '../../types/graphTypes.js';
 
 function getEdgeKeywordTooltip(edge: any): string {
   const textToScan = `${edge.nhan} ${edge.giai_thich || ''}`.toLowerCase();
@@ -23,7 +24,6 @@ export const SvgGridCanvas: React.FC = () => {
   const {
     graph,
     setGraph,
-    isDomainLinkActive,
     selectedEdge,
     selectEdge,
     selectedNodeId,
@@ -53,6 +53,18 @@ export const SvgGridCanvas: React.FC = () => {
     initialPositions: Map<string, { x: number; y: number }>;
   } | null>(null);
   const [isDraggingCluster, setIsDraggingCluster] = useState(false);
+
+  // Quản lý kéo thả từng Node riêng lẻ (Node Drag & Drop + Persistence)
+  const nodeDragRef = useRef<{
+    nodeId: string;
+    startMouseX: number;
+    startMouseY: number;
+    initialX: number;
+    initialY: number;
+    hasMoved: boolean;
+  } | null>(null);
+  const [draggingNodeId, setDraggingNodeId] = useState<string | null>(null);
+
   // Cờ phân biệt rõ ràng giữa Click và Kéo Thả (Drag vs Click Disambiguation)
   const wasJustDraggedRef = useRef(false);
 
@@ -115,14 +127,9 @@ export const SvgGridCanvas: React.FC = () => {
     };
 
     return graph.nodes.filter(node => {
-      // Ẩn node TMĐT nếu công tắc liên kết miền đang TẮT
-      if (node.id === 'node-tmdt' && !isDomainLinkActive) {
-        return false;
-      }
-
       return !isNodeCollapsedAway(node.id);
     });
-  }, [graph, isDomainLinkActive]);
+  }, [graph]);
 
   // Tính toán Cụm Topic tự động (0 token AI)
   const clusters = useMemo(() => computeClusters(visibleNodes), [visibleNodes]);
@@ -136,12 +143,9 @@ export const SvgGridCanvas: React.FC = () => {
   const visibleEdges = useMemo(() => {
     if (!graph) return [];
     return graph.edges.filter(edge => {
-      if (edge.from === 'node-tmdt' && !isDomainLinkActive) {
-        return false;
-      }
       return visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to);
     });
-  }, [graph, isDomainLinkActive, visibleNodeIds]);
+  }, [graph, visibleNodeIds]);
 
   // Tính toán trước tọa độ và hình học của từng đường nối để tách biệt các lớp SVG
   const edgeGeometries = useMemo(() => {
@@ -154,9 +158,10 @@ export const SvgGridCanvas: React.FC = () => {
       const { pathD, midX, midY } = calculateEdgePath(fromNode, toNode);
       const isEdgeSelected = selectedEdge?.from === edge.from && selectedEdge?.to === edge.to;
       const isCascadeEdge = isWhatBreaksActive && (edge.from === selectedNodeId || edge.to === selectedNodeId);
-      // Giới hạn nhãn hiển thị trên dây tối đa 22 ký tự để không đè lên các Node
-      const displayLabel = edge.nhan.length > 22 ? edge.nhan.slice(0, 20) + '…' : edge.nhan;
-      const labelWidth = Math.min(Math.max(displayLabel.length * 7.5 + 22, 70), 180);
+      // Tự động gắn ký hiệu chỉ hướng ➔ để người dùng luôn nhận biết rõ chiều luồng dữ liệu
+      const directionLabel = edge.nhan.includes('➔') || edge.nhan.includes('->') ? edge.nhan : `${edge.nhan} ➔`;
+      const displayLabel = directionLabel.length > 24 ? directionLabel.slice(0, 22) + '…' : directionLabel;
+      const labelWidth = Math.min(Math.max(displayLabel.length * 7.5 + 24, 75), 190);
       const labelHeight = 22;
 
       return {
@@ -174,6 +179,7 @@ export const SvgGridCanvas: React.FC = () => {
     }).filter(Boolean) as Array<{
       edge: (typeof visibleEdges)[0];
       key: string;
+      displayLabel: string;
       pathD: string;
       midX: number;
       midY: number;
@@ -193,6 +199,22 @@ export const SvgGridCanvas: React.FC = () => {
     const newPanY = rect.height / 2 - cluster.bounds.centerY * targetZoom;
     setZoom(targetZoom);
     setPan({ x: newPanX, y: newPanY });
+  };
+
+  // Khởi động kéo thả từng Node riêng lẻ
+  const handleNodeDragStart = (e: React.MouseEvent, node: NodeEntity) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+
+    nodeDragRef.current = {
+      nodeId: node.id,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      initialX: node.toa_do.x,
+      initialY: node.toa_do.y,
+      hasMoved: false
+    };
+    setDraggingNodeId(node.id);
   };
 
   // Khởi động kéo thả Cụm phân hệ
@@ -268,7 +290,35 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    // 1. Kéo thả Cụm phân hệ di chuyển đồng loạt các node bên trong
+    // 1. Kéo thả từng Node riêng lẻ
+    if (nodeDragRef.current && graph) {
+      const { nodeId, startMouseX, startMouseY, initialX, initialY } = nodeDragRef.current;
+      const dx = (e.clientX - startMouseX) / zoom;
+      const dy = (e.clientY - startMouseY) / zoom;
+
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        nodeDragRef.current.hasMoved = true;
+      }
+
+      const newX = Math.round(initialX + dx);
+      const newY = Math.round(initialY + dy);
+
+      const updatedNodes = graph.nodes.map(n => {
+        if (n.id === nodeId) {
+          return {
+            ...n,
+            toa_do: { x: newX, y: newY },
+            tam: { x: newX + 110, y: newY + 72 }
+          };
+        }
+        return n;
+      });
+
+      setGraph({ ...graph, nodes: updatedNodes });
+      return;
+    }
+
+    // 2. Kéo thả Cụm phân hệ di chuyển đồng loạt các node bên trong
     if (clusterDragRef.current && graph) {
       const { startMouseX, startMouseY, initialPositions } = clusterDragRef.current;
       const dx = (e.clientX - startMouseX) / zoom;
@@ -305,6 +355,22 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    // Lưu vị trí node đơn lẻ xuống SQLite khi buông chuột
+    if (nodeDragRef.current) {
+      if (nodeDragRef.current.hasMoved && graph) {
+        const movedNode = graph.nodes.find(n => n.id === nodeDragRef.current?.nodeId);
+        if (movedNode) {
+          fetch('/api/graph/update-positions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ positions: [{ id: movedNode.id, x: movedNode.toa_do.x, y: movedNode.toa_do.y }] })
+          }).catch(err => console.error('Lỗi khi lưu vị trí node:', err));
+        }
+      }
+      nodeDragRef.current = null;
+      setDraggingNodeId(null);
+    }
+
     // Lưu vị trí cụm mới xuống SQLite khi buông chuột
     if (clusterDragRef.current) {
       if (clusterDragRef.current.hasMoved && graph) {
@@ -548,9 +614,40 @@ export const SvgGridCanvas: React.FC = () => {
         {/* Vùng chứa các node Concept (z-index: 5) */}
         <div className={`vung-chua-khoi ${isMacroView ? 'tam-nhin-macro' : ''}`} style={{ pointerEvents: 'none' }}>
           {visibleNodes.map(node => (
-            <ConceptNode key={node.id} node={node} />
+            <ConceptNode
+              key={node.id}
+              node={node}
+              onNodeDragStart={handleNodeDragStart}
+              isDragging={draggingNodeId === node.id}
+            />
           ))}
         </div>
+
+        {visibleNodes.length === 0 && (
+          <div
+            style={{
+              position: 'absolute',
+              left: '460px',
+              top: '260px',
+              transform: 'translate(-50%, -50%)',
+              textAlign: 'center',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              fontFamily: "'JetBrains Mono', monospace",
+              padding: '24px 32px',
+              background: 'rgba(255, 255, 255, 0.85)',
+              border: '2px dashed #9CA3AF',
+              borderRadius: '12px'
+            }}
+          >
+            <div style={{ fontSize: '15px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
+              📐 Mặt Giấy Kỹ Sư Trống
+            </div>
+            <div style={{ fontSize: '11px', color: '#6B7280', maxWidth: '380px', lineHeight: 1.5 }}>
+              Nhấn <strong>RAG Brainstorm</strong> trên thanh công cụ hoặc <strong>Chuột phải</strong> lên mặt giấy để sinh Cụm Kiến trúc phân cấp mới.
+            </div>
+          </div>
+        )}
 
         {/* Lớp Nhãn Mũi tên SVG Độc lập (z-index: 6) - 100% Nổi trên các Node và đường vẽ */}
         <svg

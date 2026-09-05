@@ -7,7 +7,6 @@ import './styles/drawer.css';
 import { SvgGridCanvas } from './components/Canvas/SvgGridCanvas.js';
 import { FieldNotesDrawer } from './components/Drawer/FieldNotesDrawer.js';
 import { useGraphStore } from './store/useGraphStore.js';
-import { INITIAL_PAYMENT_GRAPH } from './data/initialGraph.js';
 
 export const App: React.FC = () => {
   const { graph, setGraph, fetchCurrentGraph, pollCurrentGraph } = useGraphStore();

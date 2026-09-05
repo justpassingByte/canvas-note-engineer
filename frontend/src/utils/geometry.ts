@@ -19,22 +19,23 @@ const CARD_WIDTH = 220;
 const CARD_HEIGHT = 145;
 
 /**
- * Lấy tọa độ 4 cổng neo kỹ thuật trên bounding box của node
+ * Lấy tọa độ 4 cổng neo kỹ thuật trên bounding box của node (bao gồm cả Icon Pod và Thẻ nhãn)
  */
 export function getNodePorts(node: NodeEntity): Record<PortDirection, Point> {
   const x = node.toa_do.x;
   const y = node.toa_do.y;
-  const centerX = x + CARD_WIDTH / 2; // x + 110
+  const centerX = x + 110;
+  const centerY = y + 70;
 
   return {
     // Cổng trên: Ngay đỉnh chóp của Icon Pod
     top: { x: centerX, y: y },
-    // Cổng dưới: Ngay đáy viền của thẻ nhãn
+    // Cổng dưới: Ngay đáy viền của thẻ nhãn chữ nhật (y + 145)
     bottom: { x: centerX, y: y + CARD_HEIGHT },
     // Cổng trái: Ngay giữa cạnh sườn trái của thẻ
-    left: { x: x, y: y + 70 },
+    left: { x: x, y: centerY },
     // Cổng phải: Ngay giữa cạnh sườn phải của thẻ
-    right: { x: x + CARD_WIDTH, y: y + 70 }
+    right: { x: x + CARD_WIDTH, y: centerY }
   };
 }
 

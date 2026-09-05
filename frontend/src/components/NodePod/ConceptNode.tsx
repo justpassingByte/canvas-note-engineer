@@ -6,9 +6,11 @@ import { enrichHtmlWithTooltips } from '../../dictionary/technicalDictionary.js'
 
 interface ConceptNodeProps {
   node: NodeEntity;
+  onNodeDragStart?: (e: React.MouseEvent, node: NodeEntity) => void;
+  isDragging?: boolean;
 }
 
-export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
+export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart, isDragging }) => {
   const {
     selectedNodeId,
     selectNode,
@@ -39,7 +41,7 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
   // Chế độ ôn tập: ẩn tiêu đề thành [ ? ] nếu chưa mở
   const isMaskedInRecall = isRecallMode && !revealedRecallNodes.includes(node.id);
 
-  // Đếm toàn bộ số lượng node hậu duệ phân cấp trong đồ thị DAG (0 token, chống lặp chu trình)
+  // Đếm toàn bộ số lượng node hậu duệ phân cấp trong đồ thị DAG
   const allDescendantsSet = React.useMemo(() => {
     if (!graph) return new Set<string>();
     const visited = new Set<string>();
@@ -64,17 +66,22 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
   const hasChildren = totalDescendants > 0;
   const isCollapsed = node.is_collapsed || false;
 
-  const handleNodeClick = () => {
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if ((e.target as HTMLElement).closest('.chan-the-thu-gon')) return;
+    onNodeDragStart?.(e, node);
+  };
+
+  const handleNodeClick = (e: React.MouseEvent) => {
     if (isMaskedInRecall) {
       revealRecallNode(node.id);
       return;
     }
-    // 100% CHỈ mở Drawer và highlight node (0 token, 0 độ trễ)
     selectNode(node.id);
   };
 
   const handleCollapseClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // 100% cục bộ trên client (0 token)
+    e.stopPropagation();
     toggleCollapse(node.id);
   };
 
@@ -94,10 +101,17 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
 
   return (
     <div
-      className={`cum-thuc-the ${isSelected ? 'dang-chon' : ''} ${!isSearchMatch ? 'mo-nhat' : ''} ${isSearchMatch && searchQuery ? 'khop-tim-kiem' : ''} ${isCascadeAffected ? 'canh-bao-sup-do' : ''}`}
-      style={{ top: `${node.toa_do.y}px`, left: `${node.toa_do.x}px` }}
+      className={`cum-thuc-the ${isSelected ? 'dang-chon' : ''} ${!isSearchMatch ? 'mo-nhat' : ''} ${isSearchMatch && searchQuery ? 'khop-tim-kiem' : ''} ${isCascadeAffected ? 'canh-bao-sup-do' : ''} ${isDragging ? 'dang-keo-node' : ''}`}
+      style={{
+        top: `${node.toa_do.y}px`,
+        left: `${node.toa_do.x}px`,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        zIndex: isDragging ? 50 : (isSelected ? 10 : 5)
+      }}
       data-node-id={node.id}
+      onMouseDown={handleMouseDown}
       onClick={handleNodeClick}
+      title="Kéo chuột để di chuyển node | Click để mở sổ tay kỹ thuật"
     >
       <div className="hop-icon-pod-wrap">
         <div className={`hop-icon-pod ${getPodVariantClass()}`}>
@@ -123,7 +137,7 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
           />
         )}
 
-        {/* Thanh Trạng Thái Thu Gọn (Collapse Pill) - Rõ ràng, trực quan, không gây nhầm lẫn */}
+        {/* Thanh Trạng Thái Thu Gọn (Collapse Pill) */}
         {hasChildren && (
           <div className="chan-the-thu-gon">
             <button
@@ -146,4 +160,3 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node }) => {
     </div>
   );
 };
-

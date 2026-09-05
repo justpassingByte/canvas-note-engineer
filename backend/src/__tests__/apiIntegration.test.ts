@@ -1,14 +1,34 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import http from 'http';
+import { app } from '../index.js';
 
-const BACKEND_URL = process.env.TEST_BACKEND_URL || 'http://localhost:3001';
+let server: http.Server;
+let backendUrl: string;
 
 describe('Live Backend REST API Integration Tests', () => {
+  beforeAll(async () => {
+    await new Promise<void>((resolve) => {
+      server = http.createServer(app);
+      server.listen(0, '127.0.0.1', () => {
+        const addr = server.address() as any;
+        backendUrl = `http://127.0.0.1:${addr.port}`;
+        resolve();
+      });
+    });
+  });
+
+  afterAll(async () => {
+    if (server) {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   beforeEach(async () => {
-    await fetch(`${BACKEND_URL}/api/graph/reset`, { method: 'POST' });
+    await fetch(`${backendUrl}/api/graph/reset`, { method: 'POST' });
   });
 
   it('GET /api/health should respond with status ok and sqlite_wal cache', async () => {
-    const res = await fetch(`${BACKEND_URL}/api/health`);
+    const res = await fetch(`${backendUrl}/api/health`);
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as any;
@@ -18,7 +38,7 @@ describe('Live Backend REST API Integration Tests', () => {
   });
 
   it('GET /api/graph/current should return the current knowledge graph with 5 seed nodes', async () => {
-    const res = await fetch(`${BACKEND_URL}/api/graph/current`);
+    const res = await fetch(`${backendUrl}/api/graph/current`);
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as any;
@@ -36,7 +56,7 @@ describe('Live Backend REST API Integration Tests', () => {
 
   it('POST /api/graph/expand should expand delta nodes and mark parent explored', async () => {
     // First reset to clean state
-    await fetch(`${BACKEND_URL}/api/graph/reset`, { method: 'POST' });
+    await fetch(`${backendUrl}/api/graph/reset`, { method: 'POST' });
 
     const payload = {
       target_concept_slug: 'node-khien-khoa',
@@ -44,7 +64,7 @@ describe('Live Backend REST API Integration Tests', () => {
       expansion_intent: 'Tìm hiểu sâu về cơ chế đệm bất đồng bộ'
     };
 
-    const res = await fetch(`${BACKEND_URL}/api/graph/expand`, {
+    const res = await fetch(`${backendUrl}/api/graph/expand`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -62,7 +82,7 @@ describe('Live Backend REST API Integration Tests', () => {
 
   it('POST /api/graph/prune should collapse and expand nodes without token usage', async () => {
     // Collapse action
-    const collapseRes = await fetch(`${BACKEND_URL}/api/graph/prune`, {
+    const collapseRes = await fetch(`${backendUrl}/api/graph/prune`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ node_id: 'node-khien-khoa', action: 'collapse' })
@@ -76,7 +96,7 @@ describe('Live Backend REST API Integration Tests', () => {
     expect(targetNode.is_collapsed).toBe(true);
 
     // Expand action
-    const expandRes = await fetch(`${BACKEND_URL}/api/graph/prune`, {
+    const expandRes = await fetch(`${backendUrl}/api/graph/prune`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ node_id: 'node-khien-khoa', action: 'expand' })
@@ -92,9 +112,9 @@ describe('Live Backend REST API Integration Tests', () => {
 
   it('POST /api/graph/spawn should spawn a new topic node via REST API and persist to SQLite', async () => {
     // Reset first
-    await fetch(`${BACKEND_URL}/api/graph/reset`, { method: 'POST' });
+    await fetch(`${backendUrl}/api/graph/reset`, { method: 'POST' });
 
-    const spawnRes = await fetch(`${BACKEND_URL}/api/graph/spawn`, {
+    const spawnRes = await fetch(`${backendUrl}/api/graph/spawn`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -109,11 +129,11 @@ describe('Live Backend REST API Integration Tests', () => {
     expect(body.spawned).toBe(true);
     expect(body.node).toBeDefined();
     expect(body.node.tieu_de).toContain('Nhật ký Kiểm toán');
-    expect(body.graph.nodes).toHaveLength(7);
+    expect(body.graph.nodes).toHaveLength(6);
   });
 
   it('POST /api/graph/spawn-cluster should spawn a multi-node cluster with compact schema via REST API', async () => {
-    const res = await fetch(`${BACKEND_URL}/api/graph/spawn-cluster`, {
+    const res = await fetch(`${backendUrl}/api/graph/spawn-cluster`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -145,7 +165,7 @@ describe('Live Backend REST API Integration Tests', () => {
   });
 
   it('POST /api/graph/reset should restore the graph to root state with 5 nodes', async () => {
-    const res = await fetch(`${BACKEND_URL}/api/graph/reset`, { method: 'POST' });
+    const res = await fetch(`${backendUrl}/api/graph/reset`, { method: 'POST' });
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as any;

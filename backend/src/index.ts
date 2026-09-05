@@ -4,6 +4,7 @@ import path from 'path';
 import fs from 'fs';
 import { toolHandlers } from './tools/toolHandlers.js';
 import { sqliteClient } from './db/sqliteClient.js';
+import { brainstormRAG } from './rag/brainstormRAG.js';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -119,6 +120,57 @@ app.post('/api/graph/update-positions', async (req, res) => {
   }
 });
 
+// ==========================================
+// RAG BRAINSTORM INGESTION & UPLOAD ROUTES
+// ==========================================
+app.get('/api/rag/documents', (req, res) => {
+  try {
+    const docs = brainstormRAG.listDocuments();
+    res.json({ documents: docs });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/rag/document/:filename', async (req, res) => {
+  try {
+    const content = await brainstormRAG.getDocumentContent(req.params.filename);
+    if (content === null) return res.status(404).json({ error: 'Tài liệu không tồn tại' });
+    res.json({ filename: req.params.filename, content });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/rag/ingest', async (req, res) => {
+  try {
+    const { filename, content } = req.body;
+    let docContent = content;
+    if (!docContent && filename) {
+      docContent = await brainstormRAG.getDocumentContent(filename);
+      if (!docContent) return res.status(404).json({ error: `Không tìm thấy file '${filename}' trong folder rag/` });
+    }
+    if (!docContent) return res.status(400).json({ error: 'Vui lòng cung cấp nội dung tài liệu hoặc tên file trong rag/' });
+
+    const result = await brainstormRAG.ingestDocument(docContent, filename);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/rag/upload', async (req, res) => {
+  try {
+    const { filename, content } = req.body;
+    if (!filename || !content) return res.status(400).json({ error: 'Thiếu filename hoặc content' });
+
+    const result = await brainstormRAG.saveAndIngest(filename, content);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Phục vụ frontend bundle đã build khi chạy dạng plugin độc lập hoặc nhúng webview
 const FRONTEND_DIST = path.resolve(process.cwd(), '../frontend/dist');
 if (fs.existsSync(FRONTEND_DIST)) {
@@ -128,7 +180,11 @@ if (fs.existsSync(FRONTEND_DIST)) {
   });
 }
 
-app.listen(PORT, () => {
-  console.log(`[DSH Plugin Backend] Máy chủ đang chạy tại http://localhost:${PORT}`);
-  console.log(`[DSH Plugin Backend] SQLite Cache: Sẵn sàng cho 0-token caching.`);
-});
+export { app };
+
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+  app.listen(PORT, () => {
+    console.log(`[DSH Plugin Backend] Máy chủ đang chạy tại http://localhost:${PORT}`);
+    console.log(`[DSH Plugin Backend] SQLite Cache: Sẵn sàng cho 0-token caching.`);
+  });
+}

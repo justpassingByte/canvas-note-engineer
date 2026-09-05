@@ -1,6 +1,16 @@
 import { sqliteClient } from '../db/sqliteClient.js';
 import { INITIAL_PAYMENT_GRAPH, DELTA_NODES_QUEUE_CACHE } from '../data/defaultGraph.js';
-import { GraphData, NodeEntity, EdgeEntity, ExpandPayload, PrunePayload, SpawnClusterPayload } from '../types/graphTypes.js';
+import {
+  GraphData,
+  NodeEntity,
+  EdgeEntity,
+  ExpandPayload,
+  PrunePayload,
+  SpawnClusterPayload,
+  CompactSubCluster
+} from '../types/graphTypes.js';
+
+export const MAX_GRAPH_NODES = 12;
 
 /**
  * Chuẩn hóa nhãn phân tầng kiến trúc (Architectural Layer Standard)
@@ -13,8 +23,8 @@ export function sanitizeNodeLayerLabel(rawLabel?: string, contextHint?: string):
   let cleaned = (rawLabel || '').trim();
 
   // 1. Gỡ bỏ mọi tiền tố số bước
-  cleaned = cleaned.replace(/^(bước|buoc|step)\s*[\d\.]+\s*(\/\/|:|-)?\s*/i, '');
-  cleaned = cleaned.replace(/^[\d\.]+\s*(\/\/|:|-)\s*/i, '');
+  cleaned = cleaned.replace(/^(bước|buoc|step)\s*[\d\.]+\s*(\/{2}|:|-)?\s*/i, '');
+  cleaned = cleaned.replace(/^[\d\.]+\s*(\/{2}|:|-)\s*/i, '');
   cleaned = cleaned.trim();
 
   // 2. Nhận diện các phân tầng kiến trúc cốt lõi nếu nhãn rỗng hoặc chứa từ khóa
@@ -86,13 +96,17 @@ export function sanitizeProtocolEdgeLabel(rawLabel?: string): string {
 }
 
 /**
- * BỘ KIỂM DUYỆT LIÊN KẾT 3 LỚP (NGĂN CHẶN DEEPSEEK GEN LIÊN KẾT LOẠN XẠ)
+ * BỘ KIỂM DUYỆT LIÊN KẾT 4 LỚP (BOUNDED CONTEXT & ANTI-HALLUCINATION DEFENSE)
  * 1. Chống tự trỏ (from !== to) & kiểm tra ID phải tồn tại
  * 2. Chống cạnh trùng lặp & chu trình đảo ngược trực tiếp (A -> B -> A)
- * 3. Chuẩn hóa nhãn và ép kiểu phân loại liên kết kiến trúc
+ * 3. Ngăn chặn Cross-Wiring vào Sub-cluster nội tạng của Cụm khác (Bounded Context Isolation)
+ * 4. Chuẩn hóa nhãn và ép kiểu phân loại liên kết kiến trúc
  */
 export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeEntity[]): EdgeEntity[] {
-  const nodeIds = new Set(allNodes.map(n => n.id));
+  const nodeMap = new Map<string, NodeEntity>();
+  for (const n of allNodes) {
+    nodeMap.set(n.id, n);
+  }
   const seenEdges = new Set<string>();
   const sanitized: EdgeEntity[] = [];
 
@@ -104,7 +118,7 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
     }
 
     // Lớp 1b: Kiểm tra ID nguồn và đích có tồn tại trong tập node không
-    if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
+    if (!nodeMap.has(edge.from) || !nodeMap.has(edge.to)) {
       console.warn(`[Edge Validator] Bỏ qua cạnh có ID không hợp lệ: ${edge.from} -> ${edge.to}`);
       continue;
     }
@@ -122,6 +136,31 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
       continue;
     }
 
+    const fromNode = nodeMap.get(edge.from)!;
+    const toNode = nodeMap.get(edge.to)!;
+
+    // Lớp 3: Bounded Context Isolation (Phương án B: Shared Infrastructure & Cluster Boundary)
+    // CẤM cắm dây xuyên cụm trực tiếp vào sub-cluster nội tạng private của cụm khác
+    const isDifferentDomain = fromNode.domain_id && toNode.domain_id && fromNode.domain_id !== toNode.domain_id;
+    const isDifferentCluster = fromNode.cluster_id && toNode.cluster_id && fromNode.cluster_id !== toNode.cluster_id;
+
+    if (isDifferentDomain || isDifferentCluster) {
+      // Nếu toNode là private sub-cluster của service khác và không phải Shared Infrastructure
+      const isTargetPrivateSubCluster = Boolean(
+        toNode.sub_cluster_id &&
+        !toNode.is_public_interface &&
+        toNode.cluster_id !== 'cum-shared-infrastructure' &&
+        toNode.domain_id !== 'domain-shared-infra'
+      );
+
+      if (isTargetPrivateSubCluster) {
+        console.warn(
+          `[Edge Validator] BỊ CHẶN (Bounded Context Violation): Node '${fromNode.tieu_de}' (${fromNode.cluster_id}) không được phép cắm dây trực tiếp vào Sub-Cluster nội tạng '${toNode.tieu_de}' của Cụm '${toNode.cluster_id}'. Phải giao tiếp qua Public Gateway hoặc dùng Cụm Hạ Tầng Dùng Chung (Shared Infra).`
+        );
+        continue;
+      }
+    }
+
     seenEdges.add(edgeKey);
     sanitized.push({
       ...edge,
@@ -133,8 +172,6 @@ export function validateAndSanitizeEdges(allNodes: NodeEntity[], rawEdges: EdgeE
 
   return sanitized;
 }
-
-export const MAX_GRAPH_NODES = 24;
 
 /**
  * Thuật toán tìm ô trống thông minh chống đè node (Collision-Free Spiral Slot Finder)
@@ -152,7 +189,6 @@ export function findSafeNodePosition(
     return { x: Math.round(preferredX), y: Math.round(preferredY) };
   }
 
-  // Quét xoắn ốc tìm ô trống không chồng lấn
   const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2, Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4];
   for (let r = 320; r <= 2500; r += 280) {
     for (const a of angles) {
@@ -180,37 +216,47 @@ export interface SpawnPayload {
   trac_nghiem?: any;
   schematic_template?: string;
   schematic_params?: Record<string, string>;
+  domain_id?: string;
+  cluster_id?: string;
+  sub_cluster_id?: string;
+  is_public_interface?: boolean;
+  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker';
+}
+
+function createCleanGraph(topic?: string): GraphData {
+  return {
+    id: 'graph-interactive-workspace',
+    topic: topic || 'Kiến Trúc Hệ Thống Phân Tán',
+    nodes: [],
+    edges: []
+  };
 }
 
 export const toolHandlers = {
   /**
-   * Tạo hoặc nạp đồ thị tri thức gốc (3-5 nodes)
-   * Tự động kiểm tra Cache SQLite trước để đạt 0 token
+   * Tạo hoặc nạp đồ thị tri thức (Tự động nạp từ SQLite Cache)
+   * 0 token tiêu thụ
    */
   async createKnowledgeGraph(topic?: string): Promise<{ graph: GraphData; from_cache: boolean }> {
     const existing = sqliteClient.getCurrentGraph();
-    if (existing && (!topic || existing.topic.toLowerCase().includes(topic.toLowerCase()))) {
-      return { graph: existing, from_cache: true };
+    if (existing) {
+      if (!topic || existing.topic.toLowerCase().includes(topic.toLowerCase())) {
+        return { graph: existing, from_cache: true };
+      }
     }
 
-    // Khởi tạo đồ thị trống trong SQLite, không seed dữ liệu dịch cứng
-    const initialGraph: GraphData = {
-      id: 'graph-interactive-workspace',
-      topic: topic || 'Kiến Trúc Hệ Thống Phân Tán',
-      nodes: [],
-      edges: []
-    };
-
+    // Khởi tạo đồ thị sạch 100% không hardcode
+    const initialGraph = createCleanGraph(topic);
     sqliteClient.saveGraph(initialGraph);
     return { graph: initialGraph, from_cache: false };
   },
 
   /**
    * Mở rộng 1-2 node delta từ node mục tiêu
-   * Tiết kiệm >90% token: chỉ sinh delta và gắn vào SQLite sau khi kiểm duyệt 3 lớp
+   * Tiết kiệm >90% token: chỉ sinh delta và gắn vào SQLite sau khi kiểm duyệt 4 lớp
    */
   async expandConceptNode(payload: ExpandPayload): Promise<{ graph: GraphData; expanded: boolean; message: string }> {
-    const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+    const current = sqliteClient.getCurrentGraph() || createCleanGraph();
 
     // Rào cản bão hòa toàn đồ thị (Anti-Hallucination Capacity Cap)
     if (current.nodes.length >= MAX_GRAPH_NODES) {
@@ -251,11 +297,11 @@ export const toolHandlers = {
   },
 
   /**
-   * Spawn động một Node mới (ví dụ: Node Chống DDoS, Rate Limiter, WAF)
-   * Tự động nối dây thông minh (Smart-Attachment) vào node phù hợp và kiểm duyệt 3 lớp
+   * Spawn động một Node mới (ví dụ: Node Chống DDoS, Rate Limiter, WAF, Zero Trust)
+   * Tự động gán Domain/Cluster và kiểm duyệt Bounded Context
    */
   async spawnConceptNode(payload: SpawnPayload): Promise<{ graph: GraphData; spawned: boolean; message: string; node?: NodeEntity }> {
-    const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+    const current = sqliteClient.getCurrentGraph() || createCleanGraph();
 
     // Rào cản bão hòa an toàn (Anti-Hallucination Capacity Cap)
     if (current.nodes.length >= MAX_GRAPH_NODES) {
@@ -267,8 +313,6 @@ export const toolHandlers = {
     }
 
     const typeLower = (payload.concept_type || 'ddos').toLowerCase();
-
-    // Nếu người dùng chỉ định target cụ thể thì mới nối dây, nếu không thì tạo Node Độc Lập
     const targetSlug = payload.target_concept_slug;
     let targetNode: NodeEntity | undefined = undefined;
 
@@ -278,15 +322,25 @@ export const toolHandlers = {
         return { graph: current, spawned: false, message: `Node đích '${targetSlug}' không tồn tại trong đồ thị.` };
       }
 
-      // Cho phép mở rộng linh hoạt không bị chặn cứng
+      // Saturation Lock: Kiểm tra nếu targetNode đã fully_explored thì từ chối mở rộng thêm
+      if (targetNode.fully_explored) {
+        return {
+          graph: current,
+          spawned: false,
+          node: targetNode,
+          message: `Node '${targetNode.tieu_de}' đã bão hòa và bị khóa (Saturation Lock). 0 token tiêu thụ.`
+        };
+      }
     }
 
-    const existingDb = current.nodes.find(n => n.id === 'node-tru-db' || n.bieu_tuong === 'khoi_tru_database');
-    const existingCache = current.nodes.find(n => n.id === 'node-cache' || n.id.includes('redis') || n.bieu_tuong === 'bo_nho_dem_cache');
-    const existingQueue = current.nodes.find(n => n.id === 'node-queue' || n.id.includes('queue') || n.bieu_tuong === 'hang_doi_message_queue');
+    // Chỉ tìm kiếm tái sử dụng hạ tầng trong Cụm Hạ Tầng Dùng Chung (Option B: Shared Infrastructure Platform)
+    const infraNodes = current.nodes.filter(n => n.cluster_id?.includes('infra') || n.cluster_id === 'cum-shared-infrastructure' || n.domain_id === 'domain-shared-infra');
+    const existingDb = infraNodes.find(n => n.id.includes('db') || n.id.includes('postgres') || n.id.includes('acid') || n.bieu_tuong === 'khoi_tru_database');
+    const existingCache = infraNodes.find(n => n.id.includes('redis') || n.id.includes('cache') || n.bieu_tuong === 'bo_nho_dem_cache');
+    const existingQueue = infraNodes.find(n => n.id.includes('queue') || n.id.includes('kafka') || n.bieu_tuong === 'hang_doi_message_queue');
 
-    // 1. TÁI SỬ DỤNG THÔNG MINH (SMART REUSE) - TUYỆT ĐỐI KHÔNG TRÙNG LẶP HẠ TẦNG
-    if (typeLower.includes('db') || typeLower.includes('database') || typeLower.includes('acid')) {
+    // 1. TÁI SỬ DỤNG HẠ TẦNG CHUNG NẾU LÀ REQUEST HẠ TẦNG THUẦN TÚY
+    if (typeLower === 'db' || typeLower === 'database' || typeLower === 'postgres') {
       if (existingDb) {
         const addedEdges: EdgeEntity[] = [];
         if (targetNode && targetNode.id !== existingDb.id) {
@@ -298,12 +352,8 @@ export const toolHandlers = {
             loai_lien_ket: 'LUU_TRU'
           });
         }
-        const validated = addedEdges.length > 0
-          ? validateAndSanitizeEdges(current.nodes, addedEdges)
-          : [];
-        const updated = validated.length > 0
-          ? sqliteClient.addDeltaNodes(current.id, null, [], validated)
-          : current;
+        const validated = addedEdges.length > 0 ? validateAndSanitizeEdges(current.nodes, addedEdges) : [];
+        const updated = validated.length > 0 ? sqliteClient.addDeltaNodes(current.id, null, [], validated) : current;
 
         return {
           graph: updated || current,
@@ -314,7 +364,7 @@ export const toolHandlers = {
       }
     }
 
-    if (typeLower.includes('cache') || typeLower.includes('redis')) {
+    if (typeLower === 'cache' || typeLower === 'redis') {
       if (existingCache) {
         const addedEdges: EdgeEntity[] = [];
         if (targetNode && targetNode.id !== existingCache.id) {
@@ -326,12 +376,8 @@ export const toolHandlers = {
             loai_lien_ket: 'HOA_GIAI'
           });
         }
-        const validated = addedEdges.length > 0
-          ? validateAndSanitizeEdges(current.nodes, addedEdges)
-          : [];
-        const updated = validated.length > 0
-          ? sqliteClient.addDeltaNodes(current.id, null, [], validated)
-          : current;
+        const validated = addedEdges.length > 0 ? validateAndSanitizeEdges(current.nodes, addedEdges) : [];
+        const updated = validated.length > 0 ? sqliteClient.addDeltaNodes(current.id, null, [], validated) : current;
 
         return {
           graph: updated || current,
@@ -342,40 +388,10 @@ export const toolHandlers = {
       }
     }
 
-    if (typeLower.includes('queue') || typeLower.includes('kafka') || typeLower.includes('rabbit')) {
-      if (existingQueue) {
-        const addedEdges: EdgeEntity[] = [];
-        if (targetNode && targetNode.id !== existingQueue.id) {
-          addedEdges.push({
-            from: targetNode.id,
-            to: existingQueue.id,
-            nhan: 'Đẩy vào Queue bất đồng bộ',
-            kieu: 'duong-xung-em-ai',
-            loai_lien_ket: 'HOA_GIAI'
-          });
-        }
-        const validated = addedEdges.length > 0
-          ? validateAndSanitizeEdges(current.nodes, addedEdges)
-          : [];
-        const updated = validated.length > 0
-          ? sqliteClient.addDeltaNodes(current.id, null, [], validated)
-          : current;
-
-        return {
-          graph: updated || current,
-          spawned: true,
-          message: `Đã tái sử dụng node Message Queue duy nhất ('${existingQueue.tieu_de}')!`,
-          node: existingQueue
-        };
-      }
-    }
-
-    // Xây dựng Cụm Chủ Đề hoàn chỉnh (Root Node + Child Node / Shared Infrastructure Attachment)
     const timestamp = Date.now().toString().slice(-4);
     const slotsAvailable = MAX_GRAPH_NODES - current.nodes.length;
     const canSpawnChild = slotsAvailable >= 2;
 
-    // Tọa độ ưu tiên vị trí click chuột của người dùng, hoặc tìm ô trống thông minh gần targetNode
     let preferredX = payload.position?.x ?? 100;
     let preferredY = payload.position?.y ?? -200;
 
@@ -408,6 +424,10 @@ export const toolHandlers = {
 
       rootNode = {
         id: rootId,
+        domain_id: 'domain-auth',
+        cluster_id: 'cum-zero-trust',
+        is_public_interface: true,
+        infra_type: 'gateway',
         bieu_tuong: 'khien_bao_ve',
         tieu_de: payload.title || 'Cổng Zero Trust Gateway',
         nhan_buoc: 'SECURITY / ZERO-TRUST',
@@ -450,6 +470,11 @@ export const toolHandlers = {
       if (canSpawnChild) {
         childNode = {
           id: childId,
+          domain_id: 'domain-auth',
+          cluster_id: 'cum-zero-trust',
+          sub_cluster_id: 'sub-auth-pdp',
+          is_public_interface: false,
+          infra_type: 'service',
           bieu_tuong: 'bo_nho_dem_cache',
           tieu_de: 'Dịch vụ Token JWT & PDP',
           nhan_buoc: 'SECURITY / IDENTITY',
@@ -499,7 +524,6 @@ export const toolHandlers = {
         });
       }
 
-      // Nối dây sang Redis Cache sẵn có nếu có (Multi-parent: Gateway dùng chung Redis Blacklist)
       if (existingCache) {
         newEdges.push({
           from: rootId,
@@ -524,6 +548,10 @@ export const toolHandlers = {
 
       rootNode = {
         id: rootId,
+        domain_id: 'domain-edge',
+        cluster_id: 'cum-edge-waf',
+        is_public_interface: true,
+        infra_type: 'gateway',
         bieu_tuong: 'khien_bao_ve',
         tieu_de: payload.title || 'Lá chắn WAF & Chống DDoS',
         nhan_buoc: 'EDGE / WAF RATE LIMIT',
@@ -563,57 +591,11 @@ export const toolHandlers = {
         }
       };
 
-      // TÁI SỬ DỤNG NODE CACHE NẾU CÓ (Multi-parent: WAF và Idempotency cùng trỏ vào Redis)
       if (existingCache) {
         newEdges.push({
           from: rootId,
           to: existingCache.id,
           nhan: 'Token Bucket Ingress Count',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'DEM_LOC'
-        });
-      } else if (canSpawnChild) {
-        const childId = `node-rate-limiter-${timestamp}`;
-        childNode = {
-          id: childId,
-          bieu_tuong: 'bo_nho_dem_cache',
-          tieu_de: 'Bộ lọc Rate Limiting trượt',
-          nhan_buoc: 'EDGE / TRAFFIC SHAPING',
-          tom_tat: 'Thuật toán Token Bucket giới hạn tần suất gọi API tối đa 10 req/s mỗi IP.',
-          toa_do: { x: defaultX + 260, y: defaultY },
-          tam: { x: defaultX + 370, y: defaultY + 72 },
-          fully_explored: false,
-          parent_id: rootId,
-          hoat_hoa: {
-            mau: 'rate_limit_sliding',
-            tham_so: {
-              client: 'API CLIENT',
-              waf: 'SLIDING WINDOW',
-              cache: 'REDIS RAM BUCKET',
-              drop: 'DROP 429',
-              pass: 'ALLOW 200'
-            }
-          },
-          chi_tiet: {
-            phan_loai: 'CỔNG BẢO VỆ BIÊN & CHỐNG DDOS',
-            tieu_de: 'Bộ lọc Rate Limiting trượt',
-            ban_chat: 'Triển khai Sliding Window Counter trong Redis để giới hạn lưu lượng theo từng IP hoặc API Key.',
-            chu_thich_so_do: 'Thành phần điều tiết lưu lượng chi tiết trong cụm phòng thủ',
-            ca_thuc_te: ['Ngăn chặn người dùng spam nút Thanh toán hàng trăm lần mỗi giây'],
-            rui_ro: ['Các IP đứng sau NAT gateway chung của mạng công ty có thể bị chặn oan']
-          },
-          trac_nghiem: {
-            cau_hoi: 'Thuật toán nào sau đây phù hợp nhất để Rate Limiting phân tán theo cửa sổ trượt?',
-            lua_chon: ['Sliding Window Counter / Token Bucket', 'Sequential File Lock'],
-            dung: 0,
-            giai_thich: 'Token Bucket và Sliding Window cho phép xử lý các đợt bùng nổ lưu lượng ngắn an toàn.'
-          }
-        };
-
-        newEdges.push({
-          from: rootId,
-          to: childId,
-          nhan: 'Sliding Window Rate Limit',
           kieu: 'duong-xung-em-ai',
           loai_lien_ket: 'DEM_LOC'
         });
@@ -633,6 +615,10 @@ export const toolHandlers = {
 
       rootNode = {
         id: rootId,
+        domain_id: 'domain-observability',
+        cluster_id: 'cum-audit-log',
+        is_public_interface: true,
+        infra_type: 'service',
         bieu_tuong: 'ghi_chep_so_sach' as any,
         tieu_de: payload.title || 'Nhật ký Kiểm toán & Audit Log',
         nhan_buoc: 'OBSERVABILITY / AUDIT LOG',
@@ -671,7 +657,6 @@ export const toolHandlers = {
         }
       };
 
-      // TÁI SỬ DỤNG TRỤ ACID DUY NHẤT (Multi-parent: Audit Log và Idempotency cùng ghi vào DB)
       if (existingDb) {
         newEdges.push({
           from: rootId,
@@ -681,95 +666,40 @@ export const toolHandlers = {
           loai_lien_ket: 'LUU_TRU'
         });
       }
-
-      if (canSpawnChild) {
-        const childId = `node-tamper-proof-${timestamp}`;
-        childNode = {
-          id: childId,
-          bieu_tuong: 'khien_bao_ve',
-          tieu_de: 'Kho Lưu trữ Ký số Mật mã',
-          nhan_buoc: 'SECURITY / IMMUTABILITY',
-          tom_tat: 'Ký số hàm băm mật mã học chuỗi log (Hash Chain) đảm bảo tính toàn vẹn bất biến.',
-          toa_do: { x: defaultX + 260, y: defaultY },
-          tam: { x: defaultX + 370, y: defaultY + 72 },
-          fully_explored: false,
-          parent_id: rootId,
-          hoat_hoa: {
-            mau: 'audit_hash_chain',
-            tham_so: {
-              event: 'MERKLE BLOCK',
-              hash_node: 'HMAC ENGINE',
-              chain: 'HASH TREE LINK',
-              immutability: 'PROOF VALID'
-            }
-          },
-          chi_tiet: {
-            phan_loai: 'HẠ TẦNG KIỂM TOÁN & TUÂN THỦ',
-            tieu_de: 'Kho Lưu trữ Ký số Mật mã',
-            ban_chat: 'Liên kết từng block sự kiện bằng SHA-256 HMAC, bất kỳ hành vi sửa đổi nào ở quá khứ sẽ làm gãy toàn bộ chuỗi chứng thực.',
-            chu_thich_so_do: 'Thành phần bảo mật toàn vẹn log kiểm toán',
-            ca_thuc_te: ['Cung cấp bằng chứng pháp lý không thể chối bỏ khi có tranh chấp gian lận'],
-            rui_ro: ['Hiệu năng tính toán hàm băm khi lưu lượng giao dịch đạt hàng chục ngàn req/s']
-          },
-          trac_nghiem: {
-            cau_hoi: 'Giải thuật nào thường dùng để phát hiện nhanh việc một bản ghi log trong quá khứ bị sửa đổi?',
-            lua_chon: ['Chuỗi băm liên kết Merkle Tree / Hash Chain', 'Tìm kiếm nhị phân tuần tự'],
-            dung: 0,
-            giai_thich: 'Merkle Tree và Hash Chain cho phép xác thực tính toàn vẹn của dữ liệu trong thời gian O(log N).'
-          }
-        };
-
-        newEdges.push({
-          from: rootId,
-          to: childId,
-          nhan: 'Cryptographic Hash Verification',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'LUU_TRU'
-        });
-      }
     } else {
-      // Concept mở rộng linh hoạt cho bất kỳ chủ đề mới nào
       const cleanSlug = typeLower.replace(/[^a-z0-9]/g, '-');
       const formattedTitle = payload.title || payload.concept_type.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
       const rootId = `node-${cleanSlug}-${timestamp}`;
 
-      // Tự động nhận diện template cho concept mới (ví dụ: refresh_token -> oauth2_oidc hoặc token_blacklist)
       let autoTemplate = 'default';
       let autoParams: Record<string, string> = {
         actor: 'CLIENT APP',
         component: formattedTitle.toUpperCase(),
-        target: 'SECURE AUTH MESH',
-        status: 'TOKEN VERIFIED'
+        target: 'DOWNSTREAM SERVICE',
+        status: 'VERIFIED'
       };
 
       if (typeLower.includes('token') || typeLower.includes('refresh') || typeLower.includes('session') || typeLower.includes('rotation')) {
         autoTemplate = 'oauth2_oidc';
-        autoParams = {
-          client: 'CLIENT APP',
-          auth_server: formattedTitle.toUpperCase(),
-          token: 'ROTATED TOKEN PAIR'
-        };
+        autoParams = { client: 'CLIENT APP', auth_server: formattedTitle.toUpperCase(), token: 'ROTATED TOKEN PAIR' };
       } else if (typeLower.includes('blacklist') || typeLower.includes('revoc') || typeLower.includes('thu-hoi')) {
         autoTemplate = 'token_blacklist';
-        autoParams = {
-          token_jti: 'BEARER JTI',
-          cache_store: formattedTitle.toUpperCase()
-        };
+        autoParams = { token_jti: 'BEARER JTI', cache_store: formattedTitle.toUpperCase() };
       } else if (typeLower.includes('policy') || typeLower.includes('pdp') || typeLower.includes('rbac') || typeLower.includes('abac')) {
         autoTemplate = 'pdp_policy';
-        autoParams = {
-          subject: 'USER CLAIMS',
-          engine: formattedTitle.toUpperCase(),
-          decision: 'PERMIT ACCESS'
-        };
+        autoParams = { subject: 'USER CLAIMS', engine: formattedTitle.toUpperCase(), decision: 'PERMIT ACCESS' };
       }
 
       rootNode = {
         id: rootId,
-        cluster_id: targetNode?.cluster_id,
+        domain_id: payload.domain_id || targetNode?.domain_id || `domain-${cleanSlug}`,
+        cluster_id: payload.cluster_id || targetNode?.cluster_id,
+        sub_cluster_id: payload.sub_cluster_id,
+        is_public_interface: payload.is_public_interface ?? !targetNode,
+        infra_type: payload.infra_type || 'service',
         bieu_tuong: 'khien_bao_ve',
         tieu_de: formattedTitle,
-        nhan_buoc: sanitizeNodeLayerLabel(payload.category || targetNode?.nhan_buoc || 'SECURITY / TOKEN ROTATION', formattedTitle),
+        nhan_buoc: sanitizeNodeLayerLabel(payload.category || targetNode?.nhan_buoc || 'SECURITY / COMPONENT', formattedTitle),
         tom_tat: payload.description || `Mô-đun kiến trúc ${formattedTitle} nâng cao bảo mật toàn hệ thống.`,
         toa_do: { x: defaultX, y: defaultY },
         tam: { x: defaultX + 110, y: defaultY + 72 },
@@ -782,27 +712,27 @@ export const toolHandlers = {
         chi_tiet: {
           phan_loai: payload.category || (targetNode ? targetNode.chi_tiet.phan_loai : `Phân hệ ${formattedTitle}`),
           tieu_de: formattedTitle,
-          ban_chat: payload.ban_chat || payload.description || `Thực thi cơ chế ${formattedTitle} nhằm tăng cường tính toàn vẹn và ngăn chặn các nguy cơ tấn công chiếm đoạt phiên.`,
+          ban_chat: payload.ban_chat || payload.description || `Thực thi cơ chế ${formattedTitle} tăng cường tính toàn vẹn hệ thống.`,
           chu_thich_so_do: `Mô hình luồng thực thi chuyên sâu của ${formattedTitle}`,
           ca_thuc_te: payload.ca_thuc_te || [
-            `Áp dụng quy trình xoay vòng token một lần dùng (One-Time Use) cho ${formattedTitle}`,
-            'Tự động thu hồi phiên và cô lập rủi ro khi phát hiện hành vi tái sử dụng token bất thường'
+            `Áp dụng quy trình chuẩn cho ${formattedTitle}`,
+            'Tự động cô lập rủi ro khi phát hiện bất thường'
           ],
           rui_ro: payload.rui_ro || [
-            'Cần xử lý độ trễ mạng tránh race condition khi client gửi nhiều request refresh đồng thời'
+            'Cần xử lý độ trễ mạng tránh race condition khi chịu tải cao'
           ],
           chuoi_sup_do: payload.chuoi_sup_do || [
-            `1. Lỗ hổng trong quy trình quản lý phiên ${formattedTitle} bị khai thác.`,
-            '2. Kẻ tấn công chiếm đoạt quyền truy cập dài hạn của người dùng.',
-            '3. Dữ liệu nhạy cảm có nguy cơ bị rò rỉ trái phép.',
-            '4. Buộc phải thu hồi diện rộng toàn bộ phiên đăng nhập của người dùng.'
+            `1. Lỗ hổng trong quy trình ${formattedTitle} bị khai thác.`,
+            '2. Ảnh hưởng lan truyền đến các luồng phụ thuộc phía sau.',
+            '3. Dữ liệu nhạy cảm có nguy cơ bị rò rỉ hoặc nghẽn hàng đợi.',
+            '4. Hệ thống suy giảm hiệu năng trên diện rộng.'
           ]
         },
         trac_nghiem: payload.trac_nghiem || {
           cau_hoi: `Nguyên tắc an ninh cốt lõi khi vận hành '${formattedTitle}' là gì?`,
-          lua_chon: ['Đảm bảo nguyên tắc một lần dùng (One-Time Use) và thu hồi tức thì', 'Cho phép sử dụng lại token cũ nhiều lần'],
+          lua_chon: ['Đảm bảo tính toàn vẹn và kiểm soát chặt chẽ trạng thái', 'Bỏ qua kiểm tra để tăng tốc độ tối đa'],
           dung: 0,
-          giai_thich: 'Cơ chế xoay vòng token bắt buộc token cũ phải bị vô hiệu hóa ngay khi token mới được phát hành để triệt tiêu nguy cơ Replay Attack.'
+          giai_thich: `Cơ chế của ${formattedTitle} yêu cầu kiểm soát chặt chẽ trạng thái để triệt tiêu lỗ hổng.`
         }
       };
 
@@ -814,28 +744,27 @@ export const toolHandlers = {
       newEdges.push({
         from: targetNode.id,
         to: rootNode.id,
-        nhan: 'RTR Rotation Flow',
+        nhan: 'Tích hợp phân hệ',
         kieu: 'duong-xung-em-ai',
         loai_lien_ket: 'HOA_GIAI',
-        giai_thich: `Mở rộng tích hợp từ <u>${targetNode.tieu_de}</u> sang <u>${rootNode.tieu_de}</u> tăng cường bảo mật phiên và chống Replay Attack.`
+        giai_thich: `Mở rộng tích hợp từ <u>${targetNode.tieu_de}</u> sang <u>${rootNode.tieu_de}</u>.`
       });
     }
 
-    // Chuẩn hóa nhãn lớp cho tất cả node sinh ra
     rootNode.nhan_buoc = sanitizeNodeLayerLabel(rootNode.nhan_buoc, rootNode.tieu_de);
     if (childNode) {
       childNode.nhan_buoc = sanitizeNodeLayerLabel(childNode.nhan_buoc, childNode.tieu_de);
     }
 
     const allSpawnedNodes = childNode ? [rootNode, childNode] : [rootNode];
-
-    // Kiểm duyệt liên kết 3 lớp
     const allGraphNodes = [...current.nodes, ...allSpawnedNodes];
-    const validatedEdges = newEdges.length > 0
-      ? validateAndSanitizeEdges(allGraphNodes, newEdges)
-      : [];
+    const validatedEdges = newEdges.length > 0 ? validateAndSanitizeEdges(allGraphNodes, newEdges) : [];
 
-    // Lưu vào SQLite
+    // Khóa targetNode nếu có mở rộng từ nó (Saturation Lock)
+    if (targetNode) {
+      targetNode.fully_explored = true;
+    }
+
     const updated = sqliteClient.addDeltaNodes(
       current.id,
       targetSlug || null,
@@ -858,7 +787,7 @@ export const toolHandlers = {
    * 100% cục bộ, 0 token
    */
   async pruneKnowledgeGraph(payload: PrunePayload): Promise<{ graph: GraphData; success: boolean; message: string }> {
-    const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+    const current = sqliteClient.getCurrentGraph() || createCleanGraph();
 
     if (payload.action === 'collapse') {
       const updated = sqliteClient.updateNodeCollapse(current.id, payload.node_id, true);
@@ -891,9 +820,9 @@ export const toolHandlers = {
   },
 
   /**
-   * Sinh Cụm Phân Hệ hoàn chỉnh (Cluster Spawning Engine)
-   * Sử dụng Compact Intent Schema: Tiết kiệm >85% token.
-   * Tự động tính toán vị trí, liên kết nội bộ và cắm dây vào hạ tầng chung (Cache / Queue / DB).
+   * Sinh Cụm Phân Hệ hoàn chỉnh (Hierarchical Cluster & Multi-Cluster Spawning Engine - Phương án B)
+   * Hỗ trợ spawn đồng thời Cụm Dịch Vụ và các Cụm Con / Cụm Hạ Tầng Liên Quan (Multi-Cluster / Sub-Cluster Spawning).
+   * Tự động cô lập Bounded Context và cắm dây chuẩn hóa qua Public Contract.
    */
   async spawnConceptCluster(payload: SpawnClusterPayload): Promise<{
     graph: GraphData;
@@ -901,7 +830,7 @@ export const toolHandlers = {
     cluster_id: string;
     message: string;
   }> {
-    const current = sqliteClient.getCurrentGraph() || INITIAL_PAYMENT_GRAPH;
+    const current = sqliteClient.getCurrentGraph() || createCleanGraph();
     const slotsAvailable = MAX_GRAPH_NODES - current.nodes.length;
     if (slotsAvailable <= 0) {
       return {
@@ -931,8 +860,9 @@ export const toolHandlers = {
     }
 
     const clusterId = `cum-${slugBase}-${timestamp}`;
+    const domainId = payload.domain_id || `domain-${slugBase}`;
 
-    // Xác định vị trí xuất phát - Khoảng cách an toàn giữa các cụm kiến trúc (chống dính cụm)
+    // Tọa độ xuất phát
     const startX = payload.position?.x ?? 100;
     const startY = payload.position?.y ?? (current.nodes.length > 0 ? Math.min(...current.nodes.map(n => n.toa_do.y)) - 450 : 150);
 
@@ -940,7 +870,7 @@ export const toolHandlers = {
     const spawnedNodes: NodeEntity[] = [];
     const newEdges: EdgeEntity[] = [];
 
-    // 1. Khởi tạo các Node trong Cụm - Bố cục lưới 2D cân đối (2x2 Grid khi có >= 4 node)
+    // 1. Khởi tạo các Node trong Cụm Dịch vụ Chính (Service Cluster)
     const cols = nodesToSpawn.length >= 4 ? 2 : (nodesToSpawn.length === 3 ? 3 : 2);
     nodesToSpawn.forEach((cNode, idx) => {
       const nodeSlug = cNode.title
@@ -955,7 +885,6 @@ export const toolHandlers = {
       const posX = startX + col * 320;
       const posY = startY + row * 260;
 
-      // Nhận diện biểu tượng thích hợp
       let badge: NodeEntity['bieu_tuong'] = 'khien_bao_ve';
       const roleLower = (cNode.role || '').toLowerCase();
       const titleLower = cNode.title.toLowerCase();
@@ -972,7 +901,6 @@ export const toolHandlers = {
         badge = 'khoi_tru_database';
       }
 
-      // Tự động nhận diện template lược đồ tương thích hoàn hảo với vai trò kỹ thuật
       let resolvedTemplate = cNode.schematic_template;
       let resolvedParams = cNode.schematic_params || {};
 
@@ -1010,9 +938,16 @@ export const toolHandlers = {
         }
       }
 
+      // Xác định Cổng Đối Ngoại: Node đầu tiên hoặc node mang vai trò Gateway/PEP/Ingress
+      const isPublic = cNode.is_public_interface ?? (idx === 0 || roleLower.includes('gateway') || roleLower.includes('pep') || roleLower.includes('ingress'));
+
       const entity: NodeEntity = {
         id: nodeId,
+        domain_id: domainId,
         cluster_id: clusterId,
+        sub_cluster_id: cNode.sub_cluster_id,
+        is_public_interface: isPublic,
+        infra_type: cNode.infra_type || (roleLower.includes('gateway') ? 'gateway' : 'service'),
         bieu_tuong: badge,
         tieu_de: cNode.title,
         nhan_buoc: sanitizeNodeLayerLabel(payload.cluster_name, cNode.title),
@@ -1054,62 +989,252 @@ export const toolHandlers = {
 
       spawnedNodes.push(entity);
 
-      // Cạnh nội bộ nối tuần tự các node trong cụm - Nhãn ngắn gọn kèm giải thích kỹ thuật
+      // Nối tuần tự các node trong Service Cluster
       if (idx > 0) {
         const prevNode = spawnedNodes[idx - 1];
-        const prevRole = prevNode.chi_tiet?.tieu_de?.slice(0, 10) || 'Flow';
-        const nextRole = cNode.title.slice(0, 10);
-        const compactLabel = cNode.role ? `${cNode.role} Flow` : `${prevRole} ➔ ${nextRole}`;
         newEdges.push({
           from: prevNode.id,
           to: nodeId,
-          nhan: compactLabel,
+          nhan: cNode.title,
           kieu: 'duong-xung-em-ai',
           loai_lien_ket: 'HOA_GIAI',
-          giai_thich: `Luồng tích hợp giữa <u>${prevNode.tieu_de}</u> và <u>${cNode.title}</u> bảo đảm vận hành thông suốt và an toàn kiến trúc trong phân hệ ${payload.cluster_name}.`
+          giai_thich: `Luồng tích hợp giữa <u>${prevNode.tieu_de}</u> và <u>${cNode.title}</u> trong phân hệ ${payload.cluster_name}.`
         });
       }
     });
 
-    // 2. Nối dây vào Hạ tầng Dùng chung (Zero Duplication)
-    const existingDb = current.nodes.find(n => n.id === 'node-tru-db' || n.bieu_tuong === 'khoi_tru_database');
-    const existingCache = current.nodes.find(n => n.id === 'node-cache' || n.id.includes('redis') || n.bieu_tuong === 'bo_nho_dem_cache');
-    const existingQueue = current.nodes.find(n => n.id === 'node-queue' || n.id.includes('queue') || n.bieu_tuong === 'hang_doi_message_queue');
+    // 2. Multi-Cluster Spawning: Khởi tạo các Cụm Con / Cụm Hạ Tầng Liên Quan (Sub-Clusters)
+    if (payload.sub_clusters && payload.sub_clusters.length > 0) {
+      let subOffsetIdx = 1;
+      for (const sub of payload.sub_clusters) {
+        const subSlug = (sub.name || 'sub')
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        const subClusterId = sub.sub_cluster_id || `sub-${subSlug}-${timestamp}`;
+        const subOffsetX = sub.position_offset?.x ?? (startX + (cols * 320) + 120);
+        const subOffsetY = sub.position_offset?.y ?? (startY + (subOffsetIdx - 1) * 260);
 
-    const connectInfra = payload.connect_to_shared_infra || [];
-    const pivotNode = spawnedNodes[spawnedNodes.length - 1] || spawnedNodes[0];
+        const subNodesToSpawn = sub.nodes.slice(0, MAX_GRAPH_NODES - (current.nodes.length + spawnedNodes.length));
+        const spawnedSubNodes: NodeEntity[] = [];
 
-    if (pivotNode) {
-      if (connectInfra.includes('cache') && existingCache) {
-        newEdges.push({
-          from: pivotNode.id,
-          to: existingCache.id,
-          nhan: 'Distributed Lock / Cache Buffer',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'HOA_GIAI'
+        subNodesToSpawn.forEach((sNode, sIdx) => {
+          const sNodeSlug = sNode.title
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '') || `sub-node-${sIdx}`;
+          const sNodeId = `node-${sNodeSlug}-${timestamp}`;
+          const sPosX = subOffsetX + sIdx * 300;
+          const sPosY = subOffsetY;
+
+          let sBadge: NodeEntity['bieu_tuong'] = 'bo_nho_dem_cache';
+          if (sub.infra_type === 'postgres' || sNode.infra_type === 'postgres') sBadge = 'khoi_tru_database';
+          if (sub.infra_type === 'kafka' || sNode.infra_type === 'kafka') sBadge = 'hang_doi_message_queue';
+
+          const sEntity: NodeEntity = {
+            id: sNodeId,
+            domain_id: domainId,
+            cluster_id: clusterId,
+            sub_cluster_id: subClusterId,
+            is_public_interface: false, // Node nội bộ sub-cluster được bảo vệ chống cross-wiring!
+            infra_type: sNode.infra_type || sub.infra_type || 'redis',
+            bieu_tuong: sBadge,
+            tieu_de: sNode.title,
+            nhan_buoc: sanitizeNodeLayerLabel(sub.name, sNode.title),
+            tom_tat: sNode.summary,
+            toa_do: { x: sPosX, y: sPosY },
+            tam: { x: sPosX + 110, y: sPosY + 72 },
+            fully_explored: true,
+            hoat_hoa: {
+              mau: sNode.schematic_template || (sub.infra_type === 'redis' ? 'token_blacklist' : 'default'),
+              tham_so: sNode.schematic_params || { store: sNode.title.toUpperCase() }
+            },
+            chi_tiet: {
+              phan_loai: sub.name.toUpperCase(),
+              tieu_de: sNode.title,
+              ban_chat: sNode.ban_chat || sNode.summary,
+              chu_thich_so_do: `Sub-Cluster ${sub.name} của ${payload.cluster_name}`,
+              ca_thuc_te: sNode.ca_thuc_te || [`Lưu trữ và phục vụ nội bộ cho phân hệ ${payload.cluster_name}`],
+              rui_ro: sNode.rui_ro || ['Cần đảm bảo đồng bộ trạng thái và TTL bộ nhớ']
+            },
+            trac_nghiem: sNode.trac_nghiem || {
+              cau_hoi: `Mục đích của sub-cluster '${sub.name}' là gì?`,
+              lua_chon: ['Cung cấp hạ tầng chuyên biệt cho dịch vụ cùng domain', 'Mở public cho toàn bộ Internet kết nối'],
+              dung: 0,
+              giai_thich: 'Sub-cluster thuộc Bounded Context riêng biệt của phân hệ.'
+            }
+          };
+
+          spawnedSubNodes.push(sEntity);
+          spawnedNodes.push(sEntity);
         });
-      }
-      if (connectInfra.includes('queue') && existingQueue) {
-        newEdges.push({
-          from: pivotNode.id,
-          to: existingQueue.id,
-          nhan: 'Async Ingestion Buffer',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'HOA_GIAI'
-        });
-      }
-      if (connectInfra.includes('db') && existingDb) {
-        newEdges.push({
-          from: pivotNode.id,
-          to: existingDb.id,
-          nhan: 'ACID State Persistence',
-          kieu: 'duong-xung-em-ai',
-          loai_lien_ket: 'LUU_TRU'
-        });
+
+        // Nối dây từ node phù hợp trong service cluster vào entry node của sub-cluster
+        if (spawnedSubNodes.length > 0 && spawnedNodes.length > 0) {
+          const serviceParentNode = spawnedNodes.find(n => !n.sub_cluster_id) || spawnedNodes[0];
+          newEdges.push({
+            from: serviceParentNode.id,
+            to: spawnedSubNodes[0].id,
+            nhan: `${sub.name} Pipeline`,
+            kieu: 'duong-xung-em-ai',
+            loai_lien_ket: 'LUU_TRU',
+            giai_thich: `Liên kết nội bộ phân hệ từ <u>${serviceParentNode.tieu_de}</u> sang Cụm con <u>${sub.name}</u>.`
+          });
+        }
+        subOffsetIdx++;
       }
     }
 
-    // 3. Kiểm duyệt và Lưu vào SQLite
+    // 3. Nối dây vào Cụm Hạ tầng Dùng chung (Option B: Shared Infrastructure Platform)
+    // NẾU CHƯA CÓ TRỤ HẠ TẦNG TRONG GRAPH, TỰ ĐỘNG TẠO NODE HẠ TẦNG DÙNG CHUNG!
+    const connectInfra = payload.connect_to_shared_infra || [];
+    let infraNodes = current.nodes.filter(n => n.cluster_id?.includes('infra') || n.cluster_id === 'cum-shared-infrastructure' || n.domain_id === 'domain-shared-infra');
+    let existingDb = infraNodes.find(n => n.id.includes('db') || n.id.includes('postgres') || n.id.includes('acid') || n.bieu_tuong === 'khoi_tru_database');
+    let existingCache = infraNodes.find(n => n.id.includes('redis') || n.id.includes('cache') || n.bieu_tuong === 'bo_nho_dem_cache');
+    let existingQueue = infraNodes.find(n => n.id.includes('queue') || n.id.includes('kafka') || n.bieu_tuong === 'hang_doi_message_queue');
+
+    if (connectInfra.length > 0) {
+      if (connectInfra.includes('cache')) {
+        if (!existingCache && spawnedNodes.length + current.nodes.length < MAX_GRAPH_NODES) {
+          const cacheId = 'node-shared-redis';
+          existingCache = {
+            id: cacheId,
+            domain_id: 'domain-shared-infra',
+            cluster_id: 'cum-shared-infrastructure',
+            is_public_interface: true,
+            infra_type: 'redis',
+            bieu_tuong: 'bo_nho_dem_cache',
+            tieu_de: 'Cụm Redis RAM Cache & Lock',
+            nhan_buoc: 'CACHE / DISTRIBUTED LOCK',
+            tom_tat: 'Bộ nhớ đệm tốc độ cao và phân phối khóa phân tán (Distributed Lock) toàn hệ thống.',
+            toa_do: { x: startX + 650, y: startY + 260 },
+            tam: { x: startX + 760, y: startY + 332 },
+            fully_explored: true,
+            hoat_hoa: { mau: 'doc_cache_nhanh', tham_so: { cache: 'REDIS MESH', toc_do: '1ms' } },
+            chi_tiet: {
+              phan_loai: 'HẠ TẦNG DÙNG CHUNG',
+              tieu_de: 'Cụm Redis RAM Cache & Lock',
+              ban_chat: 'Hạ tầng bộ nhớ đệm dùng chung cung cấp tốc độ phản hồi 1ms.',
+              chu_thich_so_do: 'Nền tảng hạ tầng kỹ thuật chung (Shared Infrastructure Platform)',
+              ca_thuc_te: ['Chia sẻ khóa phân tán cho các dịch vụ microservices'],
+              rui_ro: ['Tràn RAM nếu thiếu chính sách eviction LRU']
+            },
+            trac_nghiem: { cau_hoi: 'Redis dùng chung cho mục đích gì?', lua_chon: ['Distributed Lock & Cache', 'Lưu trữ lạnh'], dung: 0, giai_thich: 'Cache dùng chung.' }
+          };
+          spawnedNodes.push(existingCache);
+        }
+
+        if (existingCache) {
+          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('rate') || n.tieu_de.toLowerCase().includes('lock') || n.tieu_de.toLowerCase().includes('cache'))) || spawnedNodes[0];
+          if (clientNode && clientNode.id !== existingCache.id) {
+            newEdges.push({
+              from: clientNode.id,
+              to: existingCache.id,
+              nhan: 'Shared Cache / Lock',
+              kieu: 'duong-xung-em-ai',
+              loai_lien_ket: 'HOA_GIAI',
+              giai_thich: `Kết nối từ <u>${clientNode.tieu_de}</u> sang <u>${existingCache.tieu_de}</u> thuộc Cụm Hạ tầng Kỹ thuật dùng chung.`
+            });
+          }
+        }
+      }
+
+      if (connectInfra.includes('queue')) {
+        if (!existingQueue && spawnedNodes.length + current.nodes.length < MAX_GRAPH_NODES) {
+          const queueId = 'node-shared-queue';
+          existingQueue = {
+            id: queueId,
+            domain_id: 'domain-shared-infra',
+            cluster_id: 'cum-shared-infrastructure',
+            is_public_interface: true,
+            infra_type: 'kafka',
+            bieu_tuong: 'hang_doi_message_queue',
+            tieu_de: 'Hàng đợi Kafka Event Bus',
+            nhan_buoc: 'ASYNC / QUEUE BUFFER',
+            tom_tat: 'Băng chuyền sự kiện bất đồng bộ điều tiết lưu lượng và phân phối event liên dịch vụ.',
+            toa_do: { x: startX + 650, y: startY },
+            tam: { x: startX + 760, y: startY + 72 },
+            fully_explored: true,
+            hoat_hoa: { mau: 'hang_doi_dieu_tiet', tham_so: { buffer: 'KAFKA BUS', rate: '100k msg/s' } },
+            chi_tiet: {
+              phan_loai: 'HẠ TẦNG DÙNG CHUNG',
+              tieu_de: 'Hàng đợi Kafka Event Bus',
+              ban_chat: 'Event streaming platform cho toàn bộ hệ thống.',
+              chu_thich_so_do: 'Message Queue Platform',
+              ca_thuc_te: ['Đẩy sự kiện bất đồng bộ giữa các phân hệ'],
+              rui_ro: ['Lag partition nếu consumer xử lý chậm']
+            },
+            trac_nghiem: { cau_hoi: 'Kafka đóng vai trò gì?', lua_chon: ['Message Streaming', 'Static Web Server'], dung: 0, giai_thich: 'Streaming platform.' }
+          };
+          spawnedNodes.push(existingQueue);
+        }
+
+        if (existingQueue) {
+          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('waf') || n.tieu_de.toLowerCase().includes('event') || n.tieu_de.toLowerCase().includes('stream'))) || spawnedNodes[0];
+          if (clientNode && clientNode.id !== existingQueue.id) {
+            newEdges.push({
+              from: clientNode.id,
+              to: existingQueue.id,
+              nhan: 'Event Stream Bus',
+              kieu: 'duong-xung-em-ai',
+              loai_lien_ket: 'HOA_GIAI',
+              giai_thich: `Đẩy sự kiện từ <u>${clientNode.tieu_de}</u> sang <u>${existingQueue.tieu_de}</u> thuộc Cụm Hạ tầng Kỹ thuật dùng chung.`
+            });
+          }
+        }
+      }
+
+      if (connectInfra.includes('db')) {
+        if (!existingDb && spawnedNodes.length + current.nodes.length < MAX_GRAPH_NODES) {
+          const dbId = 'node-shared-db';
+          existingDb = {
+            id: dbId,
+            domain_id: 'domain-shared-infra',
+            cluster_id: 'cum-shared-infrastructure',
+            is_public_interface: true,
+            infra_type: 'postgres',
+            bieu_tuong: 'khoi_tru_database',
+            tieu_de: 'Bảo chứng ACID & Khóa dòng',
+            nhan_buoc: 'STORAGE / ACID DB',
+            tom_tat: 'Trụ cột cơ sở dữ liệu quan hệ bảo chứng toàn vẹn ACID.',
+            toa_do: { x: startX + 650, y: startY + 520 },
+            tam: { x: startX + 760, y: startY + 592 },
+            fully_explored: true,
+            hoat_hoa: { mau: 'luu_tru_acid', tham_so: { db: 'POSTGRES', lock: 'ROW LOCK' } },
+            chi_tiet: {
+              phan_loai: 'HẠ TẦNG DÙNG CHUNG',
+              tieu_de: 'Bảo chứng ACID & Khóa dòng',
+              ban_chat: 'Cơ sở dữ liệu trung tâm.',
+              chu_thich_so_do: 'ACID Storage',
+              ca_thuc_te: ['Lưu trữ giao dịch vĩnh viễn'],
+              rui_ro: ['Nghẽn connection nếu thiếu pooling']
+            },
+            trac_nghiem: { cau_hoi: 'Database dùng cho việc gì?', lua_chon: ['Lưu trữ bền vững ACID', 'Cache tạm'], dung: 0, giai_thich: 'ACID Storage.' }
+          };
+          spawnedNodes.push(existingDb);
+        }
+
+        if (existingDb) {
+          const clientNode = spawnedNodes.find(n => !n.sub_cluster_id && (n.tieu_de.toLowerCase().includes('ledger') || n.tieu_de.toLowerCase().includes('db') || n.tieu_de.toLowerCase().includes('storage'))) || spawnedNodes[spawnedNodes.length - 1];
+          if (clientNode && clientNode.id !== existingDb.id) {
+            newEdges.push({
+              from: clientNode.id,
+              to: existingDb.id,
+              nhan: 'ACID Persistence',
+              kieu: 'duong-xung-em-ai',
+              loai_lien_ket: 'LUU_TRU',
+              giai_thich: `Lưu trữ dữ liệu bền vững từ <u>${clientNode.tieu_de}</u> xuống <u>${existingDb.tieu_de}</u> thuộc Cụm Hạ tầng Kỹ thuật dùng chung.`
+            });
+          }
+        }
+      }
+    }
+
+    // 4. Kiểm duyệt Bounded Context và Lưu vào SQLite
     const allCandidateNodes = [...current.nodes, ...spawnedNodes];
     const validatedEdges = validateAndSanitizeEdges(allCandidateNodes, newEdges);
 
@@ -1127,13 +1252,8 @@ export const toolHandlers = {
    * Khôi phục đồ thị về 5 node gốc ban đầu
    */
   async resetToRoot(): Promise<{ graph: GraphData; message: string }> {
-    const cleanGraph: GraphData = {
-      id: 'graph-interactive-workspace',
-      topic: 'Kiến Trúc Hệ Thống Phân Tán',
-      nodes: [],
-      edges: []
-    };
+    const cleanGraph = createCleanGraph();
     sqliteClient.saveGraph(cleanGraph);
-    return { graph: cleanGraph, message: 'Đã dọn sạch đồ thị về trạng thái canvas mới (0 token).' };
+    return { graph: cleanGraph, message: 'Đã dọn sạch toàn bộ đồ thị về canvas mới (0 token).' };
   }
 };

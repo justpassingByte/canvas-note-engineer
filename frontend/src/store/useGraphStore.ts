@@ -6,7 +6,6 @@ interface GraphState {
   graph: GraphData | null;
   selectedNodeId: string;
   selectedEdge: EdgeEntity | null;
-  isDomainLinkActive: boolean;
   isReflexQuizOpen: boolean;
   isRecallMode: boolean;
   revealedRecallNodes: string[];
@@ -29,7 +28,6 @@ interface GraphState {
   toggleCollapse: (nodeId: string) => Promise<void>;
   deleteNode: (nodeId: string) => Promise<void>;
   resetGraph: () => Promise<void>;
-  toggleDomainLink: () => void;
   toggleReflexQuiz: () => void;
   toggleRecallMode: () => void;
   revealRecallNode: (nodeId: string) => void;
@@ -48,9 +46,8 @@ interface GraphState {
 
 export const useGraphStore = create<GraphState>((set, get) => ({
   graph: null,
-  selectedNodeId: 'node-khien-khoa',
+  selectedNodeId: '',
   selectedEdge: null,
-  isDomainLinkActive: true,
   isReflexQuizOpen: false,
   isRecallMode: false,
   revealedRecallNodes: [],
@@ -130,10 +127,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
 
   toggleWhatBreaks: () => {
     set((state) => ({ isWhatBreaksActive: !state.isWhatBreaksActive }));
-  },
-
-  toggleDomainLink: () => {
-    set((state) => ({ isDomainLinkActive: !state.isDomainLinkActive }));
   },
 
   toggleReflexQuiz: () => {
@@ -329,7 +322,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const res = await fetch('/api/graph/reset', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
-        set({ graph: data.graph, selectedNodeId: 'node-su-co', isLoading: false });
+        set({ graph: data.graph, selectedNodeId: '', selectedEdge: null, isLoading: false });
       }
     } catch (err) {
       console.error('Lỗi khi đặt lại đồ thị:', err);

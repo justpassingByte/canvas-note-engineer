@@ -6,6 +6,10 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
   nodes: [
     {
       id: 'node-su-co',
+      domain_id: 'domain-payment',
+      cluster_id: 'cum-webhook-gateway',
+      is_public_interface: true,
+      infra_type: 'gateway',
       fully_explored: true,
       bieu_tuong: 'su_co_canh_bao',
       tieu_de: 'Lặp Webhook trừ tiền 2 lần',
@@ -58,6 +62,9 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     },
     {
       id: 'node-tranh-chap',
+      domain_id: 'domain-payment',
+      cluster_id: 'cum-idempotency-app',
+      infra_type: 'service',
       parent_id: 'node-su-co',
       fully_explored: true,
       bieu_tuong: 'tranh_chap_phan_nhanh',
@@ -110,6 +117,9 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     },
     {
       id: 'node-khien-khoa',
+      domain_id: 'domain-payment',
+      cluster_id: 'cum-idempotency-app',
+      infra_type: 'service',
       parent_id: 'node-tranh-chap',
       fully_explored: false,
       bieu_tuong: 'khien_bao_ve',
@@ -164,6 +174,10 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     },
     {
       id: 'node-tru-db',
+      domain_id: 'domain-shared-infra',
+      cluster_id: 'cum-shared-infrastructure',
+      is_public_interface: true,
+      infra_type: 'postgres',
       parent_id: 'node-khien-khoa',
       fully_explored: true,
       bieu_tuong: 'khoi_tru_database',
@@ -214,6 +228,10 @@ export const INITIAL_PAYMENT_GRAPH: GraphData = {
     },
     {
       id: 'node-tmdt',
+      domain_id: 'domain-ecommerce',
+      cluster_id: 'cum-tmdt-domain',
+      is_public_interface: true,
+      infra_type: 'service',
       parent_id: 'node-tranh-chap',
       fully_explored: true,
       bieu_tuong: 'hop_kien_hang_domain',
@@ -303,6 +321,10 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
   nodes: [
     {
       id: 'node-queue',
+      domain_id: 'domain-shared-infra',
+      cluster_id: 'cum-shared-infrastructure',
+      is_public_interface: true,
+      infra_type: 'kafka',
       parent_id: 'node-khien-khoa',
       fully_explored: false,
       bieu_tuong: 'hang_doi_message_queue',
@@ -353,6 +375,10 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
     },
     {
       id: 'node-cache',
+      domain_id: 'domain-shared-infra',
+      cluster_id: 'cum-shared-infrastructure',
+      is_public_interface: true,
+      infra_type: 'redis',
       parent_id: 'node-khien-khoa',
       fully_explored: false,
       bieu_tuong: 'bo_nho_dem_cache',
@@ -420,4 +446,3 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
     }
   ]
 };
-

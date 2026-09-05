@@ -22,17 +22,17 @@ export interface TopicCluster {
   };
 }
 
-// Kích thước chuẩn bao gồm cả Icon Pod tròn và Thẻ Nhãn chữ nhật bên dưới (width: 225px, height: 215px)
-const CARD_WIDTH = 225;
-const CARD_HEIGHT = 215;
+// Kích thước chuẩn bao gồm cả Icon Pod tròn và Thẻ Nhãn chữ nhật bên dưới (width: 220px, height: 145px)
+const CARD_WIDTH = 220;
+const CARD_HEIGHT = 145;
 
-// Khoảng đệm rộng rãi (Generous Breathing Room) nới rộng khung cụm chống dính mép
-const PADDING_X = 52;       // Đệm rộng 52px hai bên hông (trái / phải)
-const PADDING_TOP = 64;     // Đệm 64px phía trên để thẻ Tiêu đề Cụm không chạm node
-const PADDING_BOTTOM = 46;  // Đệm 46px phía dưới đáy cụm
+// Khoảng đệm khung cụm
+const PADDING_X = 28;       // Đệm 28px hai bên hông
+const PADDING_TOP = 50;     // Đệm 50px phía trên (28px pad + 22px header)
+const PADDING_BOTTOM = 28;  // Đệm 28px phía dưới đáy cụm
 
 /**
- * Xác định Cụm Kiến trúc cho một Node dựa trên ID, phả hệ cha-con hoặc phân loại kỹ thuật.
+ * Xác định Cụm Kiến trúc cho một Node dựa trên Domain, Cluster, Sub-cluster, phả hệ cha-con hoặc phân loại kỹ thuật.
  * Hoàn toàn 0 token AI, chạy thuần client-side.
  */
 export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEntity>): {
@@ -44,15 +44,48 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
   cap_do: 'me' | 'con' | 'doc_lap';
   cum_me_id?: string;
 } {
-  // 1. Nếu node có cluster_id tường minh
+  // 1. Nếu node có sub_cluster_id tường minh (Hierarchical Sub-Cluster)
+  if (node.sub_cluster_id) {
+    let subColor = '#059669';
+    const sId = node.sub_cluster_id.toLowerCase();
+    if (sId.includes('redis') || sId.includes('cache') || node.infra_type === 'redis') {
+      subColor = '#059669';
+    } else if (sId.includes('postgres') || sId.includes('db') || node.infra_type === 'postgres') {
+      subColor = '#2563EB';
+    } else if (sId.includes('kafka') || sId.includes('queue') || node.infra_type === 'kafka') {
+      subColor = '#D97706';
+    } else if (sId.includes('auth') || sId.includes('pdp')) {
+      subColor = '#6366F1';
+    }
+
+    const subTitle = node.infra_type
+      ? `[INFRA: ${node.infra_type.toUpperCase()}]`
+      : (node.chi_tiet?.phan_loai || 'SUB-CLUSTER');
+
+    return {
+      clusterId: node.sub_cluster_id,
+      ten_cum: subTitle,
+      chu_de_phu: node.nhan_buoc,
+      mau: subColor,
+      icon: node.bieu_tuong,
+      cap_do: 'con',
+      cum_me_id: node.cluster_id
+    };
+  }
+
+  // 2. Nếu node có cluster_id tường minh
   if (node.cluster_id) {
     let clusterColor = '#6366F1';
     const cId = node.cluster_id.toLowerCase();
-    if (cId.includes('zero-trust') || cId.includes('auth')) clusterColor = '#10B981';
-    else if (cId.includes('waf') || cId.includes('ddos') || cId.includes('rate')) clusterColor = '#6366F1';
+    if (cId.includes('zero-trust') || cId.includes('auth')) clusterColor = '#4F46E5';
+    else if (cId.includes('idempotency') || cId.includes('app')) clusterColor = '#059669';
+    else if (cId.includes('waf') || cId.includes('ddos') || cId.includes('edge')) clusterColor = '#4338CA';
     else if (cId.includes('audit') || cId.includes('merkle') || cId.includes('kiem-toan')) clusterColor = '#F59E0B';
     else if (cId.includes('queue') || cId.includes('async')) clusterColor = '#D97706';
     else if (cId.includes('db') || cId.includes('acid') || cId.includes('data')) clusterColor = '#2563EB';
+    else if (cId.includes('webhook') || cId.includes('gateway')) clusterColor = '#DC2626';
+    else if (cId.includes('tmdt') || cId.includes('ecommerce')) clusterColor = '#7C3AED';
+    else if (cId.includes('shared-infrastructure')) clusterColor = '#3B82F6';
     else if (node.hoat_hoa?.mau && node.hoat_hoa.mau.startsWith('#')) clusterColor = node.hoat_hoa.mau;
 
     return {
@@ -65,7 +98,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 2. Kế thừa cụm từ node cha nếu có liên kết phả hệ
+  // 3. Kế thừa cụm từ node cha nếu có liên kết phả hệ
   if (node.parent_id && nodeMap.has(node.parent_id)) {
     const parentNode = nodeMap.get(node.parent_id)!;
     return determineClusterId(parentNode, nodeMap);
@@ -73,7 +106,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
 
   const id = node.id.toLowerCase();
 
-  // 3. Phân hệ Zero Trust & JWT Authentication
+  // 4. Phân hệ Zero Trust & JWT Authentication
   if (id.includes('zero-trust') || id.includes('jwt-pdp') || id.includes('auth')) {
     return {
       clusterId: 'cum-zero-trust',
@@ -85,7 +118,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 4. Phân hệ Phòng Thủ Trùng Lặp & Khóa Idempotency
+  // 5. Phân hệ Phòng Thủ Trùng Lặp & Khóa Idempotency
   if (
     id === 'node-khien-khoa' ||
     id === 'node-tranh-chap' ||
@@ -101,7 +134,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 5. Tầng Hạ Tầng Đệm & Message Queue
+  // 6. Tầng Hạ Tầng Đệm & Message Queue
   if (
     id === 'node-queue' ||
     id === 'node-cache' ||
@@ -118,7 +151,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 6. Tầng Cơ Sở Dữ Liệu & Toàn Vẹn ACID
+  // 7. Tầng Cơ Sở Dữ Liệu & Toàn Vẹn ACID
   if (
     id === 'node-tru-db' ||
     node.bieu_tuong === 'khoi_tru_database'
@@ -133,7 +166,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 7. Miền Sàn Thương Mại & Flash Sale
+  // 8. Miền Sàn Thương Mại & Flash Sale
   if (
     id === 'node-tmdt' ||
     node.parent_id === 'node-tmdt'
@@ -148,7 +181,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 8. Tiếp Nhận Sự Cố & Webhook Gateway
+  // 9. Tiếp Nhận Sự Cố & Webhook Gateway
   if (
     id === 'node-su-co' ||
     node.parent_id === 'node-su-co'
@@ -163,7 +196,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // 9. Lá Chắn Biên & Chống DDoS / WAF
+  // 10. Lá Chắn Biên & Chống DDoS / WAF
   if (
     id.includes('ddos') ||
     id.includes('waf')
@@ -178,7 +211,6 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     };
   }
 
-  // Mặc định: Phân hệ Kiến trúc mở rộng theo prefix ID của node
   const clusterPrefix = node.parent_id
     ? node.parent_id.replace('node-', '')
     : node.id.replace('node-', '').replace(/-\d+$/, '');
@@ -195,9 +227,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
 
 /**
  * Tính toán các Cụm Topic từ danh sách node hiển thị trên Canvas.
- * - Single-Level Clusters: Không lồng Cụm Mẹ gây trùng lặp viền nét đứt.
- * - Min Nodes Filter (mặc định >= 2): Chỉ vẽ viền cụm khi có từ 2 node trở lên.
- *   Node đơn lẻ đứng độc lập sạch sẽ, không bị bao bởi hộp thừa.
+ * Hỗ trợ phân cấp Cụm Dịch Vụ và Cụm Con (Sub-Clusters).
  */
 export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): TopicCluster[] {
   if (!nodes || nodes.length === 0) return [];
@@ -210,7 +240,6 @@ export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): Topi
     nodes: NodeEntity[];
   }>();
 
-  // Gom các node vào từng Cụm
   for (const node of nodes) {
     const info = determineClusterId(node, nodeMap);
     if (!clusterGroups.has(info.clusterId)) {
@@ -221,11 +250,9 @@ export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): Topi
 
   const clusters: TopicCluster[] = [];
 
-  // Tính Bounding Box cho từng Cụm
   for (const [id, group] of clusterGroups.entries()) {
     const cNodes = group.nodes;
 
-    // Chỉ tạo khung cụm nếu số lượng node đạt ngưỡng (mặc định >= 2)
     if (cNodes.length < minNodes) {
       continue;
     }
@@ -257,6 +284,7 @@ export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): Topi
       mau: group.info.mau,
       icon: group.info.icon,
       cap_do: group.info.cap_do,
+      cum_me_id: group.info.cum_me_id,
       nodeIds: cNodes.map(n => n.id),
       bounds: {
         minX: paddedMinX,

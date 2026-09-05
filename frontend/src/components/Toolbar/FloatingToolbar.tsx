@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   Compass,
   Sparkles,
-  GitMerge,
   RotateCcw,
   Search,
   EyeOff,
@@ -12,16 +11,17 @@ import {
   Code,
   ZoomIn,
   ZoomOut,
-  Maximize
+  Maximize,
+  FolderOpen
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
+import { BrainstormRagModal } from '../RAG/BrainstormRagModal.js';
 
 export const FloatingToolbar: React.FC = () => {
   const {
     graph,
     expandNode,
-    isDomainLinkActive,
-    toggleDomainLink,
+    selectedNodeId,
     resetGraph,
     searchQuery,
     setSearchQuery,
@@ -34,6 +34,7 @@ export const FloatingToolbar: React.FC = () => {
   } = useGraphStore();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isRagModalOpen, setIsRagModalOpen] = useState(false);
 
   const visibleNodes = graph?.nodes.filter(n => !n.is_collapsed || n.parent_id === undefined) || [];
   const nodeKhien = graph?.nodes.find(n => n.id === 'node-khien-khoa');
@@ -194,14 +195,19 @@ export const FloatingToolbar: React.FC = () => {
         <span>+ Mở rộng node con</span>
       </button>
 
-      {/* Toggle cầu nối liên kết miền TMĐT */}
+      {/* Nút RAG Brainstorm Doc Ingestion */}
       <button
-        className="nut-thao-tac-noi nut-lien-ket"
-        onClick={toggleDomainLink}
-        title="Bật/tắt đường nối cầu nối sang miền TMĐT"
+        className="nut-thao-tac-noi nut-rag-brainstorm"
+        onClick={() => setIsRagModalOpen(true)}
+        title="Nạp & Tự động sinh Cụm Kiến trúc từ tài liệu Brainstorm / RFC"
+        style={{
+          background: '#EEF2FF',
+          borderColor: '#4F46E5',
+          color: '#4338CA'
+        }}
       >
-        <GitMerge className="lucide-icon-sm" />
-        <span>Miền TMĐT: {isDomainLinkActive ? 'BẬT' : 'TẮT'}</span>
+        <FolderOpen className="lucide-icon-sm" color="#4F46E5" />
+        <span>RAG Brainstorm</span>
       </button>
 
       <div className="vach-ngan-thanh"></div>
@@ -312,6 +318,9 @@ export const FloatingToolbar: React.FC = () => {
       >
         <RotateCcw className="lucide-icon-sm" />
       </button>
+
+      {/* Modal Import Brainstorm Doc / RAG */}
+      <BrainstormRagModal isOpen={isRagModalOpen} onClose={() => setIsRagModalOpen(false)} />
     </nav>
   );
 };

@@ -5,7 +5,8 @@ export type NodeBadgeType =
   | 'khoi_tru_database'
   | 'hop_kien_hang_domain'
   | 'hang_doi_message_queue'
-  | 'bo_nho_dem_cache';
+  | 'bo_nho_dem_cache'
+  | 'ghi_chep_so_sach';
 
 export interface ReflexQuiz {
   cau_hoi: string;
@@ -38,8 +39,17 @@ export interface NodeEntity {
   toa_do: { x: number; y: number };
   tam: { x: number; y: number };
   fully_explored: boolean;
-  cluster_id?: string;
   parent_id?: string;
+
+  // Phân cấp kiến trúc 3 tầng (Hierarchical Domain & Cluster Isolation)
+  domain_id?: string;        // e.g. 'domain-auth', 'domain-payment', 'domain-shared-infra'
+  cluster_id?: string;       // e.g. 'cum-oidc-service', 'cum-webhook-pipeline', 'cum-shared-infrastructure'
+  sub_cluster_id?: string;   // e.g. 'sub-auth-redis', 'sub-payment-lock', 'sub-audit-vault'
+
+  // Cổng đối ngoại & Phân loại hạ tầng thực tế
+  is_public_interface?: boolean; // True nếu là Gateway / PEP / JWKS endpoint đại diện công khai cho cụm
+  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker'; // Phân loại hạ tầng cốt lõi
+
   is_collapsed?: boolean;
   collapsed_count?: number;
   hoat_hoa: AnimationParams;
@@ -76,13 +86,29 @@ export interface CompactClusterNode {
   rui_ro?: string[];
   chuoi_sup_do?: string[];
   trac_nghiem?: ReflexQuiz;
+  is_public_interface?: boolean;
+  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker';
+  sub_cluster_id?: string;
+}
+
+export interface CompactSubCluster {
+  sub_cluster_id?: string;
+  name: string;
+  infra_type?: 'redis' | 'postgres' | 'kafka' | 'service' | 'gateway' | 'worker';
+  namespace?: string;
+  theme?: string;
+  nodes: CompactClusterNode[];
+  position_offset?: { x: number; y: number };
 }
 
 export interface SpawnClusterPayload {
+  domain_id?: string;
   cluster_name: string;
-  cluster_theme?: 'indigo' | 'emerald' | 'amber' | 'blue' | 'purple' | 'rose';
+  cluster_theme?: 'indigo' | 'emerald' | 'amber' | 'blue' | 'purple' | 'rose' | string;
   sub_title?: string;
+  is_public_interface?: boolean;
   nodes: CompactClusterNode[];
+  sub_clusters?: CompactSubCluster[];
   connect_to_shared_infra?: Array<'db' | 'cache' | 'queue'>;
   position?: { x: number; y: number };
 }
@@ -90,6 +116,7 @@ export interface SpawnClusterPayload {
 export interface ExpandPayload {
   target_concept_slug: string;
   existing_node_slugs: string[];
+  expansion_intent?: string;
 }
 
 export interface PrunePayload {
