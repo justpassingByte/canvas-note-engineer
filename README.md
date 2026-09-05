@@ -1,10 +1,11 @@
-# 📐 Canvas Note Engineer (Sổ Tay Kỹ Sư Kiến Trúc)
+# 📐 Canvas Note Engineer
 
-> **Interactive Engineering Knowledge Graph & Architecture Field Notebook**  
+> **Interactive Engineering Knowledge Graph, SRE Incident Simulator & Architecture Field Notebook**  
 > Thiết kế đặc quyền cho Kỹ sư Phần mềm, Kiến trúc sư Hệ thống (System Architects) và Tích hợp Trợ lý Lập trình AI (**Antigravity / DeepSeek Harness**).
 
 [![Tech Stack](https://img.shields.io/badge/Stack-React%2018%20%7C%20TypeScript%20%7C%20Zustand%20%7C%20Express%20%7C%20SQLite%20WAL-green)](#-cong-nghe-su-dung)
-[![Tests](https://img.shields.io/badge/Tests-50%2F50%20Passed%20(100%25)-brightgreen)](#-kiem-thu-tu-dong-toan-dien)
+[![Tests](https://img.shields.io/badge/Tests-49%2F49%20Passed%20(100%25)-brightgreen)](#-kiem-thu-tu-dong-toan-dien)
+[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-2--Phase%20Self--Review-purple)](#-vong-lap-self-review--quality-gate-tu-danh-gia--hieu-chinh-kien-truc)
 [![Zero-Token Caching](https://img.shields.io/badge/AI-Zero--Token%20Cache-orange)](#-tinh-nang-dot-pha)
 [![Architecture](https://img.shields.io/badge/Architecture-Domain%20%E2%86%92%20Cluster%20%E2%86%92%20Sub--Cluster-indigo)](#-kien-truc-phan-cap-hierarchical-architecture)
 
@@ -12,9 +13,17 @@
 
 ## 📖 Giới Thiệu Tổng Quan
 
-**Canvas Note Engineer** là không gian làm việc số hóa mô phỏng **Sổ tay Kỹ sư thực chiến**. Hệ thống mổ xẻ các sự cố vận hành phân tán (Distributed Incidents), xung đột tương tranh (**Race Conditions**, **Deadlocks**, **Retry Storms**), và các mẫu thiết kế phòng thủ (**Idempotency**, **Distributed Lock**, **Message Queue Buffer**, **Zero-Trust PEP/PDP**, **Audit Trail Immutability**) trên mặt giấy kỹ thuật số vô hạn (Infinite Technical Grid Canvas).
+**Canvas Note Engineer** là không gian làm việc số hóa mô phỏng **Field Notes & Live SRE Disaster Simulator**. Hệ thống mổ xẻ các sự cố vận hành phân tán (Distributed Incidents), xung đột tương tranh (**Race Conditions**, **Deadlocks**, **Retry Storms**), và các mẫu thiết kế phòng thủ (**Idempotency**, **Distributed Lock**, **Message Queue Buffer**, **Zero-Trust PEP/PDP**, **Audit Trail Immutability**, **Two-Phase Reservation**, **Penny Rounding Protection**) trên mặt giấy kỹ thuật số vô hạn (Infinite Technical Grid Canvas).
 
-Hệ thống được trang bị bộ máy **RAG Brainstorm Ingestion Engine**, cơ chế **Kiến trúc Phân Cấp Bounded Context (Domain $\to$ Service Cluster $\to$ Sub-Cluster)**, khả năng **Kéo Thả (Drag & Drop) Node & Cụm Tự Do**, cùng bộ nhớ đệm **0-Token SQLite WAL Persistence**.
+Hệ thống được trang bị:
+1. **RAG Brainstorm Ingestion Engine**: Nạp trực tiếp tài liệu RFC / Markdown / Mermaid và tự động bóc tách thành sơ đồ phân cấp DDD.
+2. **Kiến trúc Phân Cấp Bounded Context**: Tách bạch rõ rệt giữa Domain $\to$ Service Cluster $\to$ Sub-Clusters hạ tầng chuyên biệt.
+3. **Vòng lặp Self-Review & Quality Gate 2 Pha**: Tự động phát hiện và loại bỏ các anti-patterns (HTTP verbs, mã lỗi 200 OK, payload cookies) để nâng cấp thành các component kiến trúc chuẩn.
+4. **Hồ Sơ Sự Cố Khép Kín (Unified Incident Case Dossiers)**: Gom nhóm bối cảnh tải (Traffic Profile), nguyên nhân gốc rễ (RCA), bán kính thiệt hại (Blast Radius), kịch bản lan truyền và giải pháp phòng thủ (Mitigation Strategy).
+5. **Mô Phỏng Lan Truyền Sóng Sự Cố (Failure Cascade Simulator)**: Con bọ đỏ (🐛 Bug Vector Particle) bò dọc theo đường cong dây nối SVG theo chiều có hướng của đồ thị DAG.
+6. **Chuỗi 5 Câu Hỏi Sát Hạch Đánh Đố (5-Step Continuous Reflex Drill)**: Thử thách phản xạ kiến trúc sư với các bẫy tư duy kỹ thuật sâu sắc.
+7. **Kéo Thả Tự Do (Node & Cluster Drag & Drop)**: Di chuyển tự do từng Node hoặc toàn bộ Cụm kèm lưu trữ bền vững 0-token SQLite WAL.
+8. **Biểu Tượng Quy Ước Quốc Tế (ISO/C4 Vector SVGs)**: Trụ Database 3 tầng, Chip CPU 4 hướng chân rết, Thanh RAM PCB...
 
 ---
 
@@ -63,7 +72,6 @@ Mô hình dữ liệu loại bỏ tư duy phẳng hóa (Flat Architecture), tổ
 
 ---
 
-
 ## 🛡️ Vòng Lặp Self-Review & Quality Gate (Tự Đánh Giá & Hiệu Chỉnh Kiến Trúc)
 
 Nhằm giải quyết triệt để lỗi sinh node sai bản chất (nhầm lẫn giữa luồng truyền tin HTTP/Cookie/Tên hàm với Thành phần Kiến trúc), hệ thống tích hợp **Quy trình Ingestion 2 Pha (2-Phase Ingestion Quality Gate)**:
@@ -100,51 +108,41 @@ Nhằm giải quyết triệt để lỗi sinh node sai bản chất (nhầm l�
     [Canvas Render & SQLite WAL Persistence]
 ```
 
-### Các Nguyên Tắc Thẩm Định Của Quality Gate:
-1. **Không bao giờ đưa Packet/Status thành Node**: Gói tin (`Access cookie`), mã trạng thái (`200 OK`), hoặc tên hàm (`authorize()`) chỉ là thông điệp đường truyền, phải được chuyển hóa thành **Thành Phần Kiến Trúc** (Engine, Gateway, Store).
-2. **Deterministic Domain Core**: Các bộ tính toán nghiệp vụ lõi (như Promotion Engine) phải được bóc tách thành **Pure Domain Service (100% 0 I/O)** để dễ dàng replay và audit.
-3. **Bảo toàn tính đầy đủ của Sổ tay (Field Notes)**: Mọi node sinh ra từ Quality Gate đều tự động có đầy đủ **Bản chất kỹ thuật**, **Sơ đồ hoạt họa**, **Tình huống thực tế**, **Chuỗi sụp đổ** và **Trắc nghiệm phản xạ**.
+---
 
 ## 🚀 Tính Năng Đột Phá
 
 ### 1. RAG Brainstorm Doc Ingestion Engine (Nạp & Tự Động Sinh Cụm)
-Hệ thống tích hợp bộ máy phân tích tài liệu thiết kế kiến trúc thông minh tại thư mục `rag/`:
-* **Tự động bóc tách sơ đồ Mermaid**: Phân tích cú pháp `flowchart TD` trong tài liệu RFC để tự động tạo Service Cluster, Database Sub-cluster, Redis Sub-cluster, Outbox Worker.
-* **Nhận diện bảng Module Boundaries & Headings**: Tự động ánh xạ các module và phân quyền thành các Node và Cụm chuẩn.
+* **Tự động bóc tách sơ đồ Mermaid**: Phân tích cú pháp `flowchart TD/LR` và Sequence Diagrams trong tài liệu RFC để tự động tạo Service Cluster, Database Sub-cluster, Redis Sub-cluster, Outbox Worker.
 * **Giao diện Modal 3 Chế Độ trên Toolbar**:
   1. 📁 **Folder `rag/`**: Duyệt danh sách các tài liệu `.md`, xem trước và 1-click **"Nạp & Tự Động Sinh Cụm"**.
   2. 📤 **Upload File**: Tải lên file `.md`, `.txt`, `.json` từ máy tính $\to$ tự động lưu vào `rag/` và sinh cụm.
   3. ✍️ **Dán Trực Tiếp**: Dán bản nháp Brainstorm text $\to$ nhấn **"Phân Tích & Sinh Cụm Lên Canvas"**.
 
-### 2. Kéo Thả Node & Cụm Tự Do (Node & Cluster Drag & Drop + Auto-Persistence)
-* **Kéo thả từng Node riêng lẻ**: Nhấn giữ chuột trái lên bất kỳ Node nào để di chuyển tự do trên mặt giấy.
-* **Kéo thả cả Cụm Topic**: Nhấn giữ Header tiêu đề cụm để di chuyển đồng loạt toàn bộ các node bên trong.
-* **Dây nối tự động thích ứng**: Đường cong Cubic Bezier S-Curves và nhãn giao thức tự động co giãn và tính toán lại cổng neo theo thời gian thực.
-* **Tự động lưu vị trí (Auto-Persistence)**: Tọa độ mới được đồng bộ ngay xuống SQLite qua `POST /api/graph/update-positions`.
+### 2. Mô Phỏng Sóng Lan Truyền Sự Cố (🐛 Bug Particle Motion & 3-Cycle Auto-Freeze)
+* Nhấn nút **"Mô Phỏng Sự Cố 🐛"** trên từng Thẻ Sự Cố để kích hoạt luồng mô phỏng:
+  * **Con bọ đỏ Vector SVG (🐛 Bug Particle)** bò mượt mà dọc theo đường cong dây nối từ Node nguồn sang các Node phụ thuộc.
+  * Tự động gắn các **Mini Stage Badges** (`🚨 1. TRIGGER`, `🔴 2. SATURATION`, `💥 3. BLAST RADIUS`) trên đầu các Node.
+  * Tự động duy trì trạng thái mô phỏng khi người dùng click chuyển qua lại giữa các Node.
 
-### 3. Chuẩn Hóa Tầng Công Nghệ (Architectural Layer Standard)
-Thay thế số thứ tự bước tuyến tính cũ bằng các phân tầng chuẩn:
-* `GATEWAY / INGRESS`: Cổng đón gói tin, Webhook Ingress, Reverse Proxy.
-* `COMPUTE / CONCURRENCY`: Phân luồng xử lý, điểm xung đột tài nguyên song song.
-* `SECURITY / IDEMPOTENCY`: Lá chắn khóa định danh UUID v4 chống trừ tiền lặp.
-* `STORAGE / ACID DB`: Trụ bảo chứng toàn vẹn dữ liệu, Row Lock & Unique Index.
-* `ASYNC / QUEUE BUFFER`: Hàng đợi điều tiết đỉnh tải (Kafka / RabbitMQ).
-* `CACHE / DISTRIBUTED LOCK`: Khóa phân tán đơn luồng RAM 1ms (Redis SETNX).
-* `EDGE / WAF RATE LIMIT`: Tường lửa ứng dụng và thuật toán Token Bucket chống DDoS.
-* `SECURITY / ZERO-TRUST`: Xác thực mTLS & Phân quyền Policy Enforcement Point.
-* `OBSERVABILITY / AUDIT LOG`: Sổ cái kiểm toán tài chính Append-Only bất biến.
+### 3. Kéo Thả Tự Do (Node & Cluster Drag & Drop + Auto-Persistence)
+* Kéo di chuyển từng Node hoặc toàn bộ Cụm tự do.
+* Tự động tính toán lại các đường cong Cubic Bezier S-Curves và lưu tọa độ bền vững vào SQLite WAL.
+* Cơ chế phân biệt Drag vs Click chống hiện tượng nhảy zoom nhầm camera.
 
-### 4. Thu Gọn / Mở Rộng Nhánh Con Độc Lập (DAG-Safe Collapse Pill)
-* Nút bấm Pill ở chân thẻ node (`.nut-thu-gon-pill`) cho phép thu gọn/mở rộng toàn bộ nhánh con phân cấp chỉ với 1 click.
-* Thiết kế **DAG-Safe**: Trạng thái thu gọn chỉ lưu trên node cha, không can thiệp đè cờ lên các node con trong SQLite.
+### 4. Hệ Thống Biểu Tượng Quy Ước Chuẩn Quốc Tế (ISO / C4 / UML SVGs)
+* 🗄️ **Database**: Khối trụ đĩa từ 3 tầng elip xếp chồng.
+* 🧠 **CPU Engine**: Con chip vi xử lý hình vuông với lõi Silicon và chân kim loại 4 hướng.
+* ⚡ **RAM Cache**: Thanh RAM PCB với 4 chip nhớ và chân cắm vàng.
+* 🖥️ **Service / Server**: Tủ Server phiến với đèn LED tín hiệu.
+* 🌐 **Gateway Ingress**: Cầu nối mạng địa cầu định tuyến vĩ tuyến.
+* 📨 **Message Queue**: Ống hàng đợi 3 lớp gói tin.
+* ⚙️ **Worker**: Cụm bánh răng cơ khí.
 
-### 5. Chế Độ "Điều Gì Sụp Đổ" (What Breaks Cascade Visualization)
-* Bấm nút **"Điều gì sụp đổ"** trên Drawer để kích hoạt hiệu ứng lan truyền sự cố (Failure Cascade):
-  * Dây nối chuyển sang màu đỏ rực cảnh báo nguy cơ.
-  * Node liên quan hiển thị hiệu ứng nhịp thở cảnh báo rủi ro dây chuyền.
-
-### 6. Chế Độ Ôn Tập Phản Xạ (Recall Quiz Mode)
-* Ẩn tên các node thành `[ ? ]` để luyện tập nhớ lại bản chất kỹ thuật trước khi click mở đáp án.
+### 5. Từ Điển Thuật Ngữ Tự Học (Self-Learning Dynamic Glossary)
+* 80+ thuật ngữ vàng cốt lõi có sẵn.
+* Tự động quét và nạp thêm thuật ngữ mới từ mọi file docs trong `rag/`.
+* Thẻ Floating Edge Hover Card hiển thị từ khóa nổi bật màu vàng ánh kim (`#FDE047`) trên nền tối.
 
 ---
 
@@ -152,10 +150,10 @@ Thay thế số thứ tự bước tuyến tính cũ bằng các phân tầng ch
 
 | Tầng | Công nghệ | Vai trò |
 |---|---|---|
-| **Frontend** | React 18, TypeScript, Vite SingleFile, Zustand, Lucide Icons | Canvas tương tác vô hạn, Drag & Drop, Cubic Bezier SVG, Responsive Drawer |
-| **Backend** | Node.js, Express, TypeScript, Better-SQLite3 | REST API, RAG Ingestion Engine, Bounded Context Validator, WAL Persistence |
+| **Frontend** | React 18, TypeScript, Vite SingleFile, Zustand, Lucide Icons | Canvas tương tác vô hạn, Drag & Drop, Cubic Bezier SVG, Field Notes Drawer |
+| **Backend** | Node.js, Express, TypeScript, Better-SQLite3 | REST API, RAG Ingestion Engine, Self-Review Quality Gate, Bounded Context Validator |
 | **Lưu Trữ** | SQLite với Write-Ahead Logging (WAL) Mode | 0-Token Caching, lưu trữ đồ thị bất biến, hỗ trợ đa tiến trình |
-| **Kiểm Thử** | Vitest | 50 automated tests (100% pass rate) cho unit, API, DB concurrency & RAG |
+| **Kiểm Thử** | Vitest | 49 automated tests (100% pass rate) cho unit, API, DB concurrency & RAG |
 
 ---
 
@@ -169,10 +167,10 @@ npm install
 # 2. Build toàn bộ frontend và backend
 npm run build
 
-# 3. Khởi chạy máy chủ backend
-npm run start
+# 3. Khởi chạy máy chủ phát triển (cả frontend và backend)
+npm run dev
 ```
-Mở trình duyệt tại: `http://localhost:3001` (hoặc qua DeepSeek Harness Web GUI `http://127.0.0.1:3080`).
+Mở trình duyệt tại: `http://localhost:5173` (hoặc qua Express Production Server `http://localhost:3001` / DeepSeek Harness Web GUI `http://127.0.0.1:3080`).
 
 ---
 
@@ -180,14 +178,15 @@ Mở trình duyệt tại: `http://localhost:3001` (hoặc qua DeepSeek Harness 
 1. Đặt các file bản thảo thiết kế (`.md`, `.txt`, `.json`) vào thư mục `rag/`.
 2. Trên thanh công cụ nổi (Floating Toolbar), bấm nút **"RAG Brainstorm"**.
 3. Trong tab **"Folder rag/"**, chọn tài liệu cần nạp $\to$ Bấm **"Nạp & Tự Động Sinh Cụm"**.
-4. Hệ thống sẽ tự động bóc tách thành Cụm Dịch Vụ và các Cụm Con Hạ Tầng tương ứng, hiển thị ngay trên Canvas.
+4. Hệ thống sẽ tự động chạy qua **Self-Review Quality Gate**, bóc tách thành Cụm Dịch Vụ và các Cụm Con Hạ Tầng tương ứng, hiển thị ngay trên Canvas.
 
 ---
 
 ### 3. Thao Tác Trực Quan Trên Canvas
 * **Kéo di chuyển Node**: Nhấn giữ chuột trái vào thẻ Node và kéo đến vị trí mong muốn.
 * **Kéo di chuyển Cụm**: Nhấn giữ thẻ tiêu đề cụm (`⋮⋮ TÊN CỤM`) để dời toàn bộ cụm.
-* **Xem chi tiết kỹ thuật**: Click vào bất kỳ Node nào để mở Sổ tay Ghi chép (Drawer) chứa Bản chất, Sơ đồ thực thi, Ca thực tế, Chuỗi sụp đổ và Trắc nghiệm phản xạ.
+* **Xem chi tiết kỹ thuật**: Click vào bất kỳ Node nào để mở Field Notes Drawer chứa Bản chất, Sơ đồ thực thi, Hồ sơ sự cố khép kín (Incident Dossiers), và Chuỗi 5 câu hỏi sát hạch phản xạ.
+* **Mô phỏng sự cố**: Bấm nút **"Mô Phỏng Sự Cố 🐛"** trên thẻ sự cố để xem con bọ đỏ bò dọc theo dây nối.
 * **Thu gọn nhánh con**: Bấm nút `Thu gọn` ở chân thẻ node.
 * **Tìm kiếm**: Gõ từ khóa vào ô tìm kiếm trên thanh công cụ để highlight node tức thì.
 * **Xuất dữ liệu**: Bấm nút Download trên thanh công cụ để xuất sang **Obsidian (.md)**, **Mermaid Chart**, hoặc **JSON**.
@@ -196,14 +195,14 @@ Mở trình duyệt tại: `http://localhost:3001` (hoặc qua DeepSeek Harness 
 
 ## 🧪 Kiểm Thử Tự Động Toàn Diện
 
-Hệ thống được bảo chứng bởi 11 test suites với 50 test cases:
+Hệ thống được bảo chứng bởi 11 test suites với 49 test cases:
 ```bash
 npm run test
 ```
 
 Kết quả kiểm thử:
+* `brainstormRAG.test.ts`: Kiểm tra bộ bóc tách tài liệu RFC, Mermaid và Self-Review Quality Gate.
 * `hierarchicalClusterSpawning.test.ts`: Kiểm tra Multi-Cluster Spawning và Bounded Context Isolation.
-* `brainstormRAG.test.ts`: Kiểm tra bộ bóc tách tài liệu RFC, Mermaid và Markdown.
 * `edgeSanitizer.test.ts`: Kiểm tra 4 lớp kiểm duyệt liên kết, chống tự trỏ, chống chu trình và chống cross-wiring.
 * `dynamicSpawnAndCapacity.test.ts`: Kiểm tra trần an toàn chống ảo giác AI (Saturation Cap).
 * `realDatabaseIntegration.test.ts`: Kiểm tra SQLite WAL persistence và ACID transactions.
