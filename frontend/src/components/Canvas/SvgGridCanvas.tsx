@@ -74,9 +74,9 @@ export const SvgGridCanvas: React.FC = () => {
       }
     }
 
-    // Quy tắc DAG Liveness:
-    // Một node chỉ bị ẩn nếu TẤT CẢ các incoming parents trỏ vào nó đều bị thu gọn (hoặc bị ẩn).
-    // Nếu có ít nhất một parent còn mở và hiển thị, node đó vẫn sống và hiển thị!
+    // Quy tắc Đa Cha (Multi-Parent Collapse):
+    // Cả 2 parent đều có toàn quyền thu gọn node con.
+    // Nếu BẤT KỲ parent nào thu gọn (hoặc chuỗi tổ tiên thu gọn), node con sẽ lập tức được thu gọn theo!
     const isNodeCollapsedAway = (nodeId: string, visited = new Set<string>()): boolean => {
       if (visited.has(nodeId)) return false;
       visited.add(nodeId);
@@ -86,9 +86,9 @@ export const SvgGridCanvas: React.FC = () => {
         return false; // Root node không có cha thì không bị ẩn bởi collapse
       }
 
-      return parents.every(parentId => {
+      return parents.some(parentId => {
         const parentNode = nodeMap.get(parentId);
-        if (!parentNode) return true;
+        if (!parentNode) return false;
         if (parentNode.is_collapsed) return true;
         return isNodeCollapsedAway(parentId, new Set(visited));
       });
