@@ -1,35 +1,170 @@
 # 📐 Canvas Note Engineer
 
 > **Interactive Engineering Knowledge Graph, SRE Incident Simulator & Architecture Field Notebook**  
-> Thiết kế đặc quyền cho Kỹ sư Phần mềm, Kiến trúc sư Hệ thống (System Architects) và Tích hợp Trợ lý Lập trình AI (**Antigravity / DeepSeek Harness**).
+> Thiết kế đặc quyền cho **Kỹ sư Phần mềm**, **Kiến trúc sư Hệ thống (System Architects)** và **Anh em thích vọc vạch / mở rộng công cụ lập trình AI (Antigravity, DeepSeek Harness, Claude Code, Cursor)**.
 
 [![Tech Stack](https://img.shields.io/badge/Stack-React%2018%20%7C%20TypeScript%20%7C%20Zustand%20%7C%20Express%20%7C%20SQLite%20WAL-green)](#-cong-nghe-su-dung)
-[![Tests](https://img.shields.io/badge/Tests-49%2F49%20Passed%20(100%25)-brightgreen)](#-kiem-thu-tu-dong-toan-dien)
-[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-2--Phase%20Self--Review-purple)](#-vong-lap-self-review--quality-gate-tu-danh-gia--hieu-chinh-kien-truc)
-[![Zero-Token Caching](https://img.shields.io/badge/AI-Zero--Token%20Cache-orange)](#-tinh-nang-dot-pha)
-[![Architecture](https://img.shields.io/badge/Architecture-Domain%20%E2%86%92%20Cluster%20%E2%86%92%20Sub--Cluster-indigo)](#-kien-truc-phan-cap-hierarchical-architecture)
+[![Tests](https://img.shields.io/badge/Tests-42%2F42%20Integration%20Passed%20(100%25)-brightgreen)](#-kiem-thu-tu-dong-toan-dien)
+[![Zero-Token Caching](https://img.shields.io/badge/AI-Zero--Token%20Cache%20(SQLite%20WAL)-orange)](#-luu-tru-va-du-lieu)
+[![Architecture](https://img.shields.io/badge/Architecture-DDD%20Bounded%20Context%20%E2%86%92%20Cluster%20%E2%86%92%20Sub--Cluster-indigo)](#-kien-truc-phan-cap-bounded-context)
 
 ---
 
-## 📖 Giới Thiệu Tổng Quan
+## ⚡ Quick Start Trong 60 Giây (Zero-Bullshit Setup)
 
-**Canvas Note Engineer** là không gian làm việc số hóa mô phỏng **Field Notes & Live SRE Disaster Simulator**. Hệ thống mổ xẻ các sự cố vận hành phân tán (Distributed Incidents), xung đột tương tranh (**Race Conditions**, **Deadlocks**, **Retry Storms**), và các mẫu thiết kế phòng thủ (**Idempotency**, **Distributed Lock**, **Message Queue Buffer**, **Zero-Trust PEP/PDP**, **Audit Trail Immutability**, **Two-Phase Reservation**, **Penny Rounding Protection**) trên mặt giấy kỹ thuật số vô hạn (Infinite Technical Grid Canvas).
+```bash
+# 1. Clone repository
+git clone https://github.com/justpassingByte/canvas-note-engineer.git
+cd canvas-note-engineer
 
-Hệ thống được trang bị:
-1. **RAG Brainstorm Ingestion Engine**: Nạp trực tiếp tài liệu RFC / Markdown / Mermaid và tự động bóc tách thành sơ đồ phân cấp DDD.
-2. **Kiến trúc Phân Cấp Bounded Context**: Tách bạch rõ rệt giữa Domain $\to$ Service Cluster $\to$ Sub-Clusters hạ tầng chuyên biệt.
-3. **Vòng lặp Self-Review & Quality Gate 2 Pha**: Tự động phát hiện và loại bỏ các anti-patterns (HTTP verbs, mã lỗi 200 OK, payload cookies) để nâng cấp thành các component kiến trúc chuẩn.
-4. **Hồ Sơ Sự Cố Khép Kín (Unified Incident Case Dossiers)**: Gom nhóm bối cảnh tải (Traffic Profile), nguyên nhân gốc rễ (RCA), bán kính thiệt hại (Blast Radius), kịch bản lan truyền và giải pháp phòng thủ (Mitigation Strategy).
-5. **Mô Phỏng Lan Truyền Sóng Sự Cố (Failure Cascade Simulator)**: Con bọ đỏ (🐛 Bug Vector Particle) bò dọc theo đường cong dây nối SVG theo chiều có hướng của đồ thị DAG.
-6. **Chuỗi 5 Câu Hỏi Sát Hạch Đánh Đố (5-Step Continuous Reflex Drill)**: Thử thách phản xạ kiến trúc sư với các bẫy tư duy kỹ thuật sâu sắc.
-7. **Kéo Thả Tự Do (Node & Cluster Drag & Drop)**: Di chuyển tự do từng Node hoặc toàn bộ Cụm kèm lưu trữ bền vững 0-token SQLite WAL.
-8. **Biểu Tượng Quy Ước Quốc Tế (ISO/C4 Vector SVGs)**: Trụ Database 3 tầng, Chip CPU 4 hướng chân rết, Thanh RAM PCB...
+# 2. Cài đặt toàn bộ dependencies (Root + Frontend + Backend)
+npm install
+npm run --prefix frontend install
+npm run --prefix backend install
+
+# 3. Tạo file .env từ template (tùy chọn cắm key AI, mặc định có Mock Provider chạy offline 0đ)
+cp .env.example .env
+
+# 4. Khởi chạy song song cả Frontend (Vite) và Backend (Express)
+npm run dev
+```
+
+* 🌐 **Frontend Dev UI**: [`http://localhost:5173`](http://localhost:5173)
+* 🚀 **Backend REST API**: [`http://localhost:3001`](http://localhost:3001)
+* 🗄️ **Database SQLite WAL**: Tự động tạo tại `data/knowledge.db` (mở xem trực tiếp bằng DBeaver hoặc SQLite Viewer).
 
 ---
 
-## 🏛️ Kiến Trúc Phân Cấp (Hierarchical Architecture & Bounded Context)
+## 🧭 Bản Đồ Codebase Dành Cho Anh Em Vọc Vạch (Hacker's Code Map)
 
-Mô hình dữ liệu loại bỏ tư duy phẳng hóa (Flat Architecture), tổ chức hệ thống theo 3 cấp độ đóng gói chuẩn Domain-Driven Design:
+Nếu bạn muốn nhảy vào sửa code, thêm tính năng, hay cắm mô hình AI của riêng bạn, đây là các file trọng yếu:
+
+```text
+canvas-note-engineer/
+├── frontend/src/
+│   ├── components/Canvas/
+│   │   └── SvgGridCanvas.tsx         # Trái tim Canvas: Pan, Zoom, Cubic Bezier, Chuột phải & Prompt Popup
+│   ├── components/NodePod/
+│   │   ├── ConceptNode.tsx           # Thẻ Node: Badges, tiêu đề, tóm tắt, collapse pill, hover effect
+│   │   └── LucideIconPod.tsx         # Vẽ Icon SVG kỹ thuật chuẩn ISO/C4 (Database, CPU, RAM, Gateway...)
+│   ├── components/Animation/
+│   │   └── DynamicSchematic.tsx      # Sơ đồ mạch động SVG (Kafka conveyor, Redis lock, ACID cylinder...)
+│   ├── components/Drawer/
+│   │   └── FieldNotesDrawer.tsx      # Sổ tay kỹ thuật: Phân tích chuyên sâu, 5 câu hỏi sát hạch, Incident dossier
+│   ├── utils/
+│   │   ├── clusterEngine.ts          # Thuật toán tính Cụm Mẹ / Cụm Con theo Bounded Context & auto Bounding Box
+│   │   └── geometry.ts               # Thuật toán tính toán đường cong dây nối Cubic Bezier mượt mà
+│   └── store/
+│       └── useGraphStore.ts          # Zustand Store quản lý toàn bộ State: Zoom, Pan, Nodes, Edges, AI actions
+│
+├── backend/src/
+│   ├── providers/                    # Chiến lược cắm rút AI đa nhà cung cấp (Strategy Pattern)
+│   │   ├── providerStrategy.ts       # Interface AIProviderStrategy chuẩn mực
+│   │   ├── openaiCompatibleProvider.ts # Tương thích OpenAI, DeepSeek, Minimax, Ollama localhost
+│   │   ├── anthropicProvider.ts      # Hỗ trợ Claude 3.5 Sonnet / Claude 3 Opus
+│   │   └── mockProvider.ts           # Chạy offline 100% không tốn token, dùng cho unit test & vọc UI
+│   ├── tools/
+│   │   └── toolHandlers.ts           # Core Engine xử lý đồ thị: spawn cluster, bóc tách layer, reflex drill
+│   ├── services/
+│   │   └── aiGraphService.ts         # Service kết nối LLM Provider sinh đồ thị & mở rộng kiến trúc
+│   ├── db/
+│   │   └── sqliteClient.ts           # SQLite3 WAL Mode: Khóa Idempotency, lưu trữ đồ thị 0-token, provider config
+│   └── index.ts                      # Express API Server phục vụ REST endpoint & Static build
+│
+├── data/
+│   └── knowledge.db                  # Database SQLite file thực tế (WAL mode)
+└── rag/                              # Thư mục nạp tài liệu RFC, Markdown, Mermaid cho tính năng RAG Brainstorm
+```
+
+---
+
+## 🤖 Cắm AI / LLM Provider Của Riêng Bạn (Bring Your Own Model)
+
+Hệ thống thiết kế theo kiến trúc **Strategy Pattern** độc lập, cho phép bạn cắm bất kỳ nhà cung cấp AI nào (OpenAI, Anthropic Claude, DeepSeek, Minimax, hoặc Ollama chạy Local).
+
+### Cách 1: Cấu hình qua file `.env`
+Mở file `.env` ở thư mục gốc:
+
+```env
+# Chọn Provider mặc định: 'anthropic' | 'openai' | 'deepseek' | 'custom' | 'mock'
+DEFAULT_AI_PROVIDER=anthropic
+
+# Cấu hình Anthropic Claude (hoặc proxy Minimax / OpenAI-compatible)
+ANTHROPIC_API_KEY=sk-ant-api03-...
+ANTHROPIC_MODEL=claude-3-5-sonnet-20241022
+
+# Cấu hình DeepSeek hoặc OpenAI
+DEEPSEEK_API_KEY=sk-...
+OPENAI_API_KEY=sk-...
+
+# Chạy mô hình Local với Ollama (0 chi phí)
+CUSTOM_BASE_URL=http://localhost:11434/v1
+CUSTOM_API_KEY=ollama
+CUSTOM_MODEL=llama3.2
+```
+
+### Cách 2: Cấu hình động ngay trên giao diện Web UI (Không cần restart server)
+1. Bấm vào icon **Bánh răng (⚙️)** trên thanh công cụ nổi (Floating Toolbar).
+2. Chọn Preset có sẵn (Claude, OpenAI, DeepSeek, Ollama, Minimax) hoặc chọn **Custom Endpoint**.
+3. Điền `Base URL`, `API Key`, `Model Name` $\to$ Bấm **"Lưu & Kích hoạt"**. Cấu hình sẽ tự động lưu bền vững vào bảng `provider_configs` trong SQLite.
+
+---
+
+## 🎨 Hướng Dẫn Thêm Tính Năng Tự Vọc (Hacker's Extension Recipes)
+
+### 1. Thêm một Biểu tượng Kỹ thuật SVG mới (Custom Icon)
+* Mở [frontend/src/components/NodePod/LucideIconPod.tsx](file:///c:/Users/MSI/Desktop/plugin/frontend/src/components/NodePod/LucideIconPod.tsx).
+* Thêm một `case` mới vào hàm `LucideIconPod` và vẽ SVG theo sở thích:
+```tsx
+case 'my_custom_service':
+  return (
+    <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2">
+      <rect x="4" y="4" width="24" height="24" rx="4" />
+      {/* Thêm các đường vẽ vector của bạn */}
+    </svg>
+  );
+```
+
+### 2. Thêm một Sơ đồ Mạch Động Mới (Custom Schematic Animation)
+* Mở [frontend/src/components/Animation/DynamicSchematic.tsx](file:///c:/Users/MSI/Desktop/plugin/frontend/src/components/Animation/DynamicSchematic.tsx).
+* Thêm một case mới tương ứng với mã hiệu `mau` trong `hoat_hoa`:
+```tsx
+case 'my_stream_pipeline': {
+  return (
+    <svg width="100%" height="100%" viewBox="0 0 450 125">
+      {/* Tạo các phần tử SVG kèm <animate> cho hiệu ứng chuyển động */}
+      <circle cx="50" cy="62" r="8" fill="#3B82F6">
+        <animate attributeName="cx" values="50;400;50" dur="3s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  );
+}
+```
+
+### 3. Tùy biến Quy tắc Phân tầng Kiến trúc (Layer Sanitizer)
+* Mở [backend/src/tools/toolHandlers.ts](file:///c:/Users/MSI/Desktop/plugin/backend/src/tools/toolHandlers.ts#L118).
+* Hàm `sanitizeNodeLayerLabel` quyết định nhãn badge màu sắc (`GATEWAY / INGRESS`, `EVENT STREAM / TOPIC`, `STORAGE / ACID DB`). Bạn có thể thêm từ khóa nhận diện mới chỉ với 2 dòng `if (textToCheck.includes(...))`.
+
+---
+
+## 🖱️ Thao Tác Chuột & Phím Tắt Nhanh (Canvas Cheat Sheet)
+
+| Thao tác | Hành vi trên Canvas |
+|---|---|
+| **Chuột phải (Vùng trống)** | Mở Context Menu: Chọn `⚡ Spawn Cluster (Agent)` hoặc `💡 Spawn Concept (Agent)` $\to$ Hiện floating prompt tại con trỏ $\to$ Nhập prompt $\to$ **Enter** để sinh cụm kiến trúc. |
+| **Chuột phải (Lên Node)** | Mở Context Menu theo Node: Spawn cụm mới nối từ node này, mở Field Notes, thu gọn nhánh con, hoặc xóa node vĩnh viễn. |
+| **Kéo rê chuột trái (Pan)** | Di chuyển camera trên mặt giấy vô hạn. |
+| **Cuộn chuột (Zoom)** | Phóng to / Thu nhỏ mượt mà theo tâm con trỏ chuột (0.25x - 2.5x). |
+| **Kéo thả Node** | Nhấn giữ chuột trái vào thẻ Node để dời vị trí $\to$ Tự động lưu tọa độ vào SQLite khi buông chuột. |
+| **Kéo thả Cụm** | Nhấn giữ vào thẻ tiêu đề Cụm (`⋮⋮ TÊN CỤM`) để dời đồng loạt toàn bộ các node bên trong cụm. |
+| **Click vào Node** | Mở **Field Notes Drawer**: Khám phá bản chất, sơ đồ động, hồ sơ sự cố (Incident Dossier) và chuỗi 5 câu hỏi sát hạch phản xạ kiến trúc sư. |
+| **Click nút 🐛 trên Thẻ Sự cố** | Kích hoạt mô phỏng sóng lan truyền sự cố: Con bọ đỏ (Bug Vector Particle) bò dọc theo dây nối DAG. |
+
+---
+
+## 🏛️ Kiến Trúc Phân Cấp & Bounded Context (Không Hardcode)
+
+Hệ thống không sử dụng mô hình phẳng (Flat Architecture) mà tổ chức phân cấp theo tiêu chuẩn **Domain-Driven Design (DDD)**:
 
 ```text
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════╗
@@ -45,7 +180,6 @@ Mô hình dữ liệu loại bỏ tư duy phẳng hóa (Flat Architecture), tổ
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════╝
                                     │
                                     │  [PUBLIC CONTRACT INTERFACE]
-                                    │  (Verify JWT via JWKS / mTLS)
                                     ▼
 ╔════════════════════════════════════════════════════════════════════════════════════════════════════╗
 ║  [DOMAIN]: PAYMENT & FINANCIAL PLATFORM                                                           ║
@@ -59,151 +193,32 @@ Mô hình dữ liệu loại bỏ tư duy phẳng hóa (Flat Architecture), tổ
 ╚════════════════════════════════════════════════════════════════════════════════════════════════════╝
 ```
 
-### 1. Phân Tầng Mô Hình Dữ Liệu (`NodeEntity`)
-* **`domain_id`**: Định danh Bounded Context miền nghiệp vụ (vd: `domain-auth`, `domain-payment`, `domain-shared-infra`).
-* **`cluster_id`**: Định danh Cụm Dịch Vụ chính (vd: `cum-oidc-identity-service`, `cum-shared-infrastructure`).
-* **`sub_cluster_id`**: Định danh Phân Hệ Hạ Tầng Cục Bộ (vd: `sub-auth-redis`, `sub-payment-lock`).
-* **`is_public_interface`**: Đánh dấu Cổng Đối Ngoại công khai (PEP Gateway, JWKS Endpoint, Webhook Ingress).
-* **`infra_type`**: Định danh hạ tầng thực tế (`redis`, `postgres`, `kafka`, `service`, `gateway`, `worker`).
-
-### 2. Bộ Lọc Chống "Cross-Wiring" Xuyên Cụm (Bounded Context Isolation)
-* **Chặn tuyệt đối** việc cắm dây từ Service của một Domain sang trực tiếp Sub-Cluster nội tạng của Domain khác (vd: cấm Payment chọc thẳng vào Token Revocation Blacklist của Auth).
-* **Giao tiếp liên Domain** bắt buộc phải thông qua **Cổng Đối Ngoại Công Khai** (`is_public_interface: true`, vd: mTLS / JWKS) hoặc trỏ về **Cụm Hạ Tầng Dùng Chung** (`cum-shared-infrastructure`).
+1. **Cụm Dịch Vụ Chính (Service Cluster)**: Chứa các node thực thi logic chính (Gateways, Pure Engines, Dispatchers, Workers).
+2. **Cụm Hạ Tầng Chuyên Biệt (Sub-Clusters)**: Chứa các tài nguyên nội bộ độc lập của phân hệ (ví dụ: `MEDIA LIFECYCLE & CLEANUP QUEUE`, `POSTGRESQL STORAGE & LEDGER SUBSYSTEM`, `REDIS CACHE SUBSYSTEM`).
+3. **Chống Cross-Wiring Xuyên Cụm**: Dịch vụ của cụm này **bị chặn tuyệt đối** không được cắm dây trực tiếp vào phần cứng nội tạng của cụm khác mà phải giao tiếp qua Public Contract (Gateway/PEP).
 
 ---
 
-## 🛡️ Vòng Lặp Self-Review & Quality Gate (Tự Đánh Giá & Hiệu Chỉnh Kiến Trúc)
+## 🧪 Bộ Lệnh Hữu Ích (Developer Cheatsheet)
 
-Nhằm giải quyết triệt để lỗi sinh node sai bản chất (nhầm lẫn giữa luồng truyền tin HTTP/Cookie/Tên hàm với Thành phần Kiến trúc), hệ thống tích hợp **Quy trình Ingestion 2 Pha (2-Phase Ingestion Quality Gate)**:
-
-```text
-[Tài Liệu Brainstorm / RFC / Mermaid]
-                 │
-                 ▼
-       [Pha 1: Parser Thô]
-                 │
-                 ▼
-┌────────────────────────────────────────────────────────┐
-│ Pha 2: Self-Review & Quality Gate Auto-Correction      │
-│                                                        │
-│ 1. Bộ Lọc Anti-Pattern (Anti-Pollution Filter):        │
-│    • Phát hiện & chặn các từ khóa phi kiến trúc:       │
-│      - HTTP Verbs: POST /auth/login, GET /...          │
-│      - HTTP Status: 200 OK, 401 Unauthorized, Reject   │
-│      - Data Packets: Access cookie, Refresh cookie     │
-│      - Function Signatures: authorize(), login()       │
-│                                                        │
-│ 2. Bộ Nâng Cấp Kiến Trúc (Architectural Elevation):    │
-│    • Tự động nâng cấp sang Component DDD chuẩn mực:    │
-│      - Route/Packet  ➔  Ingress Gateway (PEP Guard)    │
-│      - Logic tính toán ➔ Pure Domain Engine (0 I/O)    │
-│      - Lưu trữ/Đệm   ➔  Dedicated Sub-Clusters         │
-│                                                        │
-│ 3. Đánh Giá & Chấm Điểm Chất Lượng (Quality Score):   │
-│    • Bounded Context & Public Interface Validation     │
-│    • Sinh 100% Deep Details, Chuỗi Sụp Đổ & Reflex Quiz│
-└────────────────────────────────────────────────────────┘
-                 │
-                 ▼ (Chỉ render khi Quality Score ≥ 95)
-    [Canvas Render & SQLite WAL Persistence]
-```
-
----
-
-## 🚀 Tính Năng Đột Phá
-
-### 1. RAG Brainstorm Doc Ingestion Engine (Nạp & Tự Động Sinh Cụm)
-* **Tự động bóc tách sơ đồ Mermaid**: Phân tích cú pháp `flowchart TD/LR` và Sequence Diagrams trong tài liệu RFC để tự động tạo Service Cluster, Database Sub-cluster, Redis Sub-cluster, Outbox Worker.
-* **Giao diện Modal 3 Chế Độ trên Toolbar**:
-  1. 📁 **Folder `rag/`**: Duyệt danh sách các tài liệu `.md`, xem trước và 1-click **"Nạp & Tự Động Sinh Cụm"**.
-  2. 📤 **Upload File**: Tải lên file `.md`, `.txt`, `.json` từ máy tính $\to$ tự động lưu vào `rag/` và sinh cụm.
-  3. ✍️ **Dán Trực Tiếp**: Dán bản nháp Brainstorm text $\to$ nhấn **"Phân Tích & Sinh Cụm Lên Canvas"**.
-
-### 2. Mô Phỏng Sóng Lan Truyền Sự Cố (🐛 Bug Particle Motion & 3-Cycle Auto-Freeze)
-* Nhấn nút **"Mô Phỏng Sự Cố 🐛"** trên từng Thẻ Sự Cố để kích hoạt luồng mô phỏng:
-  * **Con bọ đỏ Vector SVG (🐛 Bug Particle)** bò mượt mà dọc theo đường cong dây nối từ Node nguồn sang các Node phụ thuộc.
-  * Tự động gắn các **Mini Stage Badges** (`🚨 1. TRIGGER`, `🔴 2. SATURATION`, `💥 3. BLAST RADIUS`) trên đầu các Node.
-  * Tự động duy trì trạng thái mô phỏng khi người dùng click chuyển qua lại giữa các Node.
-
-### 3. Kéo Thả Tự Do (Node & Cluster Drag & Drop + Auto-Persistence)
-* Kéo di chuyển từng Node hoặc toàn bộ Cụm tự do.
-* Tự động tính toán lại các đường cong Cubic Bezier S-Curves và lưu tọa độ bền vững vào SQLite WAL.
-* Cơ chế phân biệt Drag vs Click chống hiện tượng nhảy zoom nhầm camera.
-
-### 4. Hệ Thống Biểu Tượng Quy Ước Chuẩn Quốc Tế (ISO / C4 / UML SVGs)
-* 🗄️ **Database**: Khối trụ đĩa từ 3 tầng elip xếp chồng.
-* 🧠 **CPU Engine**: Con chip vi xử lý hình vuông với lõi Silicon và chân kim loại 4 hướng.
-* ⚡ **RAM Cache**: Thanh RAM PCB với 4 chip nhớ và chân cắm vàng.
-* 🖥️ **Service / Server**: Tủ Server phiến với đèn LED tín hiệu.
-* 🌐 **Gateway Ingress**: Cầu nối mạng địa cầu định tuyến vĩ tuyến.
-* 📨 **Message Queue**: Ống hàng đợi 3 lớp gói tin.
-* ⚙️ **Worker**: Cụm bánh răng cơ khí.
-
-### 5. Từ Điển Thuật Ngữ Tự Học (Self-Learning Dynamic Glossary)
-* 80+ thuật ngữ vàng cốt lõi có sẵn.
-* Tự động quét và nạp thêm thuật ngữ mới từ mọi file docs trong `rag/`.
-* Thẻ Floating Edge Hover Card hiển thị từ khóa nổi bật màu vàng ánh kim (`#FDE047`) trên nền tối.
-
----
-
-## 🛠️ Công Nghệ Sử Dụng
-
-| Tầng | Công nghệ | Vai trò |
-|---|---|---|
-| **Frontend** | React 18, TypeScript, Vite SingleFile, Zustand, Lucide Icons | Canvas tương tác vô hạn, Drag & Drop, Cubic Bezier SVG, Field Notes Drawer |
-| **Backend** | Node.js, Express, TypeScript, Better-SQLite3 | REST API, RAG Ingestion Engine, Self-Review Quality Gate, Bounded Context Validator |
-| **Lưu Trữ** | SQLite với Write-Ahead Logging (WAL) Mode | 0-Token Caching, lưu trữ đồ thị bất biến, hỗ trợ đa tiến trình |
-| **Kiểm Thử** | Vitest | 49 automated tests (100% pass rate) cho unit, API, DB concurrency & RAG |
-
----
-
-## 📋 Hướng Dẫn Sử Dụng
-
-### 1. Khởi Động Ứng Dụng
 ```bash
-# 1. Cài đặt dependencies (nếu mới clone)
-npm install
+# Chạy toàn bộ kiểm thử tích hợp (10 test suites, 42 tests)
+npm run test:integration
 
-# 2. Build toàn bộ frontend và backend
+# Chạy kiểm thử đơn vị frontend
+npm run test:unit
+
+# Build bundle frontend (Vite SingleFile)
+npm run build:frontend
+
+# Build toàn bộ dự án
 npm run build
 
-# 3. Khởi chạy máy chủ phát triển (cả frontend và backend)
-npm run dev
-```
-Mở trình duyệt tại: `http://localhost:5173` (hoặc qua Express Production Server `http://localhost:3001` / DeepSeek Harness Web GUI `http://127.0.0.1:3080`).
-
----
-
-### 2. Sử Dụng Tính Năng RAG Brainstorm
-1. Đặt các file bản thảo thiết kế (`.md`, `.txt`, `.json`) vào thư mục `rag/`.
-2. Trên thanh công cụ nổi (Floating Toolbar), bấm nút **"RAG Brainstorm"**.
-3. Trong tab **"Folder rag/"**, chọn tài liệu cần nạp $\to$ Bấm **"Nạp & Tự Động Sinh Cụm"**.
-4. Hệ thống sẽ tự động chạy qua **Self-Review Quality Gate**, bóc tách thành Cụm Dịch Vụ và các Cụm Con Hạ Tầng tương ứng, hiển thị ngay trên Canvas.
-
----
-
-### 3. Thao Tác Trực Quan Trên Canvas
-* **Kéo di chuyển Node**: Nhấn giữ chuột trái vào thẻ Node và kéo đến vị trí mong muốn.
-* **Kéo di chuyển Cụm**: Nhấn giữ thẻ tiêu đề cụm (`⋮⋮ TÊN CỤM`) để dời toàn bộ cụm.
-* **Xem chi tiết kỹ thuật**: Click vào bất kỳ Node nào để mở Field Notes Drawer chứa Bản chất, Sơ đồ thực thi, Hồ sơ sự cố khép kín (Incident Dossiers), và Chuỗi 5 câu hỏi sát hạch phản xạ.
-* **Mô phỏng sự cố**: Bấm nút **"Mô Phỏng Sự Cố 🐛"** trên thẻ sự cố để xem con bọ đỏ bò dọc theo dây nối.
-* **Thu gọn nhánh con**: Bấm nút `Thu gọn` ở chân thẻ node.
-* **Tìm kiếm**: Gõ từ khóa vào ô tìm kiếm trên thanh công cụ để highlight node tức thì.
-* **Xuất dữ liệu**: Bấm nút Download trên thanh công cụ để xuất sang **Obsidian (.md)**, **Mermaid Chart**, hoặc **JSON**.
-
----
-
-## 🧪 Kiểm Thử Tự Động Toàn Diện
-
-Hệ thống được bảo chứng bởi 11 test suites với 49 test cases:
-```bash
-npm run test
+# Dọn sạch Database về trạng thái Canvas tinh khôi (chạy bằng Node trực tiếp)
+node -e "const db=require('better-sqlite3')('data/knowledge.db'); db.exec('DELETE FROM knowledge_graphs; DELETE FROM idempotency_keys; VACUUM;'); console.log('DB Cleaned!');"
 ```
 
-Kết quả kiểm thử:
-* `brainstormRAG.test.ts`: Kiểm tra bộ bóc tách tài liệu RFC, Mermaid và Self-Review Quality Gate.
-* `hierarchicalClusterSpawning.test.ts`: Kiểm tra Multi-Cluster Spawning và Bounded Context Isolation.
-* `edgeSanitizer.test.ts`: Kiểm tra 4 lớp kiểm duyệt liên kết, chống tự trỏ, chống chu trình và chống cross-wiring.
-* `dynamicSpawnAndCapacity.test.ts`: Kiểm tra trần an toàn chống ảo giác AI (Saturation Cap).
-* `realDatabaseIntegration.test.ts`: Kiểm tra SQLite WAL persistence và ACID transactions.
-* `clusterEngine.test.ts` & `geometry.test.ts`: Kiểm tra thuật toán Bounding Box và Cubic Bezier Ports.
+---
+
+## 📄 Bản Quyền & Đóng Góp
+Dự án được xây dựng dưới triết lý mã nguồn mở dành cho cộng đồng Kỹ sư Phần mềm Việt Nam yêu thích kiến trúc hệ thống, distributed systems và agentic workflows. Mọi đóng góp (PR, Issue, Ideas) đều được nhiệt liệt hoan nghênh!
