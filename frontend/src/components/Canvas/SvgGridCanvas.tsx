@@ -37,7 +37,9 @@ export const SvgGridCanvas: React.FC = () => {
     setZoom,
     resetView,
     spawnNode,
-    spawnCluster
+    spawnCluster,
+    toggleExpandWithAiModal,
+    toggleNewGraphModal
   } = useGraphStore();
 
   const canvasRef = useRef<HTMLElement>(null);
@@ -940,6 +942,20 @@ export const SvgGridCanvas: React.FC = () => {
               <button
                 className="context-menu-item"
                 onClick={() => {
+                  selectNode(contextMenu.targetNode!.id);
+                  toggleExpandWithAiModal();
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#4F46E5' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>✨</span>
+                <span>Hỏi AI mở rộng nhánh này...</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onClick={() => {
                   toggleCollapse(contextMenu.targetNode!.id);
                   setContextMenu(null);
                 }}
@@ -972,6 +988,19 @@ export const SvgGridCanvas: React.FC = () => {
               <div style={{ padding: '6px 8px 4px', fontSize: '10px', fontWeight: 800, color: '#6B7280', borderBottom: '1px solid #E5E7EB' }}>
                 VÙNG TRỐNG CANVAS ({contextMenu.graphX}, {contextMenu.graphY})
               </div>
+              <button
+                className="context-menu-item"
+                onClick={() => {
+                  toggleNewGraphModal();
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#4F46E5' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>✨</span>
+                <span>Sinh Đồ Thị bằng AI...</span>
+              </button>
               <button
                 className="context-menu-item"
                 onClick={() => {

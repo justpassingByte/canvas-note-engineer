@@ -12,7 +12,9 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize,
-  FolderOpen
+  FolderOpen,
+  Settings,
+  GitBranch
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
 import { BrainstormRagModal } from '../RAG/BrainstormRagModal.js';
@@ -30,7 +32,11 @@ export const FloatingToolbar: React.FC = () => {
     zoom,
     zoomIn,
     zoomOut,
-    resetView
+    resetView,
+    activeProvider,
+    toggleProviderConfigModal,
+    toggleNewGraphModal,
+    toggleExpandWithAiModal
   } = useGraphStore();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
@@ -185,7 +191,7 @@ export const FloatingToolbar: React.FC = () => {
 
       <div className="vach-ngan-thanh"></div>
 
-      {/* Nút DeepSeek AI mở rộng node con */}
+      {/* Nút mở rộng node con (Mode 1 & Mode 2) */}
       <button
         className="nut-thao-tac-noi nut-sinh-node"
         onClick={() => expandNode(selectedNodeId || 'node-main')}
@@ -208,6 +214,34 @@ export const FloatingToolbar: React.FC = () => {
       >
         <FolderOpen className="lucide-icon-sm" color="#4F46E5" />
         <span>RAG Brainstorm</span>
+      </button>
+
+      {/* Nút Cấu hình AI Provider / .env */}
+      <button
+        className="nut-thao-tac-noi"
+        onClick={toggleProviderConfigModal}
+        title="Cấu hình AI Provider & Biến môi trường .env (DeepSeek, OpenAI, Claude, Ollama...)"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: activeProvider ? '#F0FDF4' : '#FFFBEB',
+          borderColor: activeProvider ? '#86EFAC' : '#FDE68A',
+          color: activeProvider ? '#166534' : '#B45309'
+        }}
+      >
+        <span
+          style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: activeProvider ? '#16A34A' : '#D97706'
+          }}
+        />
+        <Settings className="lucide-icon-sm" />
+        <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {activeProvider ? activeProvider.name : 'Cấu hình AI'}
+        </span>
       </button>
 
       <div className="vach-ngan-thanh"></div>

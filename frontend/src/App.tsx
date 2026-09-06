@@ -6,11 +6,14 @@ import './styles/drawer.css';
 
 import { SvgGridCanvas } from './components/Canvas/SvgGridCanvas.js';
 import { FieldNotesDrawer } from './components/Drawer/FieldNotesDrawer.js';
+import { ProviderConfigModal } from './components/Settings/ProviderConfigModal.js';
+import { NewGraphAiModal } from './components/Modals/NewGraphAiModal.js';
+import { ExpandNodeAiModal } from './components/Modals/ExpandNodeAiModal.js';
 import { useGraphStore } from './store/useGraphStore.js';
 import { setDynamicDictionary } from './dictionary/technicalDictionary.js';
 
 export const App: React.FC = () => {
-  const { graph, setGraph, fetchCurrentGraph, pollCurrentGraph } = useGraphStore();
+  const { graph, setGraph, fetchCurrentGraph, pollCurrentGraph, fetchProviderConfig } = useGraphStore();
 
   useEffect(() => {
     // 1. Nạp từ điển thuật ngữ động từ RAG documents
@@ -23,7 +26,10 @@ export const App: React.FC = () => {
       })
       .catch(() => {});
 
-    // 2. Tải đồ thị ban đầu
+    // 2. Nạp cấu hình AI Provider
+    fetchProviderConfig();
+
+    // 3. Tải đồ thị ban đầu
     fetchCurrentGraph().then(() => {
       if (!useGraphStore.getState().graph) {
         setGraph({
@@ -35,7 +41,7 @@ export const App: React.FC = () => {
       }
     });
 
-    // 2. Tự động đồng bộ thời gian thực mỗi 1.5 giây mà không cần reload trang
+    // 4. Tự động đồng bộ thời gian thực mỗi 1.5 giây mà không cần reload trang
     const timer = setInterval(() => {
       pollCurrentGraph();
     }, 1500);
@@ -47,6 +53,9 @@ export const App: React.FC = () => {
     <main className="khong-gian-lam-viec">
       <SvgGridCanvas />
       <FieldNotesDrawer />
+      <ProviderConfigModal />
+      <NewGraphAiModal />
+      <ExpandNodeAiModal />
     </main>
   );
 };

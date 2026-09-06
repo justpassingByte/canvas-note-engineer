@@ -36,7 +36,8 @@ export const FieldNotesDrawer: React.FC = () => {
     toggleWhatBreaks,
     isDrawerOpen,
     closeDrawer,
-    openDrawer
+    openDrawer,
+    toggleExpandWithAiModal
   } = useGraphStore();
 
   // Tooltip cố định chống tràn mép (Fixed Collision-Free Floating Tooltip)

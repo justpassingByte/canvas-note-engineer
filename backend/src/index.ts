@@ -5,10 +5,17 @@ import fs from 'fs';
 import { toolHandlers } from './tools/toolHandlers.js';
 import { sqliteClient } from './db/sqliteClient.js';
 import { brainstormRAG } from './rag/brainstormRAG.js';
+import { PROVIDER_PRESETS, ProviderConfig } from './config/providerConfig.js';
+import { ProviderFactory } from './providers/providerFactory.js';
+import { AIGraphService } from './services/aiGraphService.js';
+import { EnvManager } from './config/envManager.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Khởi tạo và nạp biến môi trường từ file .env
+EnvManager.init();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,10 +25,146 @@ app.use(express.json());
 
 // Khởi tạo đồ thị sạch từ SQLite (Không tự động seed dữ liệu mẫu cứng)
 console.log('[DSH Plugin Backend] Khởi động với SQLite sạch - Sẵn sàng cho AI sinh đồ thị theo yêu cầu.');
+console.log(`[DSH Plugin Backend] File .env đang nạp từ: ${EnvManager.getEnvPath()}`);
 
 // API Routes cho Frontend & DeepSeek Harness Webview
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', plugin: 'interactive_knowledge_graph', cache: 'sqlite_wal' });
+  const active = sqliteClient.getActiveProviderConfig();
+  res.json({
+    status: 'ok',
+    plugin: 'interactive_knowledge_graph',
+    cache: 'sqlite_wal',
+    active_provider: active ? { name: active.name, model: active.model, type: active.provider_type } : null
+  });
+});
+
+// ==========================================
+// AI PROVIDER CONFIGURATION & TEST ROUTES
+// ==========================================
+app.get('/api/provider/config', (req, res) => {
+  try {
+    let active = sqliteClient.getActiveProviderConfig();
+    if (!active) {
+      const activeProvider = ProviderFactory.getActiveProvider();
+      if (activeProvider) {
+        active = activeProvider.config;
+      }
+    }
+
+    const all = sqliteClient.getAllProviderConfigs();
+
+    // Masking API key trước khi trả về Frontend để bảo mật tuyệt đối
+    const safeActive = active
+      ? {
+          ...active,
+          base_url: EnvManager.resolveBaseUrl(active.provider_type, active.base_url),
+          model: EnvManager.resolveModel(active.provider_type, active.model),
+          api_key: EnvManager.maskKey(EnvManager.resolveApiKey(active.provider_type, active.api_key)),
+          has_env_key: EnvManager.hasKeyInEnv(active.provider_type),
+          env_var: `${EnvManager.getPrefixForProvider(active.provider_type)}_API_KEY`
+        }
+      : null;
+
+    res.json({
+      active: safeActive,
+      all,
+      presets: PROVIDER_PRESETS,
+      env_path: EnvManager.getEnvPath()
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/provider/config', (req, res) => {
+  try {
+    const config = req.body as ProviderConfig;
+    if (!config.id) {
+      config.id = `provider-${Date.now()}`;
+    }
+    if (!config.base_url || !config.model) {
+      return res.status(400).json({ error: 'Thiếu Base URL hoặc Model ID' });
+    }
+
+    // 1. Tự động lưu Base URL, API Key, và Model ID vào file .env
+    EnvManager.saveProviderToEnv(config.provider_type, {
+      baseUrl: config.base_url,
+      apiKey: config.api_key,
+      model: config.model
+    });
+
+    // 2. Trong SQLite, chỉ lưu cấu hình mà KHÔNG lưu khóa bí mật dạng plain-text
+    const dbConfig = {
+      ...config,
+      api_key: EnvManager.maskKey(config.api_key) || '[SAVED_IN_ENV]'
+    };
+    sqliteClient.saveProviderConfig(dbConfig);
+
+    res.json({ success: true, config: dbConfig });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/provider/test', async (req, res) => {
+  try {
+    const config = req.body as ProviderConfig;
+    if (!config.base_url) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập Base URL' });
+    }
+    const provider = ProviderFactory.createProvider(config);
+    const result = await provider.testConnection();
+    res.json(result);
+  } catch (error: any) {
+    res.json({ success: false, latencyMs: 0, message: `Lỗi: ${error.message}` });
+  }
+});
+
+app.post('/api/provider/active/:id', (req, res) => {
+  try {
+    sqliteClient.setActiveProviderConfig(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/provider/:id', (req, res) => {
+  try {
+    sqliteClient.deleteProviderConfig(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// AI LIVE GRAPH GENERATION & EXPANSION
+// ==========================================
+app.post('/api/graph/ai-generate', async (req, res) => {
+  try {
+    const { topic, domain, userPrompt } = req.body;
+    if (!topic || !topic.trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập chủ đề hoặc bài toán cần phân tích.' });
+    }
+    const result = await AIGraphService.generateNewGraph({ topic: topic.trim(), domain, userPrompt });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/graph/ai-expand', async (req, res) => {
+  try {
+    const { nodeId, intent, userInstruction } = req.body;
+    if (!nodeId) {
+      return res.status(400).json({ error: 'Thiếu nodeId cần mở rộng.' });
+    }
+    const result = await AIGraphService.expandNodeWithAI({ nodeId, intent, userInstruction });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 app.get('/api/graph/current', async (req, res) => {
