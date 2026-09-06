@@ -4,18 +4,25 @@ import { ILLMProvider, CompletionParams, ConnectionTestResult } from './baseProv
 export class AnthropicProvider implements ILLMProvider {
   constructor(public readonly config: ProviderConfig) {}
 
-  private getCleanBaseUrl(): string {
+  private getEndpoint(): string {
     let url = (this.config.base_url || 'https://api.anthropic.com/v1').trim();
     if (url.endsWith('/')) {
       url = url.slice(0, -1);
     }
-    return url;
+    if (url.endsWith('/messages')) {
+      return url;
+    }
+    if (url.endsWith('/v1')) {
+      return `${url}/messages`;
+    }
+    return `${url}/v1/messages`;
   }
 
   private getHeaders(): Record<string, string> {
+    const key = (this.config.api_key || '').trim();
     return {
       'Content-Type': 'application/json',
-      'x-api-key': this.config.api_key.trim(),
+      'x-api-key': key,
       'anthropic-version': '2023-06-01',
       ...this.config.custom_headers
     };
@@ -23,8 +30,7 @@ export class AnthropicProvider implements ILLMProvider {
 
   public async testConnection(): Promise<ConnectionTestResult> {
     const startTime = Date.now();
-    const cleanUrl = this.getCleanBaseUrl();
-    const endpoint = `${cleanUrl}/messages`;
+    const endpoint = this.getEndpoint();
 
     try {
       const response = await fetch(endpoint, {
@@ -41,13 +47,15 @@ export class AnthropicProvider implements ILLMProvider {
       const latencyMs = Date.now() - startTime;
 
       if (!response.ok) {
-        let errDetail = '';
+        const rawText = await response.text();
+        let errDetail = rawText;
         try {
-          const errData: any = await response.json();
-          errDetail = errData.error?.message || JSON.stringify(errData);
+          const errData = JSON.parse(rawText);
+          errDetail = errData.error?.message || errData.message || rawText;
         } catch {
-          errDetail = await response.text();
+          // giữ nguyên rawText nếu phản hồi không phải JSON
         }
+
         return {
           success: false,
           latencyMs,
@@ -72,8 +80,7 @@ export class AnthropicProvider implements ILLMProvider {
   }
 
   public async generateCompletion(params: CompletionParams): Promise<string> {
-    const cleanUrl = this.getCleanBaseUrl();
-    const endpoint = `${cleanUrl}/messages`;
+    const endpoint = this.getEndpoint();
 
     const bodyPayload: any = {
       model: this.config.model || 'claude-3-5-sonnet-20241022',
@@ -91,12 +98,13 @@ export class AnthropicProvider implements ILLMProvider {
     });
 
     if (!response.ok) {
-      let errText = '';
+      const rawText = await response.text();
+      let errText = rawText;
       try {
-        const errJson: any = await response.json();
-        errText = errJson.error?.message || JSON.stringify(errJson);
+        const errJson = JSON.parse(rawText);
+        errText = errJson.error?.message || errJson.message || rawText;
       } catch {
-        errText = await response.text();
+        // giữ rawText
       }
       throw new Error(`[Anthropic] Lỗi API (${response.status}): ${errText}`);
     }

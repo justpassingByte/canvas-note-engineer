@@ -25,18 +25,71 @@ export class OpenAICompatibleProvider implements ILLMProvider {
     return headers;
   }
 
+  public async fetchModels(): Promise<string[]> {
+    const cleanUrl = this.getCleanBaseUrl();
+    const modelsEndpoint = `${cleanUrl}/models`;
+    try {
+      const response = await fetch(modelsEndpoint, {
+        headers: this.getHeaders(),
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!response.ok) return [];
+      const data: any = await response.json();
+      if (Array.isArray(data.data)) {
+        return data.data
+          .map((m: any) => m.id || m.name)
+          .filter(Boolean)
+          .sort();
+      }
+      return [];
+    } catch {
+      return [];
+    }
+  }
+
   public async testConnection(): Promise<ConnectionTestResult> {
     const startTime = Date.now();
     const cleanUrl = this.getCleanBaseUrl();
 
     try {
-      // Thử endpoint chat completion nhẹ (1 token)
+      // 1. Kiểm tra xác thực qua endpoint /models trước (Không tốn token, kiểm tra chuẩn xác API Key & Base URL)
+      let availableModels: string[] = [];
+      try {
+        const modelsRes = await fetch(`${cleanUrl}/models`, {
+          headers: this.getHeaders(),
+          signal: AbortSignal.timeout(6000)
+        });
+
+        if (modelsRes.status === 401 || modelsRes.status === 403) {
+          const errData: any = await modelsRes.json().catch(() => ({}));
+          const msg = errData.error?.message || modelsRes.statusText;
+          return {
+            success: false,
+            latencyMs: Date.now() - startTime,
+            message: `Lỗi xác thực (HTTP ${modelsRes.status}): API Key không hợp lệ hoặc bị từ chối truy cập. (${msg})`
+          };
+        }
+
+        if (modelsRes.ok) {
+          const modelsData: any = await modelsRes.json();
+          if (Array.isArray(modelsData.data)) {
+            availableModels = modelsData.data
+              .map((m: any) => m.id || m.name)
+              .filter(Boolean);
+          }
+        }
+      } catch {
+        // Một số custom proxy / local LLM có thể không hỗ trợ /models, tiếp tục thử chat completions
+      }
+
+      // 2. Thử endpoint chat completion nhẹ (1 token)
+      const targetModel = this.config.model || availableModels[0] || 'gpt-4o-mini';
       const chatEndpoint = `${cleanUrl}/chat/completions`;
       const response = await fetch(chatEndpoint, {
         method: 'POST',
         headers: this.getHeaders(),
         body: JSON.stringify({
-          model: this.config.model || 'gpt-4o-mini',
+          model: targetModel,
           messages: [{ role: 'user', content: 'Hi' }],
           max_tokens: 5
         }),
@@ -46,35 +99,60 @@ export class OpenAICompatibleProvider implements ILLMProvider {
       const latencyMs = Date.now() - startTime;
 
       if (!response.ok) {
-        let errDetail = '';
+        const rawText = await response.text();
+        let errDetail = rawText;
         try {
-          const errData: any = await response.json();
-          errDetail = errData.error?.message || JSON.stringify(errData);
+          const errData: any = JSON.parse(rawText);
+          errDetail = errData.error?.message || errData.message || rawText;
         } catch {
-          errDetail = await response.text();
+          // giữ rawText
         }
+
+        // Nếu API Key đúng (status 404 hoặc model_not_found) nhưng model chưa đúng
+        if (
+          response.status === 404 ||
+          errDetail.includes('model_not_found') ||
+          errDetail.includes('does not exist') ||
+          errDetail.includes('do not have access')
+        ) {
+          const chatCandidates = availableModels.filter(
+            m => !m.includes('whisper') && !m.includes('guard') && !m.includes('embed')
+          );
+          const suggestions = (chatCandidates.length > 0 ? chatCandidates : availableModels).slice(0, 4).join(', ');
+          return {
+            success: false,
+            latencyMs,
+            message: `API Key hợp lệ! Nhưng model "${targetModel}" không tồn tại trên tài khoản của bạn.${
+              suggestions ? ` Gợi ý model khả dụng: ${suggestions}` : ''
+            }`,
+            availableModels
+          };
+        }
+
         return {
           success: false,
           latencyMs,
-          message: `HTTP ${response.status}: ${errDetail || response.statusText}`
+          message: `HTTP ${response.status}: ${errDetail || response.statusText}`,
+          availableModels: availableModels.length > 0 ? availableModels : undefined
         };
       }
 
       const resData: any = await response.json();
-      const modelUsed = resData.model || this.config.model;
+      const modelUsed = resData.model || targetModel;
 
       return {
         success: true,
         latencyMs,
         message: `Kết nối thành công tới ${this.config.name || 'Provider'}!`,
-        modelInfo: `Model: ${modelUsed}`
+        modelInfo: `Model: ${modelUsed}`,
+        availableModels: availableModels.length > 0 ? availableModels : undefined
       };
     } catch (err: any) {
       const latencyMs = Date.now() - startTime;
       return {
         success: false,
         latencyMs,
-        message: `Lỗi kết nối: ${err.message || 'Timeout hoặc sai URL'}`
+        message: `Lỗi kết nối: ${err.message || 'Timeout hoặc sai Base URL'}`
       };
     }
   }
@@ -125,27 +203,31 @@ export class OpenAICompatibleProvider implements ILLMProvider {
     }
 
     if (!response.ok) {
-      let errText = '';
+      const rawText = await response.text();
+      let errText = rawText;
+      let errJson: any = null;
       try {
-        const errJson: any = await response.json();
-        // Nếu lỗi do json_object không được hỗ trợ
-        if (params.jsonMode && errJson.error?.message?.includes('response_format')) {
-          delete bodyPayload.response_format;
-          const retryRes = await fetch(chatEndpoint, {
-            method: 'POST',
-            headers: this.getHeaders(),
-            body: JSON.stringify(bodyPayload),
-            signal: AbortSignal.timeout(60000)
-          });
-          if (retryRes.ok) {
-            const data: any = await retryRes.json();
-            return data.choices?.[0]?.message?.content || '';
-          }
-        }
-        errText = errJson.error?.message || JSON.stringify(errJson);
+        errJson = JSON.parse(rawText);
+        errText = errJson.error?.message || errJson.message || rawText;
       } catch {
-        errText = await response.text();
+        // không phải JSON
       }
+
+      // Nếu lỗi do json_object không được hỗ trợ bởi model này, thử lại không có response_format
+      if (params.jsonMode && errJson?.error?.message?.includes('response_format')) {
+        delete bodyPayload.response_format;
+        const retryRes = await fetch(chatEndpoint, {
+          method: 'POST',
+          headers: this.getHeaders(),
+          body: JSON.stringify(bodyPayload),
+          signal: AbortSignal.timeout(60000)
+        });
+        if (retryRes.ok) {
+          const data: any = await retryRes.json();
+          return data.choices?.[0]?.message?.content || '';
+        }
+      }
+
       throw new Error(`[${this.config.name}] Lỗi API (${response.status}): ${errText}`);
     }
 

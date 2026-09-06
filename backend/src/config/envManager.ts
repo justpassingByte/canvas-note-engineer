@@ -98,6 +98,23 @@ export class EnvManager {
   }
 
   /**
+   * Kiểm tra xem chuỗi key có phải là placeholder đã bị mask hay không
+   */
+  public static isMaskedKey(key?: string): boolean {
+    if (!key) return false;
+    const trimmed = key.trim();
+    return (
+      trimmed.includes('...') ||
+      trimmed.includes('***') ||
+      trimmed.startsWith('sk-...') ||
+      trimmed.startsWith('gsk_...') ||
+      trimmed.endsWith('...') ||
+      trimmed === '[SAVED_IN_ENV]' ||
+      trimmed === '[ENV]'
+    );
+  }
+
+  /**
    * Giải quyết Base URL: ưu tiên input -> sau đó lấy từ env riêng -> sau đó generic AI_BASE_URL
    */
   public static resolveBaseUrl(providerType: ProviderType, inputUrl?: string): string {
@@ -105,23 +122,23 @@ export class EnvManager {
     if (trimmed) return trimmed;
 
     const prefix = this.getPrefixForProvider(providerType);
-    const envUrl = process.env[`${prefix}_BASE_URL`] || process.env.AI_BASE_URL;
+    const envUrl = process.env[`${prefix}_BASE_URL`] || process.env.AI_BASE_URL || process.env.CUSTOM_BASE_URL;
     return (envUrl || '').trim();
   }
 
   /**
-   * Giải quyết API Key: ưu tiên input thật -> sau đó lấy từ process.env riêng -> sau đó AI_API_KEY
+   * Giải quyết API Key: ưu tiên input thật -> sau đó lấy từ process.env riêng -> sau đó fallback
    */
   public static resolveApiKey(providerType: ProviderType, inputKey?: string): string {
     const trimmed = (inputKey || '').trim();
 
     // Nếu người dùng truyền key thật (không phải placeholder đã mask)
-    if (trimmed && !trimmed.startsWith('sk-...') && !trimmed.includes('***') && trimmed !== '[ENV]') {
+    if (trimmed && !this.isMaskedKey(trimmed)) {
       return trimmed;
     }
 
     const prefix = this.getPrefixForProvider(providerType);
-    const envVal = process.env[`${prefix}_API_KEY`] || process.env.AI_API_KEY || '';
+    const envVal = process.env[`${prefix}_API_KEY`] || process.env.CUSTOM_API_KEY || process.env.AI_API_KEY || '';
     return envVal.trim();
   }
 
@@ -133,7 +150,7 @@ export class EnvManager {
     if (trimmed) return trimmed;
 
     const prefix = this.getPrefixForProvider(providerType);
-    const envModel = process.env[`${prefix}_MODEL`] || process.env.AI_MODEL;
+    const envModel = process.env[`${prefix}_MODEL`] || process.env.AI_MODEL || process.env.CUSTOM_MODEL;
     return (envModel || '').trim();
   }
 
@@ -141,8 +158,8 @@ export class EnvManager {
    * Kiểm tra xem provider này đã có API Key trong file .env chưa
    */
   public static hasKeyInEnv(providerType: ProviderType): boolean {
-    const prefix = this.getPrefixForProvider(providerType);
-    return Boolean(process.env[`${prefix}_API_KEY`] || process.env.AI_API_KEY);
+    const key = this.resolveApiKey(providerType);
+    return Boolean(key && key.trim().length > 0);
   }
 
   /**
@@ -166,7 +183,7 @@ export class EnvManager {
       updates[`${prefix}_BASE_URL`] = params.baseUrl.trim();
     }
 
-    if (params.apiKey && params.apiKey.trim() && !params.apiKey.startsWith('sk-...') && !params.apiKey.includes('***')) {
+    if (params.apiKey && params.apiKey.trim() && !this.isMaskedKey(params.apiKey)) {
       updates[`${prefix}_API_KEY`] = params.apiKey.trim();
     }
 
@@ -201,6 +218,7 @@ export class EnvManager {
   public static maskKey(key: string): string {
     if (!key) return '';
     const clean = key.trim();
+    if (this.isMaskedKey(clean)) return clean;
     if (clean.length <= 8) return 'sk-...';
     return `${clean.slice(0, 4)}...${clean.slice(-4)}`;
   }

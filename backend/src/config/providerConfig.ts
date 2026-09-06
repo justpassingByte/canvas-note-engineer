@@ -21,6 +21,8 @@ export interface ProviderConfig {
   custom_headers?: Record<string, string>;
   is_active: boolean;
   updated_at?: number;
+  has_env_key?: boolean;
+  env_var?: string;
 }
 
 export const PROVIDER_PRESETS: Record<string, Partial<ProviderConfig>> = {
@@ -33,28 +35,28 @@ export const PROVIDER_PRESETS: Record<string, Partial<ProviderConfig>> = {
   },
   openai: {
     name: 'OpenAI (GPT-4o / o3)',
-    provider_type: 'openai-compatible',
+    provider_type: 'openai',
     base_url: 'https://api.openai.com/v1',
     model: 'gpt-4o',
     temperature: 0.3
   },
   groq: {
     name: 'Groq (Ultra-fast Inference)',
-    provider_type: 'openai-compatible',
+    provider_type: 'groq',
     base_url: 'https://api.groq.com/openai/v1',
-    model: 'llama-3.3-70b-versatile',
+    model: 'qwen/qwen3.8-27b',
     temperature: 0.3
   },
   ollama: {
     name: 'Ollama (Local LLM)',
-    provider_type: 'openai-compatible',
+    provider_type: 'ollama',
     base_url: 'http://localhost:11434/v1',
     model: 'llama3.2',
     temperature: 0.3
   },
   openrouter: {
     name: 'OpenRouter (Multi-model Gateway)',
-    provider_type: 'openai-compatible',
+    provider_type: 'openrouter',
     base_url: 'https://openrouter.ai/api/v1',
     model: 'deepseek/deepseek-chat',
     temperature: 0.3

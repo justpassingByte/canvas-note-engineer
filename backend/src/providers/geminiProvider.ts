@@ -32,12 +32,13 @@ export class GeminiProvider implements ILLMProvider {
       const latencyMs = Date.now() - startTime;
 
       if (!response.ok) {
-        let errDetail = '';
+        const rawText = await response.text();
+        let errDetail = rawText;
         try {
-          const errData: any = await response.json();
-          errDetail = errData.error?.message || JSON.stringify(errData);
+          const errData = JSON.parse(rawText);
+          errDetail = errData.error?.message || errData.message || rawText;
         } catch {
-          errDetail = await response.text();
+          // giữ rawText
         }
         return {
           success: false,
@@ -65,27 +66,21 @@ export class GeminiProvider implements ILLMProvider {
   public async generateCompletion(params: CompletionParams): Promise<string> {
     const cleanUrl = this.getCleanBaseUrl();
     const model = this.config.model || 'gemini-1.5-flash';
-    const endpoint = `${cleanUrl}/v1beta/models/${model}:generateContent?key=${this.config.api_key.trim()}`;
+    const apiKey = this.config.api_key.trim();
+    const endpoint = `${cleanUrl}/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-    const genConfig: any = {
-      temperature: params.temperature ?? this.config.temperature ?? 0.3
-    };
-
-    if (params.jsonMode) {
-      genConfig.responseMimeType = 'application/json';
-    }
-    if (params.maxTokens || this.config.max_tokens) {
-      genConfig.maxOutputTokens = params.maxTokens || this.config.max_tokens;
-    }
-
-    const bodyPayload = {
-      systemInstruction: {
-        parts: [{ text: params.systemPrompt }]
-      },
+    const bodyPayload: any = {
       contents: [
-        { role: 'user', parts: [{ text: params.userPrompt }] }
+        {
+          parts: [
+            { text: `SYSTEM INSTRUCTION: ${params.systemPrompt}\n\nUSER REQUEST: ${params.userPrompt}` }
+          ]
+        }
       ],
-      generationConfig: genConfig
+      generationConfig: {
+        temperature: params.temperature ?? this.config.temperature ?? 0.3,
+        maxOutputTokens: params.maxTokens || this.config.max_tokens || 4096
+      }
     };
 
     const response = await fetch(endpoint, {
@@ -96,12 +91,13 @@ export class GeminiProvider implements ILLMProvider {
     });
 
     if (!response.ok) {
-      let errText = '';
+      const rawText = await response.text();
+      let errText = rawText;
       try {
-        const errJson: any = await response.json();
-        errText = errJson.error?.message || JSON.stringify(errJson);
+        const errJson = JSON.parse(rawText);
+        errText = errJson.error?.message || errJson.message || rawText;
       } catch {
-        errText = await response.text();
+        // giữ rawText
       }
       throw new Error(`[Gemini] Lỗi API (${response.status}): ${errText}`);
     }

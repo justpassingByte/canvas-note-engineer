@@ -12,7 +12,8 @@ import {
   EyeOff,
   Activity,
   Zap,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
 import { ProviderConfig, ProviderType } from '../../types/providerTypes.js';
@@ -39,8 +40,16 @@ export const ProviderConfigModal: React.FC = () => {
   const [temperature, setTemperature] = useState<number>(0.3);
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
+  const [availableModels, setAvailableModels] = useState<string[]>([]);
+  const [isFetchingModels, setIsFetchingModels] = useState<boolean>(false);
   const [isTesting, setIsTesting] = useState<boolean>(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; latencyMs: number; message: string; modelInfo?: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    latencyMs: number;
+    message: string;
+    modelInfo?: string;
+    availableModels?: string[];
+  } | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
   // Khi mở modal, nếu đã có activeProvider, nạp dữ liệu vào form
@@ -52,6 +61,8 @@ export const ProviderConfigModal: React.FC = () => {
       setApiKey(activeProvider.api_key);
       setModel(activeProvider.model);
       setTemperature(activeProvider.temperature);
+      setAvailableModels([]);
+      setTestResult(null);
     }
   }, [activeProvider, isProviderConfigOpen]);
 
@@ -62,11 +73,46 @@ export const ProviderConfigModal: React.FC = () => {
     const preset = providerPresets[presetKey];
     if (preset) {
       setName(preset.name || presetKey.toUpperCase());
-      setProviderType((preset.provider_type as ProviderType) || 'openai-compatible');
+      setProviderType((preset.provider_type as ProviderType) || (presetKey as ProviderType));
       setBaseUrl(preset.base_url || '');
       setModel(preset.model || '');
       setTemperature(preset.temperature ?? 0.3);
       setTestResult(null);
+      setAvailableModels([]);
+    }
+  };
+
+  const handleFetchModels = async () => {
+    if (!baseUrl) {
+      alert('Vui lòng nhập Base URL trước.');
+      return;
+    }
+    setIsFetchingModels(true);
+    try {
+      const res = await fetch('/api/provider/models', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_type: providerType,
+          base_url: baseUrl,
+          api_key: apiKey
+        })
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.models) && data.models.length > 0) {
+        setAvailableModels(data.models);
+        // Tự động chọn model chat tốt nhất nếu model hiện tại trống
+        if (!model || !data.models.includes(model)) {
+          const chatModel = data.models.find((m: string) => !m.includes('whisper') && !m.includes('guard') && !m.includes('embed')) || data.models[0];
+          if (chatModel) setModel(chatModel);
+        }
+      } else {
+        alert(data.message || 'Không thể lấy danh sách models từ provider này.');
+      }
+    } catch (e: any) {
+      alert(`Lỗi khi lấy models: ${e.message}`);
+    } finally {
+      setIsFetchingModels(false);
     }
   };
 
@@ -85,6 +131,9 @@ export const ProviderConfigModal: React.FC = () => {
     };
     const res = await testProviderConnection(tempConfig);
     setTestResult(res);
+    if (res.availableModels && res.availableModels.length > 0) {
+      setAvailableModels(res.availableModels);
+    }
     setIsTesting(false);
   };
 
@@ -282,9 +331,15 @@ export const ProviderConfigModal: React.FC = () => {
                   background: '#FFFFFF'
                 }}
               >
-                <option value="openai-compatible">OpenAI-Compatible (DeepSeek, Groq, Ollama, vLLM...)</option>
+                <option value="groq">Groq (gsk_... Siêu Tốc)</option>
+                <option value="deepseek">DeepSeek AI</option>
+                <option value="openai">OpenAI (GPT-4o, o1, o3)</option>
+                <option value="openai-compatible">OpenAI-Compatible (Chung)</option>
+                <option value="ollama">Ollama (Local LLM)</option>
+                <option value="openrouter">OpenRouter</option>
                 <option value="anthropic">Anthropic Messages API (Claude)</option>
                 <option value="gemini">Google Gemini API</option>
+                <option value="custom">Tùy Chỉnh (Custom Proxy/vLLM)</option>
               </select>
             </div>
           </div>
@@ -300,7 +355,7 @@ export const ProviderConfigModal: React.FC = () => {
                 type="text"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.deepseek.com/v1 hoặc http://localhost:11434/v1"
+                placeholder="https://api.deepseek.com/v1 hoặc https://api.groq.com/openai/v1"
                 style={{
                   flex: 1,
                   padding: '8px 12px',
@@ -319,9 +374,16 @@ export const ProviderConfigModal: React.FC = () => {
 
           {/* API Key */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-              API Key (Khóa bảo mật)
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                API Key (Khóa bảo mật)
+              </label>
+              {activeProvider?.has_env_key && (
+                <span style={{ fontSize: '11px', color: '#15803D', fontWeight: 500, background: '#DCFCE7', padding: '1px 6px', borderRadius: '4px' }}>
+                  ✓ Đã có trong .env ({activeProvider.env_var})
+                </span>
+              )}
+            </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Key size={16} color="#64748B" />
               <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
@@ -329,7 +391,7 @@ export const ProviderConfigModal: React.FC = () => {
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-... (để trống nếu dùng Ollama local không có mật khẩu)"
+                  placeholder="gsk_... hoặc sk-... (để trống nếu dùng key sẵn trong .env)"
                   style={{
                     width: '100%',
                     padding: '8px 36px 8px 12px',
@@ -359,23 +421,45 @@ export const ProviderConfigModal: React.FC = () => {
               </div>
             </div>
             <p style={{ margin: '4px 0 0 24px', fontSize: '11px', color: '#64748B' }}>
-              Lưu trữ an toàn tại cơ sở dữ liệu SQLite cục bộ trên máy bạn.
+              Khóa được ghi an toàn vào file <code>.env</code> máy chủ, tuyệt đối không lưu plain-text trong database.
             </p>
           </div>
 
           {/* Model Name & Temperature */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '14px' }}>
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Model ID
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+                  Model ID
+                </label>
+                <button
+                  type="button"
+                  onClick={handleFetchModels}
+                  disabled={isFetchingModels}
+                  style={{
+                    fontSize: '11px',
+                    color: '#4F46E5',
+                    background: '#EEF2FF',
+                    border: '1px solid #C7D2FE',
+                    borderRadius: '4px',
+                    padding: '2px 8px',
+                    cursor: isFetchingModels ? 'wait' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  <RefreshCw size={11} className={isFetchingModels ? 'animate-spin' : ''} />
+                  {isFetchingModels ? 'Đang lấy...' : 'Lấy danh sách Models'}
+                </button>
+              </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Cpu size={16} color="#64748B" />
                 <input
                   type="text"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder="deepseek-chat, gpt-4o, llama3..."
+                  placeholder="deepseek-chat, qwen/qwen3.8-27b, gpt-4o..."
                   style={{
                     flex: 1,
                     padding: '8px 12px',
@@ -387,12 +471,44 @@ export const ProviderConfigModal: React.FC = () => {
                   }}
                 />
               </div>
+
+              {/* Danh sách model khả dụng từ API */}
+              {availableModels.length > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                    Chọn nhanh model từ API ({availableModels.length} models):
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '80px', overflowY: 'auto' }}>
+                    {availableModels
+                      .filter(m => !m.includes('whisper') && !m.includes('guard'))
+                      .map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setModel(m)}
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: model === m ? '1.5px solid #4F46E5' : '1px solid #E2E8F0',
+                            background: model === m ? '#EEF2FF' : '#F8FAFC',
+                            color: model === m ? '#4338CA' : '#334155',
+                            cursor: 'pointer',
+                            fontWeight: model === m ? 600 : 400
+                          }}
+                        >
+                          {m}
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  Nhiệt độ (Temperature): {temperature}
+                  Nhiệt độ (Temp): {temperature}
                 </label>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', height: '36px' }}>
@@ -417,48 +533,83 @@ export const ProviderConfigModal: React.FC = () => {
                 padding: '12px 14px',
                 borderRadius: '8px',
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                flexDirection: 'column',
+                gap: '8px',
                 background: testResult.success ? '#F0FDF4' : '#FEF2F2',
                 border: testResult.success ? '1px solid #86EFAC' : '1px solid #FECACA'
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                {testResult.success ? (
-                  <CheckCircle2 size={18} color="#16A34A" />
-                ) : (
-                  <AlertTriangle size={18} color="#DC2626" />
-                )}
-                <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {testResult.success ? (
+                    <CheckCircle2 size={18} color="#16A34A" />
+                  ) : (
+                    <AlertTriangle size={18} color="#DC2626" />
+                  )}
+                  <div>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: testResult.success ? '#15803D' : '#B91C1C'
+                      }}
+                    >
+                      {testResult.message}
+                    </span>
+                    {testResult.modelInfo && (
+                      <span style={{ display: 'block', fontSize: '11px', color: '#166534', marginTop: '2px' }}>
+                        {testResult.modelInfo}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {testResult.success && (
                   <span
                     style={{
-                      fontSize: '13px',
+                      fontSize: '12px',
                       fontWeight: 600,
-                      color: testResult.success ? '#15803D' : '#B91C1C'
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      background: '#DCFCE7',
+                      color: '#15803D'
                     }}
                   >
-                    {testResult.message}
+                    ⚡ {testResult.latencyMs}ms
                   </span>
-                  {testResult.modelInfo && (
-                    <span style={{ display: 'block', fontSize: '11px', color: '#166534', marginTop: '2px' }}>
-                      {testResult.modelInfo}
-                    </span>
-                  )}
-                </div>
+                )}
               </div>
-              {testResult.success && (
-                <span
-                  style={{
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    padding: '2px 8px',
-                    borderRadius: '4px',
-                    background: '#DCFCE7',
-                    color: '#15803D'
-                  }}
-                >
-                  ⚡ {testResult.latencyMs}ms
-                </span>
+
+              {/* Gợi ý chọn model nếu test connection trả về availableModels */}
+              {testResult.availableModels && testResult.availableModels.length > 0 && !testResult.success && (
+                <div style={{ borderTop: '1px dashed #FECACA', paddingTop: '6px' }}>
+                  <span style={{ fontSize: '11px', color: '#991B1B', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    Nhấn vào model bên dưới để áp dụng ngay:
+                  </span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {testResult.availableModels
+                      .filter(m => !m.includes('whisper') && !m.includes('guard'))
+                      .slice(0, 6)
+                      .map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setModel(m)}
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            border: '1px solid #DC2626',
+                            background: '#FFFFFF',
+                            color: '#DC2626',
+                            cursor: 'pointer',
+                            fontWeight: 500
+                          }}
+                        >
+                          + Dùng {m}
+                        </button>
+                      ))}
+                  </div>
+                </div>
               )}
             </div>
           )}

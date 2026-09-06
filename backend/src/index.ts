@@ -120,6 +120,23 @@ app.post('/api/provider/test', async (req, res) => {
   }
 });
 
+app.post('/api/provider/models', async (req, res) => {
+  try {
+    const config = req.body as ProviderConfig;
+    if (!config.base_url) {
+      return res.status(400).json({ success: false, message: 'Thiếu Base URL' });
+    }
+    const provider = ProviderFactory.createProvider(config);
+    if (provider.fetchModels) {
+      const models = await provider.fetchModels();
+      return res.json({ success: true, models });
+    }
+    res.json({ success: true, models: [] });
+  } catch (error: any) {
+    res.status(500).json({ success: false, message: error.message, models: [] });
+  }
+});
+
 app.post('/api/provider/active/:id', (req, res) => {
   try {
     sqliteClient.setActiveProviderConfig(req.params.id);

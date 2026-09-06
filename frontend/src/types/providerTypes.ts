@@ -21,6 +21,8 @@ export interface ProviderConfig {
   custom_headers?: Record<string, string>;
   is_active: boolean;
   updated_at?: number;
+  has_env_key?: boolean;
+  env_var?: string;
 }
 
 export interface ConnectionTestResult {
@@ -28,6 +30,7 @@ export interface ConnectionTestResult {
   latencyMs: number;
   message: string;
   modelInfo?: string;
+  availableModels?: string[];
 }
 
 export type DomainType =

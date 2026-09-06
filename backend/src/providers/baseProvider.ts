@@ -13,10 +13,12 @@ export interface ConnectionTestResult {
   latencyMs: number;
   message: string;
   modelInfo?: string;
+  availableModels?: string[];
 }
 
 export interface ILLMProvider {
   readonly config: ProviderConfig;
   testConnection(): Promise<ConnectionTestResult>;
   generateCompletion(params: CompletionParams): Promise<string>;
+  fetchModels?(): Promise<string[]>;
 }
