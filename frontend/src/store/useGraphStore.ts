@@ -65,6 +65,8 @@ interface GraphState {
   toggleExpandWithAiModal: () => void;
   generateGraphWithAI: (topic: string, domain?: string, userPrompt?: string) => Promise<boolean>;
   expandNodeWithAI: (nodeId: string, intent?: string, userInstruction?: string) => Promise<boolean>;
+  spawnClusterWithAI: (params: { prompt: string; position?: { x: number; y: number }; connectedToNodeId?: string }) => Promise<boolean>;
+  spawnConceptWithAI: (params: { prompt: string; position?: { x: number; y: number } }) => Promise<boolean>;
 }
 
 export const useGraphStore = create<GraphState>((set, get) => ({
@@ -562,6 +564,65 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       }
     } catch (err: any) {
       alert(`[Lỗi Mở Rộng Node AI]: ${err.message}`);
+      set({ isAiGenerating: false, aiStatusMessage: null });
+      return false;
+    }
+  },
+
+  spawnClusterWithAI: async (params: { prompt: string; position?: { x: number; y: number }; connectedToNodeId?: string }) => {
+    set({ isAiGenerating: true, aiStatusMessage: 'AI Agent đang sinh Cụm Phân Hệ kiến trúc...' });
+    try {
+      const res = await fetch('/api/graph/ai-spawn-cluster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+
+      const data = await res.json();
+      if (data.success && data.graph) {
+        const safeNodes = resolveNodeCollisions(data.graph.nodes);
+        const firstNewNode = safeNodes.find(n => !get().graph?.nodes.some(old => old.id === n.id));
+        set({
+          graph: { ...data.graph, nodes: safeNodes },
+          selectedNodeId: firstNewNode?.id || get().selectedNodeId,
+          isAiGenerating: false,
+          aiStatusMessage: null
+        });
+        return true;
+      } else {
+        throw new Error(data.error || 'Không thể sinh Cụm Phân Hệ bằng AI');
+      }
+    } catch (err: any) {
+      alert(`[Lỗi Sinh Cụm AI]: ${err.message}`);
+      set({ isAiGenerating: false, aiStatusMessage: null });
+      return false;
+    }
+  },
+
+  spawnConceptWithAI: async (params: { prompt: string; position?: { x: number; y: number } }) => {
+    set({ isAiGenerating: true, aiStatusMessage: 'AI Agent đang sinh Khái niệm kiến trúc...' });
+    try {
+      const res = await fetch('/api/graph/ai-spawn-concept', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+
+      const data = await res.json();
+      if (data.success && data.graph) {
+        const safeNodes = resolveNodeCollisions(data.graph.nodes);
+        set({
+          graph: { ...data.graph, nodes: safeNodes },
+          selectedNodeId: data.newNode?.id || get().selectedNodeId,
+          isAiGenerating: false,
+          aiStatusMessage: null
+        });
+        return true;
+      } else {
+        throw new Error(data.error || 'Không thể sinh Concept bằng AI');
+      }
+    } catch (err: any) {
+      alert(`[Lỗi Sinh Concept AI]: ${err.message}`);
       set({ isAiGenerating: false, aiStatusMessage: null });
       return false;
     }

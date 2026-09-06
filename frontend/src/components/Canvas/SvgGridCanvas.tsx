@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useEffect } from 'react';
 import { useGraphStore } from '../../store/useGraphStore.js';
 import { ConceptNode } from '../NodePod/ConceptNode.js';
 import { calculateEdgePath } from '../../utils/geometry.js';
@@ -38,6 +38,8 @@ export const SvgGridCanvas: React.FC = () => {
     resetView,
     spawnNode,
     spawnCluster,
+    spawnClusterWithAI,
+    spawnConceptWithAI,
     toggleExpandWithAiModal,
     toggleNewGraphModal
   } = useGraphStore();
@@ -45,6 +47,51 @@ export const SvgGridCanvas: React.FC = () => {
   const canvasRef = useRef<HTMLElement>(null);
   const [isPanning, setIsPanning] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+
+  // Inline Prompt Popup cho Agent
+  const [inlinePrompt, setInlinePrompt] = useState<{
+    type: 'cluster' | 'concept';
+    targetNodeId?: string;
+    targetNodeTitle?: string;
+    clientX: number;
+    clientY: number;
+    graphX: number;
+    graphY: number;
+  } | null>(null);
+  const [promptText, setPromptText] = useState('');
+  const [isSubmittingPrompt, setIsSubmittingPrompt] = useState(false);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (inlinePrompt) {
+      setTimeout(() => {
+        promptInputRef.current?.focus();
+      }, 60);
+    }
+  }, [inlinePrompt]);
+
+  const handleExecutePrompt = async () => {
+    if (!inlinePrompt || !promptText.trim() || isSubmittingPrompt) return;
+    setIsSubmittingPrompt(true);
+    try {
+      if (inlinePrompt.type === 'cluster') {
+        await spawnClusterWithAI({
+          prompt: promptText.trim(),
+          position: { x: inlinePrompt.graphX, y: inlinePrompt.graphY },
+          connectedToNodeId: inlinePrompt.targetNodeId
+        });
+      } else {
+        await spawnConceptWithAI({
+          prompt: promptText.trim(),
+          position: { x: inlinePrompt.graphX, y: inlinePrompt.graphY }
+        });
+      }
+      setInlinePrompt(null);
+      setPromptText('');
+    } finally {
+      setIsSubmittingPrompt(false);
+    }
+  };
 
   // Quản lý kéo thả Cụm phân hệ (Cluster Drag & Drop + Persistence)
   const clusterDragRef = useRef<{
@@ -287,16 +334,23 @@ export const SvgGridCanvas: React.FC = () => {
 
   // Xử lý kéo rê chuột (Pan)
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Đóng contextMenu nếu click ra ngoài
     if (contextMenu) setContextMenu(null);
+    // Đóng inlinePrompt nếu click ra ngoài popup
+    if (inlinePrompt && !(e.target as HTMLElement).closest('.canvas-inline-prompt-popup')) {
+      setInlinePrompt(null);
+    }
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
-    // Không pan nếu đang bấm vào node, đường nối, button hoặc thẻ tiêu đề cụm
+    // Không pan nếu đang bấm vào node, đường nối, button, thẻ tiêu đề cụm, popup hoặc context menu
     if (
       target.closest('.cum-thuc-the') ||
       target.closest('.nhom-duong-noi-svg') ||
       target.closest('.nhom-nhan-svg') ||
       target.closest('button') ||
-      target.closest('.the-tieu-de-cum')
+      target.closest('.the-tieu-de-cum') ||
+      target.closest('.canvas-inline-prompt-popup') ||
+      target.closest('.canvas-dynamic-context-menu')
     ) {
       return;
     }
@@ -307,6 +361,8 @@ export const SvgGridCanvas: React.FC = () => {
   // Menu chuột phải Động (Dynamic Context Menu)
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
+    // Đóng inlinePrompt nếu đang mở khi bật context menu mới
+    if (inlinePrompt) setInlinePrompt(null);
     const target = e.target as HTMLElement;
 
     if (!canvasRef.current) return;
@@ -915,6 +971,8 @@ export const SvgGridCanvas: React.FC = () => {
             fontFamily: "'JetBrains Mono', monospace",
             fontSize: '11.5px'
           }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           onClick={(e) => e.stopPropagation()}
         >
           {contextMenu.targetNode ? (
@@ -928,6 +986,30 @@ export const SvgGridCanvas: React.FC = () => {
               </div>
               <button
                 className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  setInlinePrompt({
+                    type: 'cluster',
+                    targetNodeId: contextMenu.targetNode!.id,
+                    targetNodeTitle: contextMenu.targetNode!.tieu_de,
+                    clientX: contextMenu.clientX,
+                    clientY: contextMenu.clientY,
+                    graphX: contextMenu.graphX,
+                    graphY: contextMenu.graphY
+                  });
+                  setPromptText('');
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#059669' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>⚡</span>
+                <span>Spawn Cluster (Agent)</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   selectNode(contextMenu.targetNode!.id);
                   setContextMenu(null);
@@ -941,20 +1023,7 @@ export const SvgGridCanvas: React.FC = () => {
               </button>
               <button
                 className="context-menu-item"
-                onClick={() => {
-                  selectNode(contextMenu.targetNode!.id);
-                  toggleExpandWithAiModal();
-                  setContextMenu(null);
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#4F46E5' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <span>✨</span>
-                <span>Hỏi AI mở rộng nhánh này...</span>
-              </button>
-              <button
-                className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   toggleCollapse(contextMenu.targetNode!.id);
                   setContextMenu(null);
@@ -968,6 +1037,7 @@ export const SvgGridCanvas: React.FC = () => {
               </button>
               <button
                 className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   if (window.confirm(`Xóa vĩnh viễn '${contextMenu.targetNode!.tieu_de}' và các liên kết liên quan?`)) {
                     deleteNode(contextMenu.targetNode!.id);
@@ -990,58 +1060,49 @@ export const SvgGridCanvas: React.FC = () => {
               </div>
               <button
                 className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
-                  toggleNewGraphModal();
+                  setInlinePrompt({
+                    type: 'cluster',
+                    clientX: contextMenu.clientX,
+                    clientY: contextMenu.clientY,
+                    graphX: contextMenu.graphX,
+                    graphY: contextMenu.graphY
+                  });
+                  setPromptText('');
+                  setContextMenu(null);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#059669' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span>⚡</span>
+                <span>Spawn Cluster (Agent)</span>
+              </button>
+              <button
+                className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  setInlinePrompt({
+                    type: 'concept',
+                    clientX: contextMenu.clientX,
+                    clientY: contextMenu.clientY,
+                    graphX: contextMenu.graphX,
+                    graphY: contextMenu.graphY
+                  });
+                  setPromptText('');
                   setContextMenu(null);
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 700, color: '#4F46E5' }}
                 onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
-                <span>✨</span>
-                <span>Sinh Đồ Thị bằng AI...</span>
+                <span>💡</span>
+                <span>Spawn Concept / Domain (Agent)</span>
               </button>
               <button
                 className="context-menu-item"
-                onClick={() => {
-                  const title = window.prompt('Nhập tên Concept kiến trúc cần tạo:');
-                  if (title && title.trim()) {
-                    spawnNode('custom', { x: contextMenu.graphX, y: contextMenu.graphY }, { title: title.trim() });
-                  }
-                  setContextMenu(null);
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#EEF2FF')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <span>➕</span>
-                <span>Thêm Concept tại đây...</span>
-              </button>
-              <button
-                className="context-menu-item"
-                onClick={() => {
-                  const name = window.prompt('Nhập tên Cụm Phân Hệ kiến trúc mới:');
-                  if (name && name.trim()) {
-                    spawnCluster({
-                      cluster_name: name.trim(),
-                      position: { x: contextMenu.graphX, y: contextMenu.graphY },
-                      nodes: [
-                        { title: `${name.trim()} Ingress Gateway`, summary: `Cổng tiếp nhận của phân hệ ${name.trim()}` },
-                        { title: `${name.trim()} Core Service`, summary: `Thành phần xử lý của phân hệ ${name.trim()}` }
-                      ]
-                    });
-                  }
-                  setContextMenu(null);
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', border: 'none', background: 'transparent', cursor: 'pointer', borderRadius: '4px', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#ECFDF5')}
-                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-              >
-                <span>⚡</span>
-                <span>Sinh Cụm Phân Hệ tại đây...</span>
-              </button>
-              <button
-                className="context-menu-item"
+                onMouseDown={(e) => e.stopPropagation()}
                 onClick={() => {
                   resetView();
                   setContextMenu(null);
@@ -1055,6 +1116,145 @@ export const SvgGridCanvas: React.FC = () => {
               </button>
             </>
           )}
+        </div>
+      )}
+
+      {/* Sleek Floating Inline Prompt Popup tại vị trí con trỏ chuột */}
+      {inlinePrompt && (
+        <div
+          className="canvas-inline-prompt-popup"
+          style={{
+            position: 'fixed',
+            left: Math.max(16, Math.min(inlinePrompt.clientX, window.innerWidth - 340)),
+            top: Math.max(16, Math.min(inlinePrompt.clientY, window.innerHeight - 240)),
+            zIndex: 100000,
+            background: '#181A20',
+            color: '#F9FAFB',
+            border: '1px solid #374151',
+            borderRadius: '8px',
+            boxShadow: '0 12px 30px rgba(0, 0, 0, 0.6), 0 4px 10px rgba(0,0,0,0.4)',
+            padding: '12px',
+            width: '320px',
+            fontFamily: "'JetBrains Mono', monospace",
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px'
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #2D3748', paddingBottom: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: 800, color: inlinePrompt.type === 'cluster' ? '#10B981' : '#818CF8' }}>
+              <span>{inlinePrompt.type === 'cluster' ? '⚡' : '💡'}</span>
+              <span>{inlinePrompt.type === 'cluster' ? 'SPAWN CLUSTER (AGENT)' : 'SPAWN CONCEPT (AGENT)'}</span>
+            </div>
+            <button
+              onClick={() => setInlinePrompt(null)}
+              style={{ background: 'transparent', border: 'none', color: '#9CA3AF', cursor: 'pointer', fontSize: '12px', padding: '2px 4px' }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {inlinePrompt.targetNodeTitle ? (
+            <div style={{ fontSize: '10px', color: '#9CA3AF', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>🔗 Kết nối từ:</span>
+              <strong style={{ color: '#E5E7EB', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                {inlinePrompt.targetNodeTitle}
+              </strong>
+            </div>
+          ) : (
+            <div style={{ fontSize: '10px', color: '#9CA3AF' }}>
+              <span>📍 Tọa độ Canvas: ({inlinePrompt.graphX}, {inlinePrompt.graphY})</span>
+            </div>
+          )}
+
+          <textarea
+            ref={promptInputRef}
+            autoFocus
+            rows={2}
+            value={promptText}
+            onChange={(e) => setPromptText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                if ((e.nativeEvent as any).isComposing) return;
+                e.preventDefault();
+                handleExecutePrompt();
+              }
+              if (e.key === 'Escape') {
+                setInlinePrompt(null);
+              }
+            }}
+            placeholder={
+              inlinePrompt.type === 'cluster'
+                ? 'Nhập mô tả cụm phân hệ... (vd: Cụm Thanh toán Ví điện tử kèm hàng đợi giao dịch và Redis lock)'
+                : 'Nhập mô tả khái niệm... (vd: Miền nghiệp vụ Quản lý Rủi ro Tín dụng)'
+            }
+            disabled={isSubmittingPrompt}
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              background: '#0F1117',
+              border: '1px solid #4B5563',
+              borderRadius: '6px',
+              color: '#F3F4F6',
+              padding: '8px',
+              fontSize: '11px',
+              fontFamily: 'inherit',
+              resize: 'none',
+              outline: 'none'
+            }}
+          />
+
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', marginTop: '2px' }}>
+            <button
+              type="button"
+              onClick={() => setInlinePrompt(null)}
+              disabled={isSubmittingPrompt}
+              style={{
+                background: 'transparent',
+                border: '1px solid #4B5563',
+                color: '#D1D5DB',
+                borderRadius: '4px',
+                padding: '5px 10px',
+                fontSize: '11px',
+                cursor: 'pointer',
+                fontFamily: 'inherit'
+              }}
+            >
+              Hủy (Esc)
+            </button>
+            <button
+              type="button"
+              onClick={handleExecutePrompt}
+              disabled={!promptText.trim() || isSubmittingPrompt}
+              style={{
+                background: inlinePrompt.type === 'cluster' ? '#059669' : '#4F46E5',
+                border: 'none',
+                color: '#FFFFFF',
+                borderRadius: '4px',
+                padding: '5px 12px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: !promptText.trim() || isSubmittingPrompt ? 'not-allowed' : 'pointer',
+                opacity: !promptText.trim() || isSubmittingPrompt ? 0.6 : 1,
+                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              {isSubmittingPrompt ? (
+                <>
+                  <span style={{ display: 'inline-block', width: '10px', height: '10px', border: '2px solid #FFF', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span>Đang sinh...</span>
+                </>
+              ) : (
+                <span>✨ Sinh ngay (Enter)</span>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </section>

@@ -8,6 +8,7 @@ import {
 import { sqliteClient } from '../db/sqliteClient.js';
 import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
 import {
+  toolHandlers,
   validateAndSanitizeEdges,
   findSafeNodePosition,
   sanitizeNodeLayerLabel,
@@ -343,6 +344,198 @@ Yêu cầu:
       graph: updated || current,
       message: `Đã mở rộng thành công ${newNodesToAdd.length} node mới bằng ${provider.config.name}!`,
       newNodesCount: newNodesToAdd.length
+    };
+  }
+
+  /**
+   * Sinh một Cụm Phân Hệ (Cluster) hoàn chỉnh từ yêu cầu prompt của người dùng
+   * TÁI SỬ DỤNG 100% ENGINE CỦA toolHandlers.spawnConceptCluster:
+   * Tự động sinh sub-clusters, reflex drills, incident dossiers, bounded context layout và SQLite persistence.
+   */
+  public static async spawnClusterWithAI(params: {
+    prompt: string;
+    position?: { x: number; y: number };
+    connectedToNodeId?: string;
+  }): Promise<{ graph: GraphData; message: string; newNodesCount: number; cluster_id?: string }> {
+    let current = sqliteClient.getCurrentGraph();
+    if (!current) {
+      const genRes = await this.generateNewGraph({ topic: params.prompt });
+      return {
+        graph: genRes.graph,
+        message: `Đã khởi tạo đồ thị và sinh cụm mới từ: ${params.prompt}`,
+        newNodesCount: genRes.graph.nodes.length
+      };
+    }
+
+    if (current.nodes.length >= MAX_GRAPH_NODES) {
+      throw new Error(`Đồ thị đã đạt ngưỡng trần an toàn (${MAX_GRAPH_NODES} nodes).`);
+    }
+
+    const provider = ProviderFactory.getActiveProvider();
+    if (!provider) {
+      throw new Error('Chưa cấu hình AI Provider. Hãy mở Cài đặt AI Provider (⚙️).');
+    }
+
+    const domain = detectDomainFromTopic(current.topic);
+    const systemPrompt = buildUniversalSystemPrompt(domain);
+    const existingTitles = current.nodes.map(n => n.tieu_de);
+
+    const userPrompt = `Người dùng yêu cầu sinh một CỤM PHÂN HỆ KIẾN TRÚC MỚI (Cluster) trên đồ thị hiện tại.
+Yêu cầu của người dùng: "${params.prompt}"
+Đồ thị hiện có các thành phần: ${existingTitles.slice(0, 10).join(', ')}.
+
+Hãy phân tích và sinh cấu trúc JSON tương thích SpawnClusterPayload:
+- cluster_name: Tên cụm phân hệ (in hoa, ngắn gọn, chuẩn DDD Bounded Context, ví dụ: PAYMENT_GATEWAY, IDENTITY_AUTH, PROMOTION_ENGINE, ORDER_FULFILLMENT)
+- nodes: Danh sách từ 2 đến 4 nodes cốt lõi trong cụm dịch vụ chính:
+  + title: Tên thành phần
+  + role: Vai trò kiến trúc ('gateway' | 'service' | 'engine' | 'worker')
+  + summary: Tóm tắt chức năng (1 câu)
+  + ban_chat: Bản chất thiết kế kỹ thuật
+- sub_clusters: (TỰ SINH NẾU PHÙ HỢP LOGIC KIẾN TRÚC):
+  Cụm con hạ tầng chuyên biệt nội bộ của phân hệ này (ví dụ: sub-cluster cache Redis, sub-cluster queue Kafka, sub-cluster DB)
+  Mỗi sub_cluster gồm: { "name": string, "infra_type": "redis" | "kafka" | "postgres", "nodes": [{ "title": string, "summary": string }] }
+- connect_to_shared_infra: (TÙY CHỌN): Mảng các hạ tầng dùng chung cần liên kết nếu không có sub-cluster riêng: ['cache', 'queue', 'db']
+
+Format JSON DUY NHẤT:
+{
+  "cluster_name": "TÊN_CỤM",
+  "nodes": [
+    { "title": "...", "role": "gateway", "summary": "...", "ban_chat": "..." }
+  ],
+  "sub_clusters": [
+    { "name": "...", "infra_type": "redis", "nodes": [{ "title": "...", "summary": "..." }] }
+  ],
+  "connect_to_shared_infra": ["cache", "db"]
+}`;
+
+    const rawOutput = await provider.generateCompletion({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.3,
+      jsonMode: true
+    });
+
+    const parsed = extractJsonFromLlmOutput(rawOutput);
+    const rawNodes = Array.isArray(parsed.nodes) && parsed.nodes.length > 0 ? parsed.nodes : [
+      { title: `${params.prompt} Gateway`, role: 'gateway', summary: `Cổng tiếp nhận của ${params.prompt}` },
+      { title: `${params.prompt} Core Service`, role: 'service', summary: `Dịch vụ xử lý trung tâm của ${params.prompt}` }
+    ];
+
+    // TÁI SỬ DỤNG 100% ENGINE CỦA toolHandlers.spawnConceptCluster
+    const clusterResult = await toolHandlers.spawnConceptCluster({
+      cluster_name: parsed.cluster_name || params.prompt,
+      nodes: rawNodes,
+      sub_clusters: Array.isArray(parsed.sub_clusters) ? parsed.sub_clusters : undefined,
+      connect_to_shared_infra: Array.isArray(parsed.connect_to_shared_infra) ? parsed.connect_to_shared_infra : undefined,
+      position: params.position
+    });
+
+    if (!clusterResult.spawned) {
+      throw new Error(clusterResult.message);
+    }
+
+    // Nếu chỉ định kết nối từ một Node đã có trên đồ thị, cắm dây từ node đó sang Public Gateway của cụm mới
+    if (params.connectedToNodeId) {
+      const updatedGraph = sqliteClient.getCurrentGraph();
+      if (updatedGraph) {
+        const parentNode = updatedGraph.nodes.find(n => n.id === params.connectedToNodeId);
+        const clusterIngressNode = updatedGraph.nodes.find(n => n.cluster_id === clusterResult.cluster_id && n.is_public_interface)
+          || updatedGraph.nodes.find(n => n.cluster_id === clusterResult.cluster_id);
+
+        if (parentNode && clusterIngressNode && parentNode.id !== clusterIngressNode.id) {
+          const bridgeEdge: EdgeEntity = {
+            from: parentNode.id,
+            to: clusterIngressNode.id,
+            nhan: sanitizeProtocolEdgeLabel('Cluster Ingress Flow'),
+            giai_thich: `Kết nối luồng từ ${parentNode.tieu_de} sang Cụm ${parsed.cluster_name || params.prompt}`,
+            kieu: 'duong-xung-em-ai',
+            loai_lien_ket: 'HOA_GIAI'
+          };
+          const validated = validateAndSanitizeEdges(updatedGraph.nodes, [...updatedGraph.edges, bridgeEdge]);
+          updatedGraph.edges = validated;
+          sqliteClient.saveGraph(updatedGraph);
+          clusterResult.graph = updatedGraph;
+        }
+      }
+    }
+
+    return {
+      graph: clusterResult.graph,
+      message: clusterResult.message,
+      newNodesCount: clusterResult.graph.nodes.length,
+      cluster_id: clusterResult.cluster_id
+    };
+  }
+
+  /**
+   * Sinh một Concept / Miền nghiệp vụ (Domain Boundary) đơn lẻ
+   * TÁI SỬ DỤNG 100% ENGINE CỦA toolHandlers.spawnConceptNode
+   */
+  public static async spawnConceptWithAI(params: {
+    prompt: string;
+    position?: { x: number; y: number };
+  }): Promise<{ graph: GraphData; message: string; newNode: NodeEntity }> {
+    let current = sqliteClient.getCurrentGraph();
+    if (!current) {
+      const genRes = await this.generateNewGraph({ topic: params.prompt });
+      return {
+        graph: genRes.graph,
+        message: `Đã khởi tạo đồ thị với concept: ${params.prompt}`,
+        newNode: genRes.graph.nodes[0]
+      };
+    }
+
+    if (current.nodes.length >= MAX_GRAPH_NODES) {
+      throw new Error(`Đồ thị đã đạt ngưỡng trần an toàn (${MAX_GRAPH_NODES} nodes).`);
+    }
+
+    const provider = ProviderFactory.getActiveProvider();
+    if (!provider) {
+      throw new Error('Chưa cấu hình AI Provider. Hãy mở Cài đặt AI Provider (⚙️).');
+    }
+
+    const domain = detectDomainFromTopic(current.topic);
+    const systemPrompt = buildUniversalSystemPrompt(domain);
+
+    const userPrompt = `Người dùng muốn tạo một NODE KHÁI NIỆM / MIỀN NGHIỆP VỤ MỚI (Concept / Domain Boundary) độc lập trên đồ thị kiến trúc:
+Mô tả/Chủ đề: "${params.prompt}"
+
+Hãy sinh 1 node duy nhất phản ánh bản chất khái niệm này.
+Format JSON:
+{
+  "title": "Tên Khái Niệm / Domain (ngắn gọn, chuẩn kỹ thuật)",
+  "category": "ARCHITECTURAL_LAYER (vd: DOMAIN / CONTEXT, GATEWAY / INGRESS, DATA / STORAGE)",
+  "description": "1-2 câu giải thích cô đọng bản chất",
+  "ban_chat": "Phân tích bản chất và ranh giới kiến trúc"
+}`;
+
+    const rawOutput = await provider.generateCompletion({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.3,
+      jsonMode: true
+    });
+
+    const parsed = extractJsonFromLlmOutput(rawOutput);
+
+    // TÁI SỬ DỤNG 100% ENGINE CỦA toolHandlers.spawnConceptNode
+    const spawnResult = await toolHandlers.spawnConceptNode({
+      concept_type: 'custom',
+      title: parsed.title || params.prompt,
+      category: sanitizeNodeLayerLabel(parsed.category || 'DOMAIN / CONCEPT', parsed.title || params.prompt),
+      description: parsed.description || params.prompt,
+      ban_chat: parsed.ban_chat,
+      position: params.position
+    });
+
+    if (!spawnResult.spawned || !spawnResult.node) {
+      throw new Error(spawnResult.message || 'Không thể tạo Concept');
+    }
+
+    return {
+      graph: spawnResult.graph,
+      message: spawnResult.message,
+      newNode: spawnResult.node
     };
   }
 }

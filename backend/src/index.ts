@@ -184,6 +184,39 @@ app.post('/api/graph/ai-expand', async (req, res) => {
   }
 });
 
+app.post('/api/graph/ai-spawn-cluster', async (req, res) => {
+  try {
+    const { prompt, position, connectedToNodeId } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập yêu cầu mô tả Cụm Phân Hệ.' });
+    }
+    const result = await AIGraphService.spawnClusterWithAI({
+      prompt: prompt.trim(),
+      position,
+      connectedToNodeId
+    });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/graph/ai-spawn-concept', async (req, res) => {
+  try {
+    const { prompt, position } = req.body;
+    if (!prompt || !prompt.trim()) {
+      return res.status(400).json({ error: 'Vui lòng nhập mô tả Khái niệm / Domain.' });
+    }
+    const result = await AIGraphService.spawnConceptWithAI({
+      prompt: prompt.trim(),
+      position
+    });
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/graph/current', async (req, res) => {
   try {
     const result = await toolHandlers.createKnowledgeGraph();

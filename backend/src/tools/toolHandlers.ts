@@ -14,507 +14,95 @@ import {
 } from '../types/graphTypes.js';
 
 export function generate5StepReflexDrill(title: string, summary: string, clusterName: string): ReflexQuizItem[] {
-  const t = title.toLowerCase();
-  const s = summary.toLowerCase();
+  const cleanTitle = title || 'Thành phần Kiến trúc';
+  const cleanCluster = clusterName || 'Phân hệ';
 
-  // 1. DÀNH CHO COMPUTE & PURE ENGINES (PROMOTION, PRICING, STACKING RULES)
-  if (t.includes('engine') || t.includes('pure') || t.includes('tính toán') || t.includes('calculator') || s.includes('0 i/o') || s.includes('stacking')) {
-    return [
-      {
-        cau_hoi: `Tại sao '${title}' bắt buộc phải là một Pure Domain Service (100% 0 I/O) thay vì gọi trực tiếp DB/Redis?`,
-        lua_chon: [
-          'Inject trực tiếp Database Client vào Engine để query tồn kho thời gian thực, tránh việc phải truyền Snapshot cồng kềnh qua tham số',
-          'Đảm bảo tính Pure Deterministic: Unit Test chạy dưới 0.1ms, không bị nghẽn mạng và có thể Replay kiểm toán chính xác 100% mọi đơn hàng quá khứ'
-        ],
-        dung: 1,
-        giai_thich: 'Pure Engine không được có Side-Effects hay phụ thuộc I/O mạng. Toàn bộ dữ liệu cần thiết phải được nạp sẵn qua Snapshot trước khi đưa vào tính toán.',
-        phan_tang: 'Kiến trúc cốt lõi'
-      },
-      {
-        cau_hoi: `Khi phân bổ chiết khấu voucher sàn 100k cho 3 seller (Multi-Seller Split), giải pháp nào ngăn ngừa triệt để lỗi làm tròn số lẻ (Penny Rounding)?`,
-        lua_chon: [
-          'Dùng kiểu số thực Float (Number) chuẩn IEEE 754 có 2 chữ số thập phân rồi gọi hàm Math.round() ở bước thanh toán cuối cùng',
-          'Dùng Minor-Unit BigInt kèm thuật toán Largest Remainder để dồn chính xác phần dư 1đ vào dòng hàng có giá trị lớn nhất'
-        ],
-        dung: 1,
-        giai_thich: 'Số thực Float của JavaScript chỉ an toàn đến 53-bit và luôn tích lũy sai số làm tròn. Bắt buộc phải dùng BigInt và phân bổ phần dư nguyên vẹn để tổng chia luôn khớp 100%.',
-        phan_tang: 'Tương tranh cao điểm'
-      },
-      {
-        cau_hoi: `Nếu giỏ hàng chứa 15 sản phẩm từ 4 seller khác nhau, nguy cơ lớn nhất khi đánh giá ma trận Stacking Rules là gì?`,
-        lua_chon: [
-          'Bùng nổ tổ hợp (Combinatorial Explosion O(2^N)) làm nghẽn CPU nếu cố gắng giải thuật toán vét cạn tìm phương án giảm giá tối ưu nhất',
-          'Tràn bộ nhớ RAM do dung lượng file cấu hình JSON của rule vượt quá 100MB'
-        ],
-        dung: 0,
-        giai_thich: 'Vét cạn mọi tổ hợp voucher (Combinatorial Best Discount) có độ phức tạp lũy thừa. Hệ thống thực chiến luôn giới hạn số lượng voucher hoặc yêu cầu người dùng tự chọn khi có xung đột.',
-        phan_tang: 'Lan truyền sự cố'
-      },
-      {
-        cau_hoi: `Khi xử lý hoàn tiền (Refund) cho một phần đơn hàng đã áp voucher, Engine nên tính toán theo cơ chế nào?`,
-        lua_chon: [
-          'Chạy lại toàn bộ thuật toán Promotion Engine trên các món còn lại để tính lại biểu giá mới nhất cho người mua',
-          'Tuyệt đối không chạy lại Engine; hoàn tiền bắt buộc dựa trên Order Promotion Snapshot và Bảng phân bổ chiết khấu bất biến đã lưu lúc checkout'
-        ],
-        dung: 1,
-        giai_thich: 'Chạy lại Engine khi refund sẽ làm thay đổi mức chiết khấu ban đầu của các seller khác. Hoàn tiền phải bảo toàn lịch sử settlement qua Snapshot bất biến.',
-        phan_tang: 'Đánh đổi kỹ thuật'
-      },
-      {
-        cau_hoi: `Chỉ số kỹ thuật nào phản ánh chính xác nhất hiệu năng của Pure Domain Engine trong đợt cao điểm?`,
-        lua_chon: [
-          'P99 Execution Time của thuật toán đánh giá rule phải dưới 1ms và không phát sinh bất kỳ Network I/O nào',
-          'Tỷ lệ Cache Hit của cơ sở dữ liệu quan hệ PostgreSQL'
-        ],
-        dung: 0,
-        giai_thich: 'Vì là Pure In-Memory Service, chỉ số sống còn của Engine là thời gian thực thi CPU P99 < 1ms.',
-        phan_tang: 'Vận hành & Giám sát'
-      }
-    ];
-  }
-
-  // 2. DÀNH CHO DATABASE, REPOSITORIES, ACID STORAGE & LEDGER
-  if (t.includes('postgres') || t.includes('database') || t.includes('acid') || t.includes('storage') || t.includes('ledger') || t.includes('db')) {
-    return [
-      {
-        cau_hoi: `Tại sao PostgreSQL được chọn làm Source of Truth duy nhất cho Quota & Budget thay vì dùng Redis In-Memory Counter?`,
-        lua_chon: [
-          'Dùng lệnh DECR trên Redis Cluster cho tốc độ 1ms, sau đó định kỳ 5 phút dùng cronjob sync số dư ngược về PostgreSQL',
-          'Bắt buộc dùng PostgreSQL ACID Transaction và Row-Level Lock vì Redis Lock có nguy cơ split-brain hoặc hết hạn TTL giữa chừng gây bội chi ngân sách (Overspend)'
-        ],
-        dung: 1,
-        giai_thich: 'Dữ liệu tài chính và ngân sách tối cao bắt buộc phải dựa vào ACID và Row Lock của cơ sở dữ liệu quan hệ để đảm bảo an toàn tuyệt đối ngay cả khi máy chủ crash.',
-        phan_tang: 'Kiến trúc cốt lõi'
-      },
-      {
-        cau_hoi: `Trong kịch bản 10.000 transaction cùng áp 1 voucher lúc 0h, giải pháp nào ngăn ngừa triệt để lỗi Deadlock ở tầng DB?`,
-        lua_chon: [
-          'Bắt buộc sắp xếp danh sách ID các promotion cần khóa theo thứ tự tăng dần cố định trước khi thực thi lệnh SELECT ... FOR UPDATE',
-          'Khóa ngẫu nhiên theo thứ tự sản phẩm trong giỏ hàng và tăng connection_timeout lên 30 giây'
-        ],
-        dung: 0,
-        giai_thich: 'Deadlock xảy ra khi Tx1 khóa A chờ B, trong khi Tx2 khóa B chờ A. Khóa tài nguyên theo thứ tự ID cố định triệt tiêu 100% chu trình chờ chéo (Deadlock Cycle).',
-        phan_tang: 'Tương tranh cao điểm'
-      },
-      {
-        cau_hoi: `Nguy cơ nghẽn cổ chai nghiêm trọng nhất khi giữ Row-Level Lock trong transaction tài chính là gì?`,
-        lua_chon: [
-          'Bảng dữ liệu bị phình to dung lượng đĩa cứng quá nhanh',
-          'Connection Pool bị chiếm giữ quá 150ms làm cạn kiệt kết nối (Starvation), kéo sập dây chuyền toàn bộ API Checkout'
-        ],
-        dung: 1,
-        giai_thich: 'Row lock contention giữ chặt kết nối DB. Khi hàng ngàn request xếp hàng chờ, connection pool cạn kiệt khiến toàn bộ hệ thống bị timeout.',
-        phan_tang: 'Lan truyền sự cố'
-      },
-      {
-        cau_hoi: `Tại sao cột lưu trữ số tiền chiết khấu trong PostgreSQL nên dùng kiểu BIGINT thay vì NUMERIC(15,2) hay DOUBLE PRECISION?`,
-        lua_chon: [
-          'BIGINT (lưu Minor-Unit) xử lý phép tính số học nguyên thủy trên CPU cực nhanh và ánh xạ mượt mà sang BigInt của Node.js mà không bị sai số dấu phẩy động',
-          'DOUBLE PRECISION tiết kiệm dung lượng lưu trữ hơn BIGINT tới 4 lần'
-        ],
-        dung: 0,
-        giai_thich: 'Lưu Minor-Unit dạng BIGINT đảm bảo tính toán số nguyên nhanh nhất và không bao giờ bị sai lệch số lẻ như các kiểu số thực.',
-        phan_tang: 'Đánh đổi kỹ thuật'
-      },
-      {
-        cau_hoi: `Để bảo vệ PostgreSQL không bị quá tải khi hàng ngàn đơn hàng thanh toán cùng lúc, giải pháp nào tối ưu nhất?`,
-        lua_chon: [
-          'Mở rộng Connection Pool lên 5.000 kết nối đồng thời trên PostgreSQL',
-          'Kết hợp Fast Pre-Check hạn ngạch trên Redis Cache + Connection Pooling (PgBouncer) giữ pool ở ngưỡng tối ưu 50-100 connections'
-        ],
-        dung: 1,
-        giai_thich: 'Mở quá nhiều connection (> 500) sẽ làm PostgreSQL bị nghẽn context-switch CPU. Cần dùng PgBouncer và Fast Pre-check trên cache để gạn lọc request.',
-        phan_tang: 'Vận hành & Giám sát'
-      }
-    ];
-  }
-
-  // 3. DÀNH CHO REDIS CACHE, DISTRIBUTED LOCK & RATE LIMIT
-  if (t.includes('redis') || t.includes('cache') || t.includes('rate') || t.includes('lock') || t.includes('blacklist')) {
-    return [
-      {
-        cau_hoi: `Nguyên tắc phòng thủ sống còn khi thiết kế phân hệ Caching cho hệ thống Promotion / Auth là gì?`,
-        lua_chon: [
-          'Lưu trữ trạng thái duy nhất trên Redis và tắt cơ chế ghi đĩa của PostgreSQL để đạt thông lượng tối đa',
-          'Redis chỉ đóng vai trò bản sao tăng tốc (Read Cache) và Rate Limit; sự cố sập cụm Redis (Outage) không được phép làm sai lệch tính đúng đắn của dữ liệu'
-        ],
-        dung: 1,
-        giai_thich: 'Cache có thể bị xóa và dựng lại bất kỳ lúc nào từ Database. Hệ thống phải thiết kế sao cho khi Redis sập hoàn toàn thì dữ liệu tài chính vẫn bảo toàn.',
-        phan_tang: 'Kiến trúc cốt lõi'
-      },
-      {
-        cau_hoi: `Hiện tượng Cache Stampede (Thảm họa bão truy vấn) xảy ra khi nào và cách hóa giải tối ưu là gì?`,
-        lua_chon: [
-          'Xảy ra khi hàng triệu request cùng ùa xuống DB khi một key hot vừa hết hạn TTL; hóa giải bằng cơ chế Mutex Lock / Probabilistic Early Expiration (XFetch)',
-          'Xảy ra khi dung lượng RAM Redis đầy 100%; hóa giải bằng cách khởi động lại máy chủ Redis'
-        ],
-        dung: 0,
-        giai_thich: 'Cache Stampede làm nghẽn DB tức thì khi key hot hết hạn. Cần dùng Mutex khóa tái tạo cache hoặc thuật toán tính xác suất làm mới cache trước khi hết hạn.',
-        phan_tang: 'Tương tranh cao điểm'
-      },
-      {
-        cau_hoi: `Khi sử dụng Redis Distributed Lock (SETNX) cho các tác vụ dài hạn, nguy cơ tiềm ẩn lớn nhất là gì?`,
-        lua_chon: [
-          'Khóa bị giải phóng sớm do hết hạn TTL trong khi tiến trình nghiệp vụ vẫn đang thực thi, dẫn đến 2 tiến trình cùng thao tác đồng thời',
-          'Lệnh SETNX tốn nhiều I/O đĩa cứng làm tăng độ trễ mạng'
-        ],
-        dung: 0,
-        giai_thich: 'Nếu tác vụ chạy lâu hơn TTL của lock, Redis sẽ tự động nhả khóa cho tiến trình khác vào, phá vỡ tính cô lập. Cần có cơ chế Lock Watchdog / Heartbeat để gia hạn.',
-        phan_tang: 'Lan truyền sự cố'
-      },
-      {
-        cau_hoi: `Thuật toán Rate Limiting nào cân bằng tốt nhất giữa khả năng chịu tải đột biến ngắn hạn và tính chính xác biên thời gian?`,
-        lua_chon: [
-          'Fixed Window Counter (Bộ đếm cửa sổ cố định)',
-          'Sliding Window Counter kết hợp Token Bucket trong Redis Scripting (Lua)'
-        ],
-        dung: 1,
-        giai_thich: 'Sliding Window triệt tiêu lỗi bùng nổ lưu lượng ở biên cửa sổ thời gian, trong khi Token Bucket cho phép xử lý các đợt burst traffic an toàn.',
-        phan_tang: 'Đánh đổi kỹ thuật'
-      },
-      {
-        cau_hoi: `Chính sách loại bỏ dữ liệu (Eviction Policy) nào phù hợp nhất cho Redis cụm Caching & Rate Limiting?`,
-        lua_chon: [
-          'volatile-lru hoặc allkeys-lru để tự động giải phóng các key ít dùng nhất khi bộ nhớ chạm ngưỡng trần maxmemory',
-          'noeviction (từ chối nhận lệnh mới và báo lỗi Out of Memory ngay lập tức)'
-        ],
-        dung: 0,
-        giai_thich: 'LRU (Least Recently Used) đảm bảo hệ thống cache không bị sập khi đầy RAM mà tự động đào thải các bản ghi cũ.',
-        phan_tang: 'Vận hành & Giám sát'
-      }
-    ];
-  }
-
-  // 4. DÀNH CHO AUTH, GATEWAY, JWT & REFRESH TOKEN ROTATION (RTR)
-  if (t.includes('auth') || t.includes('jwt') || t.includes('token') || t.includes('rtr') || t.includes('gateway') || t.includes('pep') || t.includes('oidc')) {
-    return [
-      {
-        cau_hoi: `Tại sao Access Token JWT nên có thời gian sống rất ngắn (5-15 phút) và lưu trong HttpOnly Cookie thay vì localStorage?`,
-        lua_chon: [
-          'Lưu trong localStorage giúp lập trình viên Frontend dễ dàng đọc quyền hạn của user bằng JavaScript để ẩn hiện nút bấm',
-          'HttpOnly Cookie ngăn chặn 100% mã độc JavaScript đọc trộm token qua lỗ hổng XSS, và thời gian ngắn hạn giúp thu hẹp tối đa cửa sổ rủi ro nếu token bị lộ'
-        ],
-        dung: 1,
-        giai_thich: 'localStorage hoàn toàn bất lực trước tấn công XSS. Bắt buộc phải lưu trong HttpOnly Cookie kèm cờ SameSite=Lax/Strict.',
-        phan_tang: 'Kiến trúc cốt lõi'
-      },
-      {
-        cau_hoi: `Trong cơ chế Refresh Token Rotation (RTR), điều gì xảy ra khi hệ thống phát hiện một Refresh Token cũ trong quá khứ bị gửi lại lần 2?`,
-        lua_chon: [
-          'Vẫn tiếp tục cấp Access Token mới nếu thời hạn TTL của token cũ chưa hết',
-          'Kích hoạt cơ chế Phục hồi Xâm nhập (Breach Detection): Lập tức thu hồi toàn bộ Token Family (tất cả token con cháu của phiên) vì nghi ngờ Replay Attack'
-        ],
-        dung: 1,
-        giai_thich: 'Dùng lại token đã hủy là dấu hiệu chắc chắn token đã bị kẻ gian đánh cắp hoặc nghe lén. Bắt buộc phải thu hồi toàn bộ phiên để bảo vệ người dùng.',
-        phan_tang: 'Tương tranh cao điểm'
-      },
-      {
-        cau_hoi: `Để chống Race Condition khi ứng dụng Client (React/Mobile) phát 2 request refresh đồng thời qua mạng chập chờn, giải pháp nào chuẩn mực nhất?`,
-        lua_chon: [
-          'Cung cấp một khoảng thời gian ân hạn ngắn (Grace Period 10-30s) cho phép token vừa bị xoay vòng vẫn được trả về token mới đã sinh',
-          'Tắt hoàn toàn cơ chế xoay vòng token và chỉ dùng 1 token vĩnh viễn'
-        ],
-        dung: 0,
-        giai_thich: 'Grace Period ngắn (10-30s) cho phép xử lý độ trễ mạng khi nhiều request refresh bay song song mà không kích hoạt nhầm cảnh báo Replay Attack.',
-        phan_tang: 'Lan truyền sự cố'
-      },
-      {
-        cau_hoi: `Tại sao Auth Server nên phân tách rõ rệt Audience Claim (aud) giữa cổng Khách hàng (/customer) và cổng Quản trị (/admin)?`,
-        lua_chon: [
-          'Ngăn chặn tuyệt đối nguy cơ kẻ tấn công dùng Token hợp lệ của tài khoản Khách hàng để Replay mạo danh vào API Quản trị',
-          'Để giảm kích thước payload của chuỗi mã hóa JWT'
-        ],
-        dung: 0,
-        giai_thich: 'Audience routing đảm bảo mỗi token chỉ có giá trị trên một bề mặt ứng dụng xác định, không thể dùng chéo bề mặt.',
-        phan_tang: 'Đánh đổi kỹ thuật'
-      },
-      {
-        cau_hoi: `Khi Auth Gateway thẩm định JWT dạng Stateless ở tốc độ 0.2ms, làm thế nào để thu hồi tức thì một token bị lộ trước khi nó hết hạn?`,
-        lua_chon: [
-          'Truy vấn danh sách JTI bị thu hồi trong Redis Blacklist với thời gian sống TTL đúng bằng thời gian còn lại của Access Token',
-          'Khởi động lại toàn bộ máy chủ backend để xóa bộ nhớ tạm'
-        ],
-        dung: 0,
-        giai_thich: 'Redis Blacklist chỉ lưu JTI của những token bị thu hồi khẩn cấp với TTL ngắn, kết hợp ưu điểm của cả Stateless JWT và Tức thì Revocation.',
-        phan_tang: 'Vận hành & Giám sát'
-      }
-    ];
-  }
-
-  // 5. DÀNH CHO MESSAGE QUEUE, TRANSACTIONAL OUTBOX & BACKGROUND WORKERS
-  if (t.includes('queue') || t.includes('outbox') || t.includes('worker') || t.includes('kafka') || t.includes('event')) {
-    return [
-      {
-        cau_hoi: `Mẫu thiết kế Transactional Outbox giải quyết bài toán phân tán cốt lõi nào giữa Database và Message Broker?`,
-        lua_chon: [
-          'Thực thi giao dịch 2-Phase Commit (XA Transactions) khóa cứng cả PostgreSQL và Kafka cùng lúc',
-          'Đảm bảo tính nguyên tử: Lưu Event vào bảng outbox trong cùng 1 DB Transaction với Entity, sau đó Worker nền mới phát tán sự kiện sang Message Bus một cách tin cậy'
-        ],
-        dung: 1,
-        giai_thich: 'Transactional Outbox tránh được việc DB lưu thành công nhưng bắn Kafka thất bại (hoặc ngược lại) mà không cần giao dịch phân tán 2PC cồng kềnh.',
-        phan_tang: 'Kiến trúc cốt lõi'
-      },
-      {
-        cau_hoi: `Vì các hệ thống Message Queue phân tán (Kafka/RabbitMQ) hoạt động theo cơ chế At-Least-Once Delivery, Consumer bắt buộc phải thiết kế như thế nào?`,
-        lua_chon: [
-          'Consumer bắt buộc phải có tính Idempotent (Khử trùng lặp qua Message ID / Unique Index) để không xử lý trùng khi tin nhắn bị gửi lại',
-          'Yêu cầu Kafka cam kết chuyển phát Exactly-Once trên mọi điều kiện mạng mà không cần xử lý ở tầng ứng dụng'
-        ],
-        dung: 0,
-        giai_thich: 'Trong thực tế mạng phân tán, At-Least-Once là chuẩn mực. Mọi Consumer phải tự bảo vệ bằng cơ chế Idempotency chống lặp xử lý.',
-        phan_tang: 'Tương tranh cao điểm'
-      },
-      {
-        cau_hoi: `Nếu Background Worker giải phóng Reservation (hạn 15m) bị sập hoặc gặp sự cố Lag kéo dài, hậu quả là gì?`,
-        lua_chon: [
-          'Hạn ngạch (Quota) của các voucher bị bỏ dở không được nhả lại vào quỹ chung, khiến khách hàng khác không thể áp mã dù ngân sách thực tế vẫn còn',
-          'Dữ liệu tài khoản của người dùng bị xóa hoàn toàn khỏi cơ sở dữ liệu'
-        ],
-        dung: 0,
-        giai_thich: 'Worker giải phóng voucher quá hạn nếu bị lag sẽ gây hiện tượng "giữ ảo" quota, làm giảm doanh thu của đợt khuyến mãi.',
-        phan_tang: 'Lan truyền sự cố'
-      },
-      {
-        cau_hoi: `Chiến lược xử lý tin nhắn lỗi (Failed Message) chuẩn SRE sau khi đã thử lại nhiều lần (Max Retries) là gì?`,
-        lua_chon: [
-          'Bỏ qua tin nhắn lỗi và tiếp tục xử lý các tin nhắn tiếp theo trong hàng đợi',
-          'Đẩy tin nhắn lỗi vào Dead Letter Queue (DLQ) kèm đầy đủ Error Stacktrace và gửi cảnh báo để kỹ sư điều tra và Replay thủ công'
-        ],
-        dung: 1,
-        giai_thich: 'DLQ bảo vệ pipeline không bị tắc nghẽn vô tận bởi "Poison Pill Messages" mà vẫn lưu giữ nguyên vẹn dữ liệu lỗi để khắc phục.',
-        phan_tang: 'Đánh đổi kỹ thuật'
-      },
-      {
-        cau_hoi: `Chỉ số giám sát quan trọng nhất để phát hiện tình trạng quá tải của hệ thống hàng đợi tin nhắn là gì?`,
-        lua_chon: [
-          'Consumer Lag (Độ trễ số lượng tin nhắn chưa được xử lý giữa Producer và Consumer) và Thời gian lưu tin nhắn trong Outbox Table',
-          'Kích thước file cấu hình của Kafka cluster'
-        ],
-        dung: 0,
-        giai_thich: 'Consumer Lag tăng cao là cảnh báo sớm nhất cho thấy tốc độ tiêu thụ của worker không theo kịp tốc độ sản sinh tin nhắn.',
-        phan_tang: 'Vận hành & Giám sát'
-      }
-    ];
-  }
-
-  // 6. DEFAULT ARCHITECTURE QUESTIONS (FALLBACK CHUẨN KỸ SƯ CẤP CAO)
   return [
     {
-      cau_hoi: `Nguyên tắc kiến trúc bất biến (Architectural Invariance) sống còn của '${title}' là gì?`,
+      cau_hoi: `Nguyên lý kiến trúc cốt lõi để đảm bảo tính bất biến và ranh giới cô lập cho '${cleanTitle}' (${cleanCluster}) là gì?`,
       lua_chon: [
-        'Bỏ qua các bước thẩm định tính toàn vẹn để ưu tiên tuyệt đối cho tốc độ phản hồi API',
-        `Duy trì ranh giới Bounded Context độc lập, không cho phép các phân hệ khác can thiệp trực tiếp vào cấu trúc nội tạng của ${title}`
+        `Thiết lập ranh giới cô lập (Bounded Context) độc lập, chỉ giao tiếp qua contract giao diện và kiểm soát chặt chẽ trạng thái`,
+        `Cho phép các dịch vụ khác truy cập trực tiếp vào tầng dữ liệu nội bộ để giảm độ trễ tối đa`
       ],
-      dung: 1,
-      giai_thich: `Mỗi phân hệ kiến trúc bắt buộc phải bảo vệ Bounded Context và dữ liệu nội bộ qua Interfaces trừu tượng.`,
+      dung: 0,
+      giai_thich: `Mọi thành phần trong kiến trúc phân tán bắt buộc phải tuân thủ nguyên tắc đóng gói ranh giới (Bounded Context) và giao tiếp qua Public Contract được kiểm soát.`,
       phan_tang: 'Kiến trúc cốt lõi'
     },
     {
-      cau_hoi: `Trong kịch bản tải cao điểm đột biến 50.000 req/s, điểm nghẽn (Bottleneck) nguy hiểm nhất tại '${title}' là gì?`,
+      cau_hoi: `Khi lưu lượng truy cập dồn dập vào '${cleanTitle}', giải pháp nào ngăn ngừa triệt để lỗi tranh chấp tài nguyên (Race Condition) và Deadlock?`,
       lua_chon: [
-        'Trạng thái bão hòa tài nguyên (CPU/RAM/Connection Pool) làm tăng đột biến P99 Latency và gây tràn hàng đợi xử lý',
-        'Hệ thống tự động chuyển sang trạng thái ngủ đông mà không tiêu thụ điện năng'
+        `Bỏ qua cơ chế khóa và hy sinh tính nhất quán để đảm bảo thời gian phản hồi dưới 1ms`,
+        `Áp dụng cơ chế Atomic Check / Distributed Lock có TTL an toàn hoặc sắp xếp tuần tự hóa tài nguyên trước khi xử lý`
       ],
-      dung: 0,
-      giai_thich: 'Tải cao điểm làm cạn kiệt tài nguyên xử lý nếu thiếu các cơ chế đệm bất đồng bộ hoặc giới hạn tần suất.',
+      dung: 1,
+      giai_thich: `Để xử lý tranh chấp khi tải cao, hệ thống bắt buộc phải kiểm soát tính nguyên tử (Atomicity) và thứ tự khóa tài nguyên nhằm triệt tiêu hoàn toàn chu trình Deadlock.`,
       phan_tang: 'Tương tranh cao điểm'
     },
     {
-      cau_hoi: `Khi '${title}' gặp sự cố suy giảm hiệu năng, giải pháp ngăn chặn hiệu ứng thất bại dây chuyền (Failure Cascade) là gì?`,
+      cau_hoi: `Nếu '${cleanTitle}' gặp sự cố suy giảm hiệu năng hoặc mất kết nối phụ thuộc, giải pháp nào ngăn chặn sự cố dây chuyền (Cascading Failure)?`,
       lua_chon: [
-        'Kích hoạt Circuit Breaker tự động ngắt kết nối và trả về phản hồi suy giảm có kiểm soát (Graceful Degradation / Fallback)',
-        'Tăng thời gian timeout lên 60 giây để tất cả client cùng kiên nhẫn chờ đợi'
+        `Kích hoạt Circuit Breaker, áp dụng cơ chế ngắt mạch tự động kèm Fallback và điều tiết Backpressure hàng đợi`,
+        `Tiếp tục gửi request thử lại liên tục (Retry Flood) không giới hạn thời gian chờ`
       ],
       dung: 0,
-      giai_thich: 'Tăng timeout khi service đang chậm sẽ làm các client dồn ứ kết nối và kéo sập toàn bộ hệ sinh thái. Bắt buộc phải ngắt mạch sớm (Fast-Fail).',
+      giai_thich: `Circuit Breaker và Backpressure là lá chắn sống còn giúp cô lập lỗi cục bộ tại '${cleanTitle}', bảo vệ toàn bộ phân hệ '${cleanCluster}' không bị sụp đổ dây chuyền.`,
       phan_tang: 'Lan truyền sự cố'
     },
     {
-      cau_hoi: `Đánh đổi kỹ thuật (Trade-off) căn bản nhất khi thiết kế và vận hành '${title}' là gì?`,
+      cau_hoi: `Đánh đổi kỹ thuật (Architectural Trade-off) trọng yếu nhất khi triển khai '${cleanTitle}' là gì?`,
       lua_chon: [
-        'Cân đối giữa Tính nhất quán dữ liệu (Data Consistency), Tính sẵn sàng (High Availability) và Độ phức tạp vận hành',
-        'Hệ thống có thể đạt được 100% tất cả các thuộc tính hoàn hảo mà không cần đánh đổi bất kỳ yếu tố nào'
+        `Cân bằng giữa Tính nhất quán dữ liệu (Consistency) và Độ trễ phản hồi (Latency), chấp nhận Eventual Consistency nếu cần thông lượng cao`,
+        `Đạt được cả 100% Zero-Latency lẫn 100% ACID phân tán mà không cần hy sinh tài nguyên phần cứng`
       ],
       dung: 0,
-      giai_thich: 'Theo định lý CAP và PACELC, mọi quyết định kiến trúc đều là sự lựa chọn đánh đổi có chủ đích giữa Consistency, Availability và Latency.',
+      giai_thich: `Theo định lý CAP và PACELC, mọi quyết định kiến trúc đều phải đánh đổi giữa tính nhất quán nghiêm ngặt và tính khả dụng / độ trễ.`,
       phan_tang: 'Đánh đổi kỹ thuật'
     },
     {
-      cau_hoi: `Bộ chỉ số giám sát SRE (Golden Signals) nào cần thiết lập cảnh báo thời gian thực cho '${title}'?`,
+      cau_hoi: `Chỉ số độ tin cậy (SLI/SLO) nào phản ánh chính xác nhất sức khỏe vận hành của '${cleanTitle}' trong môi trường Production?`,
       lua_chon: [
-        'Tỷ lệ lỗi (Error Rate 5xx), P95/P99 Latency, Lưu lượng thông lượng (Traffic Throughput) và Mức độ bão hòa (Resource Saturation)',
-        'Số lượng commit trên kho lưu trữ mã nguồn'
+        `Độ trễ P99 (P99 Latency), Tỷ lệ lỗi (Error Rate) và Mức độ bão hòa tài nguyên (Resource Saturation)`,
+        `Số lượng dòng code đã triển khai trên máy chủ`
       ],
       dung: 0,
-      giai_thich: '4 tín hiệu vàng (Golden Signals) của Google SRE là tiêu chuẩn quốc tế để phát hiện sớm mọi sự cố hệ thống.',
+      giai_thich: `Mô hình 4 Golden Signals (Latency, Traffic, Errors, Saturation) là tiêu chuẩn vàng để giám sát và cảnh báo sớm sự cố của '${cleanTitle}'.`,
       phan_tang: 'Vận hành & Giám sát'
     }
   ];
 }
 
 export function generateIncidentDossier(title: string, summary: string, clusterName: string): IncidentDossier {
-  const t = title.toLowerCase();
-  if (t.includes('pure') || t.includes('engine') || t.includes('tính toán')) {
-    return {
-      boi_canh_tai: 'Đêm Flash Sale 11.11: Giỏ hàng 15 món từ 4 gian hàng (Multi-Seller Cart), áp Voucher sàn -100k.',
-      nguyen_nhan_goc_re: 'Lỗi làm tròn Float (Penny Rounding): Chia 100k cho 3 seller dư 1đ (33.333,33đ) gây lệch sổ cái đối soát.',
-      ban_kinh_anh_huong: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm.',
-      chien_luoc_phong_thu: 'Thuật toán Largest Remainder + Minor-Unit BigInt dồn phần dư 1đ vào seller có giá trị đơn cao nhất.'
-    };
-  }
-  if (t.includes('postgres') || t.includes('database') || t.includes('db') || t.includes('acid') || t.includes('storage')) {
-    return {
-      boi_canh_tai: '0h Flash Voucher: 10.000 requests/giây cùng tranh chấp áp 1 mã khuyến mãi toàn sàn.',
-      nguyen_nhan_goc_re: 'Pessimistic Row-Level Lock giữ connection quá 150ms gây cạn kiệt Connection Pool (Starvation).',
-      ban_kinh_anh_huong: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
-      chien_luoc_phong_thu: 'Khóa theo thứ tự ID tăng dần + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
-    };
-  }
-  if (t.includes('redis') || t.includes('cache') || t.includes('lock')) {
-    return {
-      boi_canh_tai: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
-      nguyen_nhan_goc_re: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng.',
-      ban_kinh_anh_huong: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
-      chien_luoc_phong_thu: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
-    };
-  }
-  if (t.includes('outbox') || t.includes('queue') || t.includes('worker') || t.includes('kafka')) {
-    return {
-      boi_canh_tai: 'Đêm mở bán vé: 25.000 đơn hàng thanh toán thành công trong 10 phút cao điểm.',
-      nguyen_nhan_goc_re: 'DB Transaction commit thành công nhưng kết nối Message Broker bị ngắt 5s làm event bị thất lạc.',
-      ban_kinh_anh_huong: 'Hệ thống Analytics và Kho quà tặng không nhận được event trừ tồn kho, gây lệch số liệu báo cáo tài chính.',
-      chien_luoc_phong_thu: 'Mẫu Transactional Outbox ghi event vào cùng 1 DB Transaction với Entity + Background Reconciler quét dọn reservation quá hạn 15m.'
-    };
-  }
-  if (t.includes('application') || t.includes('service')) {
-    return {
-      boi_canh_tai: '10.000 khách hàng bấm áp mã voucher lúc 0h rồi chuyển sang cổng ngân hàng.',
-      nguyen_nhan_goc_re: 'Khách hàng tắt trình duyệt bỏ ngang không thanh toán đơn nhưng hệ thống thiếu cơ chế Reservation Timeout.',
-      ban_kinh_anh_huong: 'Quota voucher bị treo giữ ảo suốt 48h, sàn thương mại sụt giảm 1.8 tỷ đồng doanh thu do khách khác không áp được mã.',
-      chien_luoc_phong_thu: 'Chu trình Two-Phase Reservation có hạn 15 phút, kết hợp Background Worker tự động thu hồi quota khi đơn bị hủy.'
-    };
-  }
+  const cleanTitle = title || 'Thành phần';
+  const cleanCluster = clusterName || 'Phân hệ';
+  const cleanSummary = summary || 'thực thi tác vụ phân tán';
+
   return {
-    boi_canh_tai: `Tải cao điểm 50.000 req/s dồn vào thành phần ${title} trong phân hệ ${clusterName}.`,
-    nguyen_nhan_goc_re: `Tắc nghẽn xử lý do ${summary.slice(0, 55)}...`,
-    ban_kinh_anh_huong: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên quan.`,
-    chien_luoc_phong_thu: `Kích hoạt cơ chế Circuit Breaker, giới hạn tần suất Rate Limiting và đệm dữ liệu bất đồng bộ.`
+    boi_canh_tai: `Tải cao điểm P99 vượt ngưỡng dồn vào thành phần ${cleanTitle} thuộc phân hệ ${cleanCluster}.`,
+    nguyen_nhan_goc_re: `Tắc nghẽn tài nguyên xử lý hoặc phân giải phụ thuộc trong quá trình: ${cleanSummary.slice(0, 75)}...`,
+    ban_kinh_anh_huong: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên kết trong ${cleanCluster}.`,
+    chien_luoc_phong_thu: `Kích hoạt cơ chế Circuit Breaker tự động cô lập lỗi, áp dụng Rate Limiting bảo vệ biên và đệm hàng đợi bất đồng bộ.`
   };
 }
 
-
 export function generateDefaultIncidentCases(title: string, summary: string, clusterName: string): IncidentCase[] {
-  const t = title.toLowerCase();
-  if (t.includes('pure') || t.includes('engine') || t.includes('tính toán')) {
-    return [
-      {
-        id: 'case_engine_penny_rounding',
-        title: 'Penny Rounding On Multi-Seller Split Allocation',
-        traffic_profile: 'Đêm Flash Sale 11.11, giỏ hàng 1 đơn gồm 15 món từ 3 shop độc lập (Shop A: 100k, Shop B: 100k, Shop C: 100k), áp Voucher sàn -100.000đ.',
-        root_cause_analysis: 'Voucher 100.000đ chia đều cho 3 shop ra 33.333,333...đ mỗi shop. Nếu làm tròn số lẻ Float, tổng tiền chiết khấu thành 99.999đ hoặc 100.001đ.',
-        blast_radius: 'Bút toán đối soát settlement giữa Sàn và Seller bị lệch hàng triệu đồng mỗi đêm, 1 shop gửi đơn khiếu nại sàn ăn chặn tiền chiết khấu.',
-        cascading_failure_path: [
-          '[Trigger]: Khách bấm thanh toán giỏ hàng chứa sản phẩm của 3 Seller độc lập.',
-          '[Calculation Error]: JavaScript chia số thực Float làm tròn sai lệch vài đồng mỗi đơn hàng.',
-          '[Failure Cascade]: Tổng tiền từng shop cộng lại không khớp với tổng tiền khách thanh toán.',
-          '[Blast Radius]: Bút toán đối soát ngân hàng bị lệch, tạm dừng giải ngân cho Seller.'
-        ],
-        mitigation_strategy: 'Áp dụng Thuật toán Largest Remainder + Minor-Unit BigInt dồn chính xác phần dư 1đ vào seller có giá trị đơn hàng cao nhất.'
-      },
-      {
-        id: 'case_engine_combinatorial_explosion',
-        title: 'Combinatorial Explosion On Stacking Rules',
-        traffic_profile: 'Giỏ hàng chứa 20 mặt hàng, khách thu thập 15 mã voucher khác nhau (Voucher sàn, Shop voucher, Free ship, Member bonus).',
-        root_cause_analysis: 'Thuật toán vét cạn tổ hợp O(2^N) chạy trong luồng chính (Main Thread) làm nghẽn 100% CPU máy chủ trong 8 giây.',
-        blast_radius: 'Node.js Event Loop bị block hoàn toàn, hàng ngàn request của người dùng khác bị timeout 504 Gateway Timeout.',
-        cascading_failure_path: [
-          '[Trigger]: Giỏ hàng chứa 15 mã giảm giá kích hoạt thuật toán vét cạn tổ hợp O(2^N).',
-          '[CPU Starvation]: Node.js Event Loop bị block hoàn toàn 100% CPU trong 8 giây.',
-          '[Failure Cascade]: Các request checkout song song bị dồn ứ hàng đợi và timeout 504.',
-          '[Blast Radius]: Toàn bộ trang giỏ hàng và thanh toán của khách bị gián đoạn.'
-        ],
-        mitigation_strategy: 'Thiết kế ma trận Stacking Matrix loại trừ sớm (Early Pruning) + Giới hạn số lượng voucher tối đa được áp dụng cùng lúc.'
-      }
-    ];
-  }
-  if (t.includes('postgres') || t.includes('database') || t.includes('db') || t.includes('acid') || t.includes('storage')) {
-    return [
-      {
-        id: 'case_pg_lock_contention',
-        title: 'Row-Level Lock Contention On Flash Voucher 0h',
-        traffic_profile: '0h mở bán Flash Voucher giảm 50% cho 1.000 người đầu tiên, 10.000 requests/giây cùng dội vào khóa dòng voucher #99.',
-        root_cause_analysis: 'Pessimistic Row-Level Lock (SELECT ... FOR UPDATE) trên cùng 1 dòng voucher giữ connection quá 150ms làm cạn kiệt Connection Pool (Starvation).',
-        blast_radius: 'Toàn bộ API Checkout và Payment bị gián đoạn, hàng ngàn đơn hàng bị timeout 3s.',
-        cascading_failure_path: [
-          '[Trigger]: 10.000 request dồn dập tranh nhau khóa dòng cùng 1 voucher lúc 0h.',
-          '[Saturation]: Transaction giữ Row Lock kéo dài làm nghẽn hàng đợi kết nối DB.',
-          '[Failure Cascade]: Connection Pool bị cạn kiệt, các API checkout khác bị timeout dây chuyền.',
-          '[Blast Radius]: Toàn bộ hệ thống thanh toán rơi vào trạng thái tê liệt (Connection Starvation).'
-        ],
-        mitigation_strategy: 'Khóa theo thứ tự ID tăng dần cố định + Fast Pre-Check quota trên Redis cache trước khi chạm DB.'
-      },
-      {
-        id: 'case_pg_deadlock',
-        title: 'Deadlock Cycle On Multi-Voucher Checkout',
-        traffic_profile: '5.000 transaction đồng thời áp cặp voucher [Voucher Sàn A + Voucher Shop B] trên các giỏ hàng khác nhau.',
-        root_cause_analysis: 'Transaction 1 khóa A chờ B, trong khi Transaction 2 khóa B chờ A kẹt chéo tạo thành chu trình Deadlock.',
-        blast_radius: 'PostgreSQL Deadlock Detector tự động abort transaction, khách hàng bị báo lỗi thanh toán dù voucher còn lượt.',
-        cascading_failure_path: [
-          '[Trigger]: Hai transaction áp cùng cặp voucher theo thứ tự duyệt giỏ hàng ngẫu nhiên.',
-          '[Deadlock Cycle]: Transaction 1 khóa A chờ B; Transaction 2 khóa B chờ A kẹt chéo.',
-          '[Failure Cascade]: PostgreSQL phát hiện sau 1.000ms và buộc abort transaction.',
-          '[Blast Radius]: Khách hàng bị văng lỗi thanh toán và mất lượt mua hàng oan.'
-        ],
-        mitigation_strategy: 'Bắt buộc sắp xếp mảng ID các voucher cần khóa theo thứ tự từ điển tăng dần trước khi SELECT FOR UPDATE.'
-      }
-    ];
-  }
-  if (t.includes('redis') || t.includes('cache') || t.includes('rate') || t.includes('lock')) {
-    return [
-      {
-        id: 'case_redis_stampede',
-        title: 'Cache Stampede On Viral Campaign Expiration',
-        traffic_profile: 'Flash Sale 0h: 100.000 requests/giây dồn vào 1 voucher hot vừa hết hạn cache TTL 60s.',
-        root_cause_analysis: 'Thảm họa Cache Stampede: Hàng trăm ngàn request lọt thẳng xuống PostgreSQL làm nghẽn I/O đĩa cứng và sập pool.',
-        blast_radius: 'PostgreSQL tăng vọt 500% CPU, tê liệt toàn bộ cổng API trong 12 phút.',
-        cascading_failure_path: [
-          '[Trigger]: Hàng triệu request cùng truy vấn một mã khuyến mãi vừa hết hạn cache lúc 0h.',
-          '[Cache Stampede]: Toàn bộ request lọt thẳng xuống tầng cơ sở dữ liệu quan hệ PostgreSQL.',
-          '[Failure Cascade]: I/O Database tăng vọt 500%, Connection Pool bị cạn kiệt.',
-          '[Blast Radius]: Dịch vụ Promotion và Checkout bị suy giảm hiệu năng nghiêm trọng.'
-        ],
-        mitigation_strategy: 'Áp dụng Mutex Lock / Probabilistic Early Expiration (XFetch) và Rate Limiting 10 req/s mỗi IP bằng Redis Lua Script.'
-      },
-      {
-        id: 'case_redis_botnet',
-        title: 'Botnet Request Flood & Token Drain',
-        traffic_profile: '5.000 IP botnet tự động gửi 50.000 request/giây nhằm quét vét mã voucher có giá trị cao.',
-        root_cause_analysis: 'Thiếu bộ lọc Sliding Window Rate Limiter ở tầng biên khiến lưu lượng ảo tràn vào hệ thống.',
-        blast_radius: 'Băng thông mạng bị nghẽn, người dùng thật bị chậm phản hồi và không kịp săn mã sale.',
-        cascading_failure_path: [
-          '[Trigger]: Botnet đồng loạt dội bão request quét mã voucher lúc mở cổng sale.',
-          '[Network Saturation]: Băng thông mạng và CPU Redis bị chiếm dụng 90%.',
-          '[Failure Cascade]: Request của người dùng thật bị xếp hàng sau và timeout.',
-          '[Blast Radius]: Trải nghiệm khách hàng bị phá hủy, voucher bị bot gom sạch.'
-        ],
-        mitigation_strategy: 'Thiết lập Sliding Window Counter 10 req/s mỗi IP + WAF IP Reputation Filter chặn đứng botnet từ tầng biên.'
-      }
-    ];
-  }
+  const cleanTitle = title || 'Thành phần';
+  const cleanCluster = clusterName || 'Phân hệ';
+  const slug = cleanTitle.toLowerCase().replace(/[^a-z0-9]/g, '_');
+
   return [
     {
-      id: `case_${title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_overload`,
-      title: `${title} Overload & Resource Saturation`,
-      traffic_profile: `Lưu lượng đỉnh 50.000 req/s dồn vào thành phần ${title} trong phân hệ ${clusterName}.`,
-      root_cause_analysis: `Nghẽn cổ chai xử lý do ${summary.slice(0, 55)}...`,
-      blast_radius: `Hiệu ứng lan truyền (Cascading Failure) làm tăng P99 Latency và nghẽn hàng đợi các dịch vụ liên quan.`,
+      id: `case_${slug}_saturation`,
+      title: `${cleanTitle} High Concurrency & Resource Saturation`,
+      traffic_profile: `Bão lưu lượng dồn dập vào ${cleanTitle} thuộc phân hệ ${cleanCluster}, vượt quá ngưỡng thiết kế đồng thời.`,
+      root_cause_analysis: `Nghẽn hàng đợi xử lý hoặc giữ connection quá lâu khi thực thi tác vụ: ${summary.slice(0, 60)}...`,
+      blast_radius: `Toàn bộ các luồng phụ thuộc vào ${cleanTitle} bị suy giảm hiệu năng, P99 latency tăng cao và xuất hiện timeout.`,
       cascading_failure_path: [
-        `1. [Trigger]: Bão request 50.000 req/s dồn dập vào ${title}.`,
-        `2. [Resource Saturation]: Hàng đợi xử lý bị đầy, CPU/RAM chạm ngưỡng 95%.`,
-        `3. [Failure Cascade]: Các dịch vụ gọi phụ thuộc phía sau bị timeout 504.`,
-        `4. [Blast Radius]: Phân hệ ${clusterName} rơi vào trạng thái suy giảm hiệu năng.`
+        `1. [Trigger]: Đột biến lưu lượng truy cập cao điểm dồn vào ${cleanTitle}.`,
+        `2. [Saturation]: Tài nguyên CPU/RAM hoặc Connection Pool bị chiếm dụng chạm ngưỡng 95%.`,
+        `3. [Failure Cascade]: Các dịch vụ upstream gọi vào bị ứ đọng hàng đợi và rơi vào trạng thái timeout.`,
+        `4. [Blast Radius]: Phân hệ ${cleanCluster} rơi vào trạng thái suy giảm hiệu năng có kiểm soát.`
       ],
-      mitigation_strategy: `Kích hoạt Circuit Breaker ngắt mạch tự động + Thiết lập Rate Limiting và đệm hàng đợi bất đồng bộ.`
+      mitigation_strategy: `Áp dụng thuật toán Rate Limiting theo cửa sổ trượt + Connection Pooling + Ngắt mạch Circuit Breaker tự động phục hồi.`
     }
   ];
 }
@@ -551,6 +139,9 @@ export function sanitizeNodeLayerLabel(rawLabel?: string, contextHint?: string):
   }
   if (textToCheck.includes('acid') || textToCheck.includes('database') || textToCheck.includes('cơ sở dữ liệu') || textToCheck.includes('row lock')) {
     return 'STORAGE / ACID DB';
+  }
+  if (textToCheck.includes('topic') || textToCheck.includes('stream') || textToCheck.includes('event partition') || textToCheck.includes('partition log')) {
+    return 'EVENT STREAM / TOPIC';
   }
   if (textToCheck.includes('queue') || textToCheck.includes('hàng đợi') || textToCheck.includes('băng chuyền') || textToCheck.includes('buffer')) {
     return 'ASYNC / QUEUE BUFFER';
@@ -1571,8 +1162,17 @@ export const toolHandlers = {
           const sPosY = subOffsetY;
 
           let sBadge: NodeEntity['bieu_tuong'] = 'bo_nho_dem_cache';
-          if (sub.infra_type === 'postgres' || sNode.infra_type === 'postgres') sBadge = 'khoi_tru_database';
-          if (sub.infra_type === 'kafka' || sNode.infra_type === 'kafka') sBadge = 'hang_doi_message_queue';
+          let defaultTemplate = 'bo_nho_dem_redis';
+          if (sub.infra_type === 'postgres' || sNode.infra_type === 'postgres') {
+            sBadge = 'khoi_tru_database';
+            defaultTemplate = 'luu_tru_acid';
+          }
+          if (sub.infra_type === 'kafka' || sNode.infra_type === 'kafka') {
+            sBadge = 'hang_doi_message_queue';
+            defaultTemplate = 'queue_outbox_conveyor';
+          }
+
+          const resolvedSubName = sub.name ? sub.name.trim() : 'SUB-CLUSTER';
 
           const sEntity: NodeEntity = {
             id: sNodeId,
@@ -1589,14 +1189,14 @@ export const toolHandlers = {
             tam: { x: sPosX + 110, y: sPosY + 72 },
             fully_explored: true,
             hoat_hoa: {
-              mau: sNode.schematic_template || (sub.infra_type === 'redis' ? 'token_blacklist' : 'default'),
+              mau: sNode.schematic_template || defaultTemplate,
               tham_so: sNode.schematic_params || { store: sNode.title.toUpperCase() }
             },
             chi_tiet: {
-              phan_loai: sub.name.toUpperCase(),
+              phan_loai: resolvedSubName.toUpperCase(),
               tieu_de: sNode.title,
               ban_chat: sNode.ban_chat || sNode.summary,
-              chu_thich_so_do: `Sub-Cluster ${sub.name} của ${payload.cluster_name}`,
+              chu_thich_so_do: `Sub-Cluster ${resolvedSubName} của ${payload.cluster_name}`,
               ca_thuc_te: sNode.ca_thuc_te || [`Lưu trữ và phục vụ nội bộ cho phân hệ ${payload.cluster_name}`],
               rui_ro: sNode.rui_ro || ['Cần đảm bảo đồng bộ trạng thái và TTL bộ nhớ'],
               chuoi_sup_do: sNode.chuoi_sup_do || [

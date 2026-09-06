@@ -50,22 +50,29 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     const sId = node.sub_cluster_id.toLowerCase();
     if (sId.includes('redis') || sId.includes('cache') || node.infra_type === 'redis') {
       subColor = '#059669';
-    } else if (sId.includes('postgres') || sId.includes('db') || node.infra_type === 'postgres') {
+    } else if (sId.includes('postgres') || sId.includes('db') || sId.includes('storage') || node.infra_type === 'postgres') {
       subColor = '#2563EB';
-    } else if (sId.includes('kafka') || sId.includes('queue') || node.infra_type === 'kafka') {
+    } else if (sId.includes('kafka') || sId.includes('queue') || sId.includes('topic') || node.infra_type === 'kafka') {
       subColor = '#D97706';
-    } else if (sId.includes('auth') || sId.includes('pdp')) {
+    } else if (sId.includes('auth') || sId.includes('pdp') || sId.includes('token')) {
       subColor = '#6366F1';
     }
 
-    const subTitle = node.infra_type
-      ? `[INFRA: ${node.infra_type.toUpperCase()}]`
-      : (node.chi_tiet?.phan_loai || 'SUB-CLUSTER');
+    // Ưu tiên hiển thị tên đề mục phân hệ con (ví dụ: MEDIA LIFECYCLE & CLEANUP QUEUE, MESSAGE BROKER CORE)
+    // KHÔNG ghi đè thô thiển bằng [INFRA: KAFKA]
+    const rawSubTitle = node.chi_tiet?.phan_loai || '';
+    const cleanSubTitle = rawSubTitle && !rawSubTitle.startsWith('[INFRA')
+      ? rawSubTitle.replace(/_/g, ' ')
+      : (node.infra_type ? `HẠ TẦNG ${node.infra_type.toUpperCase()}` : 'SUB-CLUSTER');
+
+    const subSubtitle = node.infra_type
+      ? `${node.infra_type.toUpperCase()} • ${node.nhan_buoc}`
+      : node.nhan_buoc;
 
     return {
       clusterId: node.sub_cluster_id,
-      ten_cum: subTitle,
-      chu_de_phu: node.nhan_buoc,
+      ten_cum: cleanSubTitle,
+      chu_de_phu: subSubtitle,
       mau: subColor,
       icon: node.bieu_tuong,
       cap_do: 'con',
@@ -82,15 +89,19 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
     else if (cId.includes('waf') || cId.includes('ddos') || cId.includes('edge')) clusterColor = '#4338CA';
     else if (cId.includes('audit') || cId.includes('merkle') || cId.includes('kiem-toan')) clusterColor = '#F59E0B';
     else if (cId.includes('queue') || cId.includes('async')) clusterColor = '#D97706';
-    else if (cId.includes('db') || cId.includes('acid') || cId.includes('data')) clusterColor = '#2563EB';
+    else if (cId.includes('db') || cId.includes('acid') || cId.includes('data') || cId.includes('media')) clusterColor = '#2563EB';
     else if (cId.includes('webhook') || cId.includes('gateway')) clusterColor = '#DC2626';
-    else if (cId.includes('tmdt') || cId.includes('ecommerce')) clusterColor = '#7C3AED';
+    else if (cId.includes('tmdt') || cId.includes('ecommerce') || cId.includes('promo') || cId.includes('voucher')) clusterColor = '#7C3AED';
     else if (cId.includes('shared-infrastructure')) clusterColor = '#3B82F6';
     else if (node.hoat_hoa?.mau && node.hoat_hoa.mau.startsWith('#')) clusterColor = node.hoat_hoa.mau;
 
+    // Chuẩn hóa tên Cụm Lớn: bỏ dấu gạch dưới và viết hoa thanh lịch
+    const rawClusterTitle = node.chi_tiet?.phan_loai || node.cluster_id.replace(/^cum-/, '').replace(/-\d+$/, '');
+    const cleanClusterTitle = rawClusterTitle.replace(/_/g, ' ').toUpperCase();
+
     return {
       clusterId: node.cluster_id,
-      ten_cum: node.chi_tiet?.phan_loai || node.tieu_de.toUpperCase(),
+      ten_cum: cleanClusterTitle,
       chu_de_phu: node.nhan_buoc,
       mau: clusterColor,
       icon: node.bieu_tuong,
