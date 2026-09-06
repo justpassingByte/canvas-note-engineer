@@ -352,7 +352,7 @@ app.get('/api/rag/document/:filename', async (req, res) => {
 
 app.post('/api/rag/ingest', async (req, res) => {
   try {
-    const { filename, content } = req.body;
+    const { filename, content, mode } = req.body;
     let docContent = content;
     if (!docContent && filename) {
       docContent = await brainstormRAG.getDocumentContent(filename);
@@ -360,7 +360,7 @@ app.post('/api/rag/ingest', async (req, res) => {
     }
     if (!docContent) return res.status(400).json({ error: 'Vui lòng cung cấp nội dung tài liệu hoặc tên file trong rag/' });
 
-    const result = await brainstormRAG.ingestDocument(docContent, filename);
+    const result = await brainstormRAG.ingestDocument(docContent, filename, { forceMode: mode });
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -369,10 +369,10 @@ app.post('/api/rag/ingest', async (req, res) => {
 
 app.post('/api/rag/upload', async (req, res) => {
   try {
-    const { filename, content } = req.body;
+    const { filename, content, mode } = req.body;
     if (!filename || !content) return res.status(400).json({ error: 'Thiếu filename hoặc content' });
 
-    const result = await brainstormRAG.saveAndIngest(filename, content);
+    const result = await brainstormRAG.saveAndIngest(filename, content, { forceMode: mode });
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message });

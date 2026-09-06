@@ -6,7 +6,7 @@ import {
   buildExpandNodePrompt
 } from './universalDomainPrompts.js';
 import { sqliteClient } from '../db/sqliteClient.js';
-import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
+import { GraphData, NodeEntity, EdgeEntity, SpawnClusterPayload } from '../types/graphTypes.js';
 import {
   toolHandlers,
   validateAndSanitizeEdges,
@@ -536,6 +536,93 @@ Format JSON:
       graph: spawnResult.graph,
       message: spawnResult.message,
       newNode: spawnResult.node
+    };
+  }
+
+  /**
+   * Đọc hiểu và phân tích sâu tài liệu kỹ thuật bất kỳ (PRD, RFC, Specs, Free-form Text)
+   * Sử dụng AI Provider để sinh kiến trúc phân cấp chuẩn DDD Bounded Context
+   */
+  public static async ingestDocumentWithAI(params: {
+    rawText: string;
+    filename?: string;
+  }): Promise<{ payload: SpawnClusterPayload; providerUsed: string }> {
+    const provider = ProviderFactory.getActiveProvider();
+    if (!provider) {
+      throw new Error('Chưa cấu hình AI Provider. Vui lòng mở Cài đặt AI Provider (⚙️) trên Toolbar để nhập API Key.');
+    }
+
+    const systemPrompt = `Bạn là một Principal System Architect / Distinguished Systems Engineer.
+Nhiệm vụ của bạn là đọc hiểu TOÀN BỘ tài liệu kỹ thuật được cung cấp (dù là PRD, RFC, System Specification, Meeting Notes, Post-Mortem hay văn bản tự do bằng tiếng Việt hoặc tiếng Anh) và bóc tách thành một Kiến trúc Hệ thống chuẩn Domain-Driven Design (DDD) Bounded Context dạng JSON SpawnClusterPayload.
+
+QUY TẮC THIẾT KẾ BẮT BUỘC:
+1. BOUNDED CONTEXT & SERVICE CLUSTER:
+   - "cluster_name": Tên Phân Hệ Dịch Vụ chính (in hoa, ngắn gọn, chuẩn DDD, ví dụ: "PAYMENT_SETTLEMENT_GATEWAY", "VIDEO_TRANSCODING_PIPELINE", "HOTEL_RESERVATION_CORE", "REALTIME_LOCATION_TRACKING").
+   - "domain_id": Slug định danh miền nghiệp vụ (ví dụ: "domain-payment", "domain-transcoding").
+   - "cluster_theme": Chọn 1 trong các mã màu: "emerald" (thanh toán/tài chính), "indigo" (xác thực/bảo mật), "purple" (bảo mật/WAF), "amber" (kiểm toán/log/giám sát), "blue" (hạ tầng), "rose" (cảnh báo/sự cố).
+
+2. DANH SÁCH NODES CỐT LÕI TRONG CỤM DỊCH VỤ (2 đến 4 nodes):
+   - Phân chia vai trò rõ ràng:
+     + 1 Node Ingress / Public API Gateway: "is_public_interface": true, "role": "gateway", "schematic_template": "pipeline_filter" hoặc "zero_trust_pep".
+     + 1 Node Core Domain Engine: "is_public_interface": false, "role": "engine", "schematic_template": "split_allocation" hoặc "state_machine".
+     + 1 Node Application Service / Orchestrator: "is_public_interface": false, "role": "service", "schematic_template": "two_phase_state_machine".
+     + 1 Node Worker / Outbox Consumer (nếu tài liệu có xử lý nền hoặc hàng đợi): "role": "worker", "schematic_template": "hexagonal_ports".
+   - Mỗi node BẮT BUỘC có các trường chi tiết kỹ thuật:
+     + "title": Tên thành phần kỹ thuật chính xác.
+     + "nhan_buoc": TẦNG KIẾN TRÚC IN HOA (vd: "GATEWAY / INGRESS", "COMPUTE / CONCURRENCY", "DOMAIN / CORE LOGIC"). TUYỆT ĐỐI KHÔNG dùng tiền tố tuyến tính "Bước 1", "Step 1".
+     + "summary": Tóm tắt 1 câu rõ ràng.
+     + "ban_chat": Giải thích bản chất kỹ thuật 2-3 câu, ranh giới dữ liệu và luồng xử lý.
+     + "ca_thuc_te": Mảng 2 case sự cố/tình huống thực tế.
+     + "rui_ro": Mảng 2 rủi ro kỹ thuật nghiêm trọng (deadlock, OOM, starvation, stampede).
+     + "chuoi_sup_do": Mảng 4 bước domino (1. Trigger -> 2. Saturation -> 3. Failure Cascade -> 4. Blast Radius).
+     + "incident_cases": Mảng 1-2 sự cố với cấu trúc:
+       { "id": "...", "title": "...", "traffic_profile": "...", "root_cause_analysis": "...", "blast_radius": "...", "cascading_failure_path": ["1. Trigger...", "2. Saturation...", "3. Cascade...", "4. Blast..."], "mitigation_strategy": "..." }
+     + "trac_nghiem": Câu hỏi trắc nghiệm phản xạ kiến trúc:
+       { "cau_hoi": "...", "lua_chon": ["Đáp án đúng", "Đáp án sai"], "dung": 0, "giai_thich": "..." }
+
+3. SUB-CLUSTERS HẠ TẦNG CỤC BỘ (TỰ ĐỘNG PHÁT HIỆN TỪ TÀI LIỆU):
+   - Nếu tài liệu đề cập đến cơ sở dữ liệu quan hệ, ACID, giao dịch tài chính, lưu trữ bền vững:
+     -> Sinh sub_cluster với "name": Tên Sub-Cluster DB cụ thể (vd: "PostgreSQL Storage & Ledger Subsystem"), "infra_type": "postgres", "nodes": [{ "title": "...", "summary": "...", "schematic_template": "table_row_lock" }].
+   - Nếu tài liệu đề cập đến cache, RAM, sliding window rate limit, lock phân tán:
+     -> Sinh sub_cluster với "name": Tên Sub-Cluster Cache cụ thể (vd: "Redis Cache & Rate Limit Subsystem"), "infra_type": "redis", "nodes": [{ "title": "...", "summary": "...", "schematic_template": "cache_ttl_lock" }].
+   - Nếu tài liệu đề cập đến hàng đợi, message broker, sự kiện bất đồng bộ, outbox:
+     -> Sinh sub_cluster với "name": Tên Sub-Cluster Queue cụ thể (vd: "Transactional Outbox & Event Queue"), "infra_type": "kafka", "nodes": [{ "title": "...", "summary": "...", "schematic_template": "queue_outbox_conveyor" }].
+
+4. ĐỊNH DẠNG ĐẦU RA:
+   - BẮT BUỘC trả về DUY NHẤT một khối JSON hợp lệ theo format:
+{
+  "cluster_name": "TÊN_CỤM_DỊCH_VỤ",
+  "domain_id": "domain-slug",
+  "cluster_theme": "emerald",
+  "nodes": [ ... ],
+  "sub_clusters": [ ... ]
+}`;
+
+    const userPrompt = `Dưới đây là tài liệu kỹ thuật cần đọc hiểu và chuyển hóa thành kiến trúc hệ thống:
+Tên tài liệu: ${params.filename || 'Tài liệu không tên'}
+Nội dung tài liệu:
+"""
+${params.rawText.slice(0, 20000)}
+"""
+
+Hãy phân tích toàn diện và sinh JSON SpawnClusterPayload hoàn chỉnh.`;
+
+    const rawOutput = await provider.generateCompletion({
+      systemPrompt,
+      userPrompt,
+      temperature: 0.2,
+      jsonMode: true
+    });
+
+    const parsed = extractJsonFromLlmOutput(rawOutput);
+
+    if (!parsed || !parsed.cluster_name || !Array.isArray(parsed.nodes) || parsed.nodes.length === 0) {
+      throw new Error('AI không sinh được payload kiến trúc hợp lệ từ tài liệu.');
+    }
+
+    return {
+      payload: parsed as SpawnClusterPayload,
+      providerUsed: `${provider.config.name} (${provider.config.model})`
     };
   }
 }

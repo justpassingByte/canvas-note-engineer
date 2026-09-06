@@ -3,6 +3,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { CompactClusterNode, CompactSubCluster, SpawnClusterPayload, ReflexQuiz } from '../types/graphTypes.js';
 import { toolHandlers } from '../tools/toolHandlers.js';
+import { ProviderFactory } from '../providers/providerFactory.js';
+import { AIGraphService } from '../services/aiGraphService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1042,8 +1044,36 @@ export const brainstormRAG = {
     return fs.readFileSync(fullPath, 'utf8');
   },
 
-  async ingestDocument(rawText: string, filename?: string): Promise<IngestResult> {
-    const rawPayload = parseBrainstormDocument(rawText, filename?.replace(/\.[^/.]+$/, '') || 'Phân Hệ Brainstorm');
+  async ingestDocument(
+    rawText: string,
+    filename?: string,
+    options?: { forceMode?: 'ai' | 'ast' }
+  ): Promise<IngestResult> {
+    const provider = ProviderFactory.getActiveProvider();
+    let rawPayload: SpawnClusterPayload;
+    let engineUsed = 'LOCAL_OFFLINE_AST';
+    let aiNotice: string | null = null;
+
+    if (options?.forceMode !== 'ast' && provider) {
+      try {
+        console.log(`[RAG Ingestion] Đang sử dụng AI Provider '${provider.config.name}' (${provider.config.model}) để đọc hiểu tài liệu...`);
+        const aiResult = await AIGraphService.ingestDocumentWithAI({ rawText, filename });
+        rawPayload = aiResult.payload;
+        engineUsed = `AI_DEEP_COMPREHENSION (${aiResult.providerUsed})`;
+      } catch (err: any) {
+        console.warn(`[RAG Ingestion] AI Provider thất bại (${err.message}). Đang fallback sang Local AST Parser...`);
+        aiNotice = `AI Provider gặp lỗi: ${err.message} -> Đã fallback sang Local AST Parser`;
+        rawPayload = parseBrainstormDocument(rawText, filename?.replace(/\.[^/.]+$/, '') || 'Phân Hệ Brainstorm');
+      }
+    } else {
+      if (!provider && options?.forceMode === 'ai') {
+        aiNotice = 'Chưa cấu hình AI Provider -> Đang chạy chế độ Local AST Parser. Hãy mở Cài đặt AI (⚙️) để đọc hiểu mọi loại tài liệu tự do.';
+      } else if (!provider) {
+        aiNotice = 'Đang chạy Local AST Parser (chế độ tĩnh offline). Cấu hình AI Provider (⚙️) để kích hoạt AI Đọc hiểu ngữ nghĩa sâu.';
+      }
+      rawPayload = parseBrainstormDocument(rawText, filename?.replace(/\.[^/.]+$/, '') || 'Phân Hệ Brainstorm');
+    }
+
     const { refinedPayload, reviewReport } = selfReviewAndElevateArchitecture(rawPayload, rawText);
 
     const result = await toolHandlers.spawnConceptCluster(refinedPayload);
@@ -1055,17 +1085,28 @@ export const brainstormRAG = {
       domain_id: refinedPayload.domain_id,
       nodeCount: refinedPayload.nodes.length + (refinedPayload.sub_clusters?.reduce((acc, s) => acc + s.nodes.length, 0) || 0),
       message: result.message,
-      review_report: reviewReport,
+      review_report: {
+        ...reviewReport,
+        elevations_applied: [
+          `Động cơ phân tích: ${engineUsed}`,
+          ...(aiNotice ? [aiNotice] : []),
+          ...reviewReport.elevations_applied
+        ]
+      },
       graph: result.graph
     };
   },
 
-  async saveAndIngest(filename: string, content: string): Promise<IngestResult> {
+  async saveAndIngest(
+    filename: string,
+    content: string,
+    options?: { forceMode?: 'ai' | 'ast' }
+  ): Promise<IngestResult> {
     const ragDir = getRagDir();
     const safeFilename = path.basename(filename).replace(/[^a-zA-Z0-9_.-]/g, '_');
     const fullPath = path.join(ragDir, safeFilename);
     fs.writeFileSync(fullPath, content, 'utf8');
-    return this.ingestDocument(content, safeFilename);
+    return this.ingestDocument(content, safeFilename, options);
   },
 
   extractDynamicGlossary(): Record<string, string> {

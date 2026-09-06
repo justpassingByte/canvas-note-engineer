@@ -24,13 +24,28 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
   const [uploadedFile, setUploadedFile] = useState<{ name: string; content: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [activeProvider, setActiveProvider] = useState<{ name: string; model: string; type: string } | null>(null);
+  const [ingestMode, setIngestMode] = useState<'auto' | 'ai' | 'ast'>('auto');
 
-  // Nạp danh sách tài liệu trong folder rag/
+  // Nạp danh sách tài liệu trong folder rag/ và kiểm tra AI Provider
   useEffect(() => {
     if (isOpen) {
       fetchDocs();
+      checkActiveProvider();
     }
   }, [isOpen]);
+
+  const checkActiveProvider = async () => {
+    try {
+      const res = await fetch('/api/health');
+      if (res.ok) {
+        const data = await res.json();
+        setActiveProvider(data.active_provider || null);
+      }
+    } catch (err) {
+      console.error('Không thể kiểm tra AI Provider:', err);
+    }
+  };
 
   const fetchDocs = async () => {
     try {
@@ -66,19 +81,21 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
     setIsProcessing(true);
     setStatusMessage(null);
     try {
+      const chosenMode = ingestMode === 'auto' ? (activeProvider ? 'ai' : 'ast') : ingestMode;
       const res = await fetch('/api/rag/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: selectedDoc })
+        body: JSON.stringify({ filename: selectedDoc, mode: chosenMode })
       });
       const data = await res.json();
       if (data.success && data.graph) {
         setGraph(data.graph);
+        const engineNotice = data.review_report?.elevations_applied?.find((e: string) => e.startsWith('Động cơ:')) || '';
         setStatusMessage({
           type: 'success',
-          text: `Đã sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes) thành công!`
+          text: `Đã sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes) thành công! ${engineNotice ? `[${engineNotice}]` : ''}`
         });
-        setTimeout(() => onClose(), 1200);
+        setTimeout(() => onClose(), 1400);
       } else {
         setStatusMessage({ type: 'error', text: data.message || 'Không thể sinh cụm từ tài liệu.' });
       }
@@ -107,19 +124,21 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
     setIsProcessing(true);
     setStatusMessage(null);
     try {
+      const chosenMode = ingestMode === 'auto' ? (activeProvider ? 'ai' : 'ast') : ingestMode;
       const res = await fetch('/api/rag/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: uploadedFile.name, content: uploadedFile.content })
+        body: JSON.stringify({ filename: uploadedFile.name, content: uploadedFile.content, mode: chosenMode })
       });
       const data = await res.json();
       if (data.success && data.graph) {
         setGraph(data.graph);
+        const engineNotice = data.review_report?.elevations_applied?.find((e: string) => e.startsWith('Động cơ:')) || '';
         setStatusMessage({
           type: 'success',
-          text: `Đã lưu vào rag/ và sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes)!`
+          text: `Đã lưu vào rag/ và sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes)! ${engineNotice ? `[${engineNotice}]` : ''}`
         });
-        setTimeout(() => onClose(), 1200);
+        setTimeout(() => onClose(), 1400);
       } else {
         setStatusMessage({ type: 'error', text: data.message || 'Không thể sinh cụm.' });
       }
@@ -136,19 +155,21 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
     setIsProcessing(true);
     setStatusMessage(null);
     try {
+      const chosenMode = ingestMode === 'auto' ? (activeProvider ? 'ai' : 'ast') : ingestMode;
       const res = await fetch('/api/rag/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: rawText, filename: 'custom_brainstorm.md' })
+        body: JSON.stringify({ content: rawText, filename: 'custom_brainstorm.md', mode: chosenMode })
       });
       const data = await res.json();
       if (data.success && data.graph) {
         setGraph(data.graph);
+        const engineNotice = data.review_report?.elevations_applied?.find((e: string) => e.startsWith('Động cơ:')) || '';
         setStatusMessage({
           type: 'success',
-          text: `Đã phân tích và sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes)!`
+          text: `Đã phân tích và sinh Cụm '${data.cluster_name}' (${data.nodeCount} nodes)! ${engineNotice ? `[${engineNotice}]` : ''}`
         });
-        setTimeout(() => onClose(), 1200);
+        setTimeout(() => onClose(), 1400);
       } else {
         setStatusMessage({ type: 'error', text: data.message || 'Không thể phân tích tài liệu.' });
       }
@@ -222,6 +243,96 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
             <X size={18} color="#4B5563" />
           </button>
         </div>
+
+        {/* Engine Status & Strategy Banner */}
+        {activeProvider ? (
+          <div
+            style={{
+              padding: '8px 18px',
+              background: '#ECFDF5',
+              borderBottom: '1px solid #A7F3D0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#065F46' }}>
+              <Sparkles size={14} color="#059669" />
+              <span>
+                <strong>AI Semantic Engine:</strong> Đang dùng <strong>{activeProvider.name}</strong> ({activeProvider.model}). Đọc hiểu & sinh kiến trúc chuẩn xác từ <em>mọi loại tài liệu PRD/RFC tự do</em>.
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={() => setIngestMode('ai')}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  borderRadius: '4px',
+                  border: ingestMode === 'ai' || ingestMode === 'auto' ? '1px solid #059669' : '1px solid #D1D5DB',
+                  background: ingestMode === 'ai' || ingestMode === 'auto' ? '#059669' : '#FFFFFF',
+                  color: ingestMode === 'ai' || ingestMode === 'auto' ? '#FFFFFF' : '#374151',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                ✨ AI Deep Mode
+              </button>
+              <button
+                type="button"
+                onClick={() => setIngestMode('ast')}
+                style={{
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  borderRadius: '4px',
+                  border: ingestMode === 'ast' ? '1px solid #4F46E5' : '1px solid #D1D5DB',
+                  background: ingestMode === 'ast' ? '#4F46E5' : '#FFFFFF',
+                  color: ingestMode === 'ast' ? '#FFFFFF' : '#374151',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                ⚡ Fast AST Mode
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              padding: '8px 18px',
+              background: '#FFFBEB',
+              borderBottom: '1px solid #FDE68A',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '11px',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#92400E' }}>
+              <AlertCircle size={14} color="#D97706" />
+              <span>
+                <strong>Chế độ Offline (Local AST Parser):</strong> Bóc tách cú pháp tĩnh. Để đảm bảo <em>mọi loại tài liệu PRD/RFC bất kỳ</em> đều parse chuẩn kiến trúc, hãy cấu hình <strong>AI Provider (⚙️)</strong>!
+              </span>
+            </div>
+            <span
+              style={{
+                fontSize: '10px',
+                background: '#FEF3C7',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                color: '#B45309',
+                fontWeight: 700,
+                flexShrink: 0
+              }}
+            >
+              OFFLINE AST
+            </span>
+          </div>
+        )}
 
         {/* Tab Selection */}
         <div
@@ -483,7 +594,11 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
           }}
         >
           <span style={{ fontSize: '10px', color: '#6B7280' }}>
-            RAG Engine: 0 Token AI, Phân tích cục bộ 100%
+            {activeProvider ? (
+              <span>RAG Engine: <strong>AI Deep Comprehension</strong> ({activeProvider.name})</span>
+            ) : (
+              <span>RAG Engine: <strong>Local AST Mode</strong> (Offline 0-Token Fallback)</span>
+            )}
           </span>
 
           <div style={{ display: 'flex', gap: '10px' }}>
