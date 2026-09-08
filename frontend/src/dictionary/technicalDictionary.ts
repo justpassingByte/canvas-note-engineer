@@ -3,6 +3,24 @@
  * 80+ Thuật ngữ chuẩn ngành cho Hệ thống Phân tán, Xác thực, Phân quyền, Tài chính & Khuyến mãi.
  */
 export const TECHNICAL_DICTIONARY: Record<string, string> = {
+  // Software Testing, TestOps & SRE Diagnostics
+  "regression test": "Kiểm thử hồi quy: Chạy lại toàn bộ test suite sau khi sửa code để đảm bảo tính năng mới hoặc bản vá không làm sập các tính năng cũ.",
+  "regression testing": "Kiểm thử hồi quy: Quy trình tự động hóa kiểm định tính toàn vẹn của mã nguồn nhằm ngăn chặn lỗi cũ tái diễn.",
+  "root cause analysis": "Phân tích nguyên nhân gốc (RCA): Phương pháp truy vết ngược từ triệu chứng lỗi bề mặt vào tận dòng code phát sinh sự cố.",
+  "rca": "Root Cause Analysis: Kỹ thuật định vị và xử lý tận gốc nguyên nhân gây lỗi phần mềm, triệt tiêu việc vá tạm bợ.",
+  "playwright": "Framework kiểm thử tự động hóa E2E hiện đại điều khiển trực tiếp Chromium, Firefox, WebKit qua giao thức CDP tốc độ cao.",
+  "assertion": "Câu lệnh khẳng định trong kiểm thử (expect/assert) đối chiếu kết quả thực tế với kỳ vọng để xác định ca test Passed hay Failed.",
+  "assert": "Khẳng định kiểm thử so sánh trạng thái thực tế của hệ thống với tiêu chuẩn kỹ thuật kỳ vọng.",
+  "flaky test": "Bài test chập chờn lúc đạt lúc hỏng không do code logic mà do độ trễ mạng, điều kiện race condition hoặc animation chưa xong.",
+  "mutation testing": "Kiểm thử đột biến: Kỹ thuật cố tình sửa đổi mã nguồn (tiêm lỗi) để kiểm tra xem bộ test suite có đủ nhạy để phát hiện lỗi hay không.",
+  "mutation test": "Phương pháp tiêm lỗi chủ động đánh giá độ bao phủ và chất lượng thực sự của bài test.",
+  "smoke test": "Kiểm thử khói: Bộ test nhanh kiểm tra các tính năng sống còn trước khi tiến hành các bước kiểm thử chuyên sâu.",
+  "sanity test": "Kiểm thử mức tỉnh táo: Ca test nhanh xác nhận một tính năng cụ thể hoặc một bản vá bug có thực sự hoạt động như mong muốn.",
+  "e2e testing": "Kiểm thử toàn trình (End-to-End): Mô phỏng toàn bộ hành vi thực tế của người dùng từ giao diện Web Browser xuống Cơ sở dữ liệu.",
+  "eaddrinuse": "Lỗi mạng kinh điển khi cổng TCP/IP (như 3000, 4201, 9229) bị một tiến trình Node.js/Docker chạy ngầm chiếm dụng chưa giải phóng.",
+  "cdp": "Chrome DevTools Protocol: Giao thức nhị phân điều khiển trình duyệt, bắt sự kiện DOM, mạng và gỡ lỗi mã nguồn từ xa.",
+  "chrome devtools protocol": "Giao thức nhị phân kết nối trực tiếp với nhân Chromium phục vụ tự động hóa và trích xuất callstack.",
+  "human-in-the-loop": "Mô hình kết hợp: AI tự động hóa điều tra và tổng hợp dữ liệu, nhưng kỹ sư con người giữ quyền thẩm định và phê duyệt cuối cùng.",
   // Concurrency & Distributed Locks
   "race condition": "Tranh chấp đồng thời khi nhiều luồng cùng đọc và sửa 1 bản ghi trong cùng một mili-giây dẫn đến sai lệch số dư.",
   "idempotency": "Tính lũy thừa: Thực thi nhiều lần vẫn chỉ sinh ra kết quả của đúng một lần duy nhất (f(f(x)) = f(x)), bảo vệ toàn vẹn tài chính.",

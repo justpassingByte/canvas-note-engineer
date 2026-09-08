@@ -986,11 +986,25 @@ export const toolHandlers = {
       const posX = startX + col * 320;
       const posY = startY + row * 260;
 
-      let badge: NodeEntity['bieu_tuong'] = 'dieu_phoi_service';
+      let badge: NodeEntity['bieu_tuong'] = cNode.badge_type || 'dieu_phoi_service';
       const roleLower = (cNode.role || '').toLowerCase();
       const titleLower = cNode.title.toLowerCase();
       const summaryLower = (cNode.summary || '').toLowerCase();
       const combinedText = `${titleLower} ${roleLower} ${summaryLower}`;
+
+      if (cNode.badge_type) {
+        badge = cNode.badge_type;
+      } else if (roleLower.includes('passed') || combinedText.includes('passed') || combinedText.includes('thanh cong')) {
+        badge = 'test_case_passed';
+      } else if (roleLower.includes('failed') || combinedText.includes('failed') || combinedText.includes('that bai')) {
+        badge = 'test_case_failed';
+      } else if (roleLower.includes('playwright') || roleLower.includes('browser') || combinedText.includes('playwright')) {
+        badge = 'playwright_trace';
+      } else if (roleLower.includes('root_cause') || combinedText.includes('root cause') || combinedText.includes('nguyen nhan goc')) {
+        badge = 'root_cause_defect';
+      } else if (roleLower.includes('defense') || roleLower.includes('regression') || combinedText.includes('hoi quy')) {
+        badge = 'regression_shield';
+      } else
 
       if (combinedText.includes('http') || combinedText.includes('gateway') || combinedText.includes('ingress') || combinedText.includes('controller') || roleLower.includes('gateway')) {
         badge = 'cong_gateway_ingress';
@@ -1161,15 +1175,37 @@ export const toolHandlers = {
           const sPosX = subOffsetX + sIdx * 300;
           const sPosY = subOffsetY;
 
-          let sBadge: NodeEntity['bieu_tuong'] = 'bo_nho_dem_cache';
-          let defaultTemplate = 'bo_nho_dem_redis';
-          if (sub.infra_type === 'postgres' || sNode.infra_type === 'postgres') {
-            sBadge = 'khoi_tru_database';
-            defaultTemplate = 'luu_tru_acid';
-          }
-          if (sub.infra_type === 'kafka' || sNode.infra_type === 'kafka') {
-            sBadge = 'hang_doi_message_queue';
-            defaultTemplate = 'queue_outbox_conveyor';
+          let sBadge: NodeEntity['bieu_tuong'] = sNode.badge_type || 'dieu_phoi_service';
+          let defaultTemplate = 'default';
+          if (sNode.badge_type) {
+            sBadge = sNode.badge_type;
+            if (sBadge === 'test_case_passed' || sBadge === 'test_case_failed') defaultTemplate = 'pipeline_filter';
+            if (sBadge === 'root_cause_defect') defaultTemplate = 'table_row_lock';
+          } else {
+            const sText = `${sNode.title.toLowerCase()} ${(sNode.role || '').toLowerCase()} ${(sNode.summary || '').toLowerCase()}`;
+            if (sText.includes('passed') || sText.includes('thanh cong') || (sNode.role || '').includes('passed')) {
+              sBadge = 'test_case_passed';
+              defaultTemplate = 'pipeline_filter';
+            } else if (sText.includes('failed') || sText.includes('that bai') || (sNode.role || '').includes('failed')) {
+              sBadge = 'test_case_failed';
+              defaultTemplate = 'pipeline_filter';
+            } else if (sText.includes('playwright') || sText.includes('browser') || (sNode.role || '').includes('browser')) {
+              sBadge = 'playwright_trace';
+            } else if (sText.includes('root cause') || sText.includes('nguyen nhan goc') || (sNode.role || '').includes('root_cause')) {
+              sBadge = 'root_cause_defect';
+              defaultTemplate = 'table_row_lock';
+            } else if (sText.includes('regression') || sText.includes('hoi quy') || (sNode.role || '').includes('defense')) {
+              sBadge = 'regression_shield';
+            } else if (sub.infra_type === 'postgres' || sNode.infra_type === 'postgres') {
+              sBadge = 'khoi_tru_database';
+              defaultTemplate = 'luu_tru_acid';
+            } else if (sub.infra_type === 'kafka' || sNode.infra_type === 'kafka') {
+              sBadge = 'hang_doi_message_queue';
+              defaultTemplate = 'queue_outbox_conveyor';
+            } else {
+              sBadge = 'bo_nho_dem_cache';
+              defaultTemplate = 'bo_nho_dem_redis';
+            }
           }
 
           const resolvedSubName = sub.name ? sub.name.trim() : 'SUB-CLUSTER';

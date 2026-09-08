@@ -238,6 +238,69 @@ export const LucideIconPod: React.FC<LucideIconPodProps> = ({ type, className = 
       );
 
     // Mặc định
+    // ------------------------------------------------------------------------
+    // 25. TEST CASE PASSED (Double Green Ring with bold Checkmark)
+    // ------------------------------------------------------------------------
+    case 'test_case_passed':
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="16" cy="16" r="12" strokeWidth="2" />
+          <path d="M10 16.5l4 4 8-9" strokeWidth="2.6" />
+        </svg>
+      );
+
+    // ------------------------------------------------------------------------
+    // 26. TEST CASE FAILED (Red Alert Octagon with X)
+    // ------------------------------------------------------------------------
+    case 'test_case_failed':
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <polygon points="10,4 22,4 28,10 28,22 22,28 10,28 4,22 4,10" strokeWidth="2" />
+          <line x1="11" y1="11" x2="21" y2="21" strokeWidth="2.5" />
+          <line x1="21" y1="11" x2="11" y2="21" strokeWidth="2.5" />
+        </svg>
+      );
+
+    // ------------------------------------------------------------------------
+    // 27. PLAYWRIGHT BROWSER TRACE (Browser Window & Cursor Pointer)
+    // ------------------------------------------------------------------------
+    case 'playwright_trace':
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="5" width="24" height="20" rx="3" strokeWidth="2" />
+          <line x1="4" y1="11" x2="28" y2="11" strokeWidth="1.8" />
+          <circle cx="8" cy="8" r="1" fill="currentColor" />
+          <circle cx="12" cy="8" r="1" fill="currentColor" />
+          <circle cx="16" cy="8" r="1" fill="currentColor" />
+          <path d="M17 14l6 3-3 1.5 2.5 4.5-2 1-2.5-4.5-2.5 2.5z" fill="currentColor" fillOpacity="0.3" strokeWidth="1.8" />
+        </svg>
+      );
+
+    // ------------------------------------------------------------------------
+    // 28. ROOT CAUSE DEFECT (Beetle Bug with Antennae & Split Shell)
+    // ------------------------------------------------------------------------
+    case 'root_cause_defect':
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 4c0 3 4 4 4 4s4-1 4-4" />
+          <ellipse cx="16" cy="18" rx="7" ry="9" strokeWidth="2" />
+          <line x1="16" y1="9" x2="16" y2="27" strokeWidth="1.8" />
+          <path d="M9 13L4 10M9 18L3 18M9 23L4 26" strokeWidth="2" />
+          <path d="M23 13L28 10M23 18L29 18M23 23L28 26" strokeWidth="2" />
+        </svg>
+      );
+
+    // ------------------------------------------------------------------------
+    // 29. REGRESSION SHIELD (Security Shield with Checkmark)
+    // ------------------------------------------------------------------------
+    case 'regression_shield':
+      return (
+        <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M16 3L5 7v9c0 7 5 11 11 13 6-2 11-6 11-13V7L16 3z" strokeWidth="2" />
+          <path d="M11 16l3.5 3.5 7-7" strokeWidth="2.5" />
+        </svg>
+      );
+
     default:
       return (
         <svg viewBox="0 0 32 32" className={className} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

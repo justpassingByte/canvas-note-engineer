@@ -36,7 +36,13 @@ export type NodeBadgeType =
   | 'client_cache_swr'
   | 'bundle_code_split'
   | 'browser_web_worker'
-  | 'form_zod_validator';
+  | 'form_zod_validator'
+  // Software Testing, TestOps & Quality Assurance
+  | 'test_case_passed'
+  | 'test_case_failed'
+  | 'playwright_trace'
+  | 'root_cause_defect'
+  | 'regression_shield';
 
 export interface ReflexQuizItem {
   cau_hoi: string;
@@ -172,6 +178,7 @@ export interface CompactClusterNode {
   title: string;
   role?: string;
   summary: string;
+  badge_type?: NodeBadgeType;
   schematic_template?: string;
   schematic_params?: Record<string, string>;
   schematic_data?: SchematicData;

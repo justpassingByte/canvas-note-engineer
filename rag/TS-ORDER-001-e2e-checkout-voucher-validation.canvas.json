@@ -1,0 +1,188 @@
+{
+  "domain_id": "testops_e2e_checkout_voucher_validation",
+  "cluster_name": "[TEST SUITE] TS-ORDER-001: E2E Checkout & Voucher Validation",
+  "cluster_theme": "rose",
+  "sub_title": "Autonomous AI Test Run | Pass Rate: 66.7% (2/3 Passed)",
+  "is_public_interface": true,
+  "nodes": [],
+  "sub_clusters": [
+    {
+      "sub_cluster_id": "sub_test_scenarios",
+      "name": "📋 Test Scenarios Matrix",
+      "theme": "indigo",
+      "nodes": [
+        {
+          "title": "TC-01: Standard Checkout (Happy Path)",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Standard checkout flow with 2 cart items on listed price without voucher.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "status": "passed",
+            "metric": "Status: 200 OK | Latency: 145ms",
+            "items": [
+              {
+                "label": "Verdict: PASSED",
+                "status": "ok"
+              },
+              {
+                "label": "Latency: 145ms",
+                "status": "info"
+              }
+            ]
+          }
+        },
+        {
+          "title": "TC-02: Standard Percentage Voucher (SALE10)",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Apply valid 10% discount voucher on non-negotiated order. Cart total recalculated successfully.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "status": "passed",
+            "metric": "Status: 200 OK | Latency: 190ms",
+            "items": [
+              {
+                "label": "Verdict: PASSED",
+                "status": "ok"
+              },
+              {
+                "label": "Latency: 190ms",
+                "status": "info"
+              }
+            ]
+          }
+        },
+        {
+          "title": "TC-03: E2E Checkout & Voucher Validation (Edge Case Defect)",
+          "role": "test_case",
+          "badge_type": "test_case_failed",
+          "summary": "Edge Case: Applying voucher on a negotiated price order triggers unhandled TypeError at /checkout.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "status": "failed",
+            "metric": "Status: 500 Internal Server Error | Latency: 315ms",
+            "items": [
+              {
+                "label": "Verdict: FAILED",
+                "status": "error"
+              },
+              {
+                "label": "Latency: 315ms",
+                "status": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_browser_trace",
+      "name": "🎭 Browser & Network Trace (Playwright)",
+      "theme": "blue",
+      "nodes": [
+        {
+          "title": "Playwright: DOM Interaction (/checkout)",
+          "role": "browser_action",
+          "badge_type": "playwright_trace",
+          "summary": "Fill voucher input \"#voucher-code\" with \"SALE50\" and click \"#btn-apply-voucher\"",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Route: /checkout",
+                "status": "info"
+              },
+              {
+                "label": "Console Error: Uncaught TypeError",
+                "status": "error"
+              },
+              {
+                "label": "Artifact: debug_error_1788894674493.png",
+                "status": "info"
+              }
+            ]
+          }
+        },
+        {
+          "title": "API Intercept: POST /api/v1/orders/voucher",
+          "role": "gateway",
+          "summary": "Intercepted backend HTTP response: POST /api/v1/orders/voucher -> 500 Internal Server Error",
+          "schematic_template": "circuit_breaker_backoff",
+          "schematic_data": {
+            "metric": "500 Internal Server Error",
+            "items": [
+              {
+                "label": "HTTP Status: 500 Internal Server Error",
+                "status": "error"
+              },
+              {
+                "label": "Endpoint: /checkout",
+                "status": "info"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_defect_defense",
+      "name": "🔍 Root Cause Analysis & Regression Defense",
+      "theme": "rose",
+      "nodes": [
+        {
+          "title": "Root Cause: orders.service.ts (Line 142)",
+          "role": "root_cause",
+          "badge_type": "root_cause_defect",
+          "summary": "Function applyVoucher: sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
+          "schematic_template": "table_row_lock",
+          "incident_dossier": {
+            "boi_canh_tai": "Checkout flow with negotiated pricing order at /checkout",
+            "nguyen_nhan_goc_re": "sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
+            "ban_kinh_anh_huong": "All orders with negotiated pricing attempting to apply discount vouchers",
+            "chien_luoc_phong_thu": "Add optional chaining: sellerRank?.discount ?? 0 and input validation"
+          },
+          "incident_cases": [
+            {
+              "id": "defect_ts_order_001",
+              "title": "E2E Checkout & Voucher Validation",
+              "traffic_profile": "E2E Playwright simulation with edge case input",
+              "root_cause_analysis": "sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
+              "blast_radius": "Checkout flow failure at /checkout",
+              "cascading_failure_path": [
+                "1. [User Action]: Fill voucher input \"#voucher-code\" with \"SALE50\" and click \"#btn-apply-voucher\"",
+                "2. [HTTP Fail]: POST /api/v1/orders/voucher -> 500 Internal Server Error",
+                "3. [Frontend Freeze]: TypeError: Cannot read properties of null (reading 'discount')",
+                "4. [Backend Crash]: api/src/modules/orders/orders.service.ts:142"
+              ],
+              "mitigation_strategy": "Apply patch in api/src/modules/orders/orders.service.ts and execute automated regression test"
+            }
+          ]
+        },
+        {
+          "title": "Regression Defense Suite",
+          "role": "defense_test",
+          "badge_type": "regression_shield",
+          "summary": "Automated test suite: tests/regression/bug-2026-001.spec.ts locking against regressions in CI/CD.",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Automated Regression Suite",
+                "status": "ok"
+              },
+              {
+                "label": "Test File: bug-2026-001.spec.ts",
+                "status": "ok"
+              },
+              {
+                "label": "CI/CD Pipeline: Protected ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

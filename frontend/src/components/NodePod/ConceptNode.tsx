@@ -146,6 +146,11 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
       case 'browser_web_worker': return 'worker';
       case 'form_zod_validator': return 'form-zod';
       case 'khien_bao_ve': return 'khien';
+      case 'test_case_passed': return 'test-passed';
+      case 'test_case_failed': return 'test-failed';
+      case 'playwright_trace': return 'test-browser';
+      case 'root_cause_defect': return 'test-bug';
+      case 'regression_shield': return 'test-shield';
       default: return 'service';
     }
   };

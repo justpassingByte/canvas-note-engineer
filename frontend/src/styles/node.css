@@ -420,3 +420,34 @@
   visibility: visible;
   transform: translateX(-50%) translateY(0);
 }
+
+/* TestOps & Testing Pod Variants */
+.hop-icon-pod.test-passed {
+  background: #ECFDF5;
+  color: #059669;
+  border-color: #10B981;
+}
+
+.hop-icon-pod.test-failed {
+  background: #FEF2F2;
+  color: #DC2626;
+  border-color: #EF4444;
+}
+
+.hop-icon-pod.test-browser {
+  background: #F0F9FF;
+  color: #0284C7;
+  border-color: #06B6D4;
+}
+
+.hop-icon-pod.test-bug {
+  background: #FFFBEB;
+  color: #D97706;
+  border-color: #F59E0B;
+}
+
+.hop-icon-pod.test-shield {
+  background: #FAF5FF;
+  color: #7C3AED;
+  border-color: #8B5CF6;
+}

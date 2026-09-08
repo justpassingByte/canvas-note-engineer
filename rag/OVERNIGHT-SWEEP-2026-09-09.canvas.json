@@ -1,0 +1,369 @@
+{
+  "domain_id": "overnight_sweep_20260909",
+  "cluster_name": "[SRE OVERNIGHT SWEEP] 2026-09-09: 4/6 Flows Passed (66.7%)",
+  "cluster_theme": "rose",
+  "sub_title": "Autonomous AI Test Run across 6 flows | 2 defects captured via CDP WebSocket",
+  "is_public_interface": true,
+  "nodes": [],
+  "sub_clusters": [
+    {
+      "sub_cluster_id": "sub_executive_summary",
+      "name": "📊 SRE Executive Overview & KPIs",
+      "theme": "amber",
+      "nodes": [
+        {
+          "title": "Overnight SRE Sweep: 2026-09-09",
+          "role": "gateway",
+          "badge_type": "test_case_failed",
+          "summary": "Autonomous overnight run across 6 business flows. Pass rate: 66.7%. 2 defect(s) isolated.",
+          "schematic_template": "circuit_breaker_backoff",
+          "schematic_data": {
+            "metric": "Pass Rate: 66.7%",
+            "items": [
+              {
+                "label": "Flows: 4/6 Passed",
+                "status": "warn"
+              },
+              {
+                "label": "Test Assertions: 50/52",
+                "status": "info"
+              },
+              {
+                "label": "CDP In-Memory Heap: Active ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        },
+        {
+          "title": "Nightly Execution Pipeline & Schedule",
+          "role": "database",
+          "summary": "Executed unattended between 00:00 - 05:30. Zero developer intervention required.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Scheduler: Nightly Batch Daemon",
+                "status": "info"
+              },
+              {
+                "label": "Browser Engine: Playwright Chromium",
+                "status": "ok"
+              },
+              {
+                "label": "Diagnostic Engine: Node CDP WebSocket :9229",
+                "status": "ok"
+              },
+              {
+                "label": "Artifact Output: Dual RAG (.md + .canvas.json)",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_01",
+      "name": "✅ [FLOW-01] Authentication & Session Security Flow",
+      "theme": "emerald",
+      "nodes": [
+        {
+          "title": "FLOW-01: Authentication & Session Security Flow",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Login, JWT refresh, OTP verification, and rate-limit fail-closed security checks verified.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "metric": "Status: 200 OK | Latency: 112ms",
+            "items": [
+              {
+                "label": "Test Cases: 8/8 Passed",
+                "status": "ok"
+              },
+              {
+                "label": "Route: /api/v1/auth/login",
+                "status": "info"
+              },
+              {
+                "label": "Regression State: Clean ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_02",
+      "name": "✅ [FLOW-02] Product Catalog & Category Taxonomy Flow",
+      "theme": "emerald",
+      "nodes": [
+        {
+          "title": "FLOW-02: Product Catalog & Category Taxonomy Flow",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Category hierarchy lookup, slug resolution, and elastic search filters all functional.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "metric": "Status: 200 OK | Latency: 145ms",
+            "items": [
+              {
+                "label": "Test Cases: 12/12 Passed",
+                "status": "ok"
+              },
+              {
+                "label": "Route: /api/v1/products",
+                "status": "info"
+              },
+              {
+                "label": "Regression State: Clean ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_03",
+      "name": "✅ [FLOW-03] Cart Management & Draft Order Flow",
+      "theme": "emerald",
+      "nodes": [
+        {
+          "title": "FLOW-03: Cart Management & Draft Order Flow",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Item additions, quantity updates, inventory locking, and address draft state verified.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "metric": "Status: 200 OK | Latency: 98ms",
+            "items": [
+              {
+                "label": "Test Cases: 6/6 Passed",
+                "status": "ok"
+              },
+              {
+                "label": "Route: /api/v1/cart",
+                "status": "info"
+              },
+              {
+                "label": "Regression State: Clean ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_04",
+      "name": "❌ [FLOW-04] Voucher Application & Discount Engine Flow",
+      "theme": "rose",
+      "nodes": [
+        {
+          "title": "Playwright Trace: Voucher Application & Discount Engine Flow",
+          "role": "browser_action",
+          "badge_type": "playwright_trace",
+          "summary": "HTTP 500 Internal Server Error intercepted during synthetic user simulation at /api/v1/orders/voucher.",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Route: /api/v1/orders/voucher",
+                "status": "info"
+              },
+              {
+                "label": "Error: Uncaught TypeError: Cannot read properties of undefined (reading discount)",
+                "status": "error"
+              },
+              {
+                "label": "Request: POST /api/v1/orders/voucher -> 500",
+                "status": "error"
+              }
+            ]
+          }
+        },
+        {
+          "title": "CDP RAM Heap: applyVoucher",
+          "role": "gateway",
+          "summary": "Live in-memory variable state captured via CDP WebSocket without console.log: {\"sellerRank\":null,\"order.isNegotiated\":true,\"voucherAmount\":\"50000n\"}",
+          "schematic_template": "table_row_lock",
+          "schematic_data": {
+            "metric": "RAM Heap Frozen by CDP",
+            "items": [
+              {
+                "label": "sellerRank: null",
+                "status": "error"
+              },
+              {
+                "label": "order.isNegotiated: true",
+                "status": "warn"
+              },
+              {
+                "label": "voucherAmount: 50000n",
+                "status": "warn"
+              }
+            ]
+          }
+        },
+        {
+          "title": "Root Cause: orders.service.ts:142",
+          "role": "root_cause",
+          "badge_type": "root_cause_defect",
+          "summary": "Missing null check on sellerRank object when order has negotiated pricing.",
+          "schematic_template": "table_row_lock",
+          "incident_dossier": {
+            "boi_canh_tai": "Flow FLOW-04 execution at /api/v1/orders/voucher",
+            "nguyen_nhan_goc_re": "Missing null check on sellerRank object when order has negotiated pricing.",
+            "ban_kinh_anh_huong": "Business Flow Voucher Application & Discount Engine Flow",
+            "chien_luoc_phong_thu": "Implement null-safety guard and run tests/regression/negotiated-voucher-null-safety.spec.ts"
+          }
+        },
+        {
+          "title": "Regression Shield: negotiated-voucher-null-safety.spec.ts",
+          "role": "defense_test",
+          "badge_type": "regression_shield",
+          "summary": "Automated regression test suite tests/regression/negotiated-voucher-null-safety.spec.ts enforcing invariant in CI/CD pipeline.",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Automated Regression Shield",
+                "status": "ok"
+              },
+              {
+                "label": "Test File: negotiated-voucher-null-safety.spec.ts",
+                "status": "info"
+              },
+              {
+                "label": "CI/CD Gate: Mandatory Check",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_05",
+      "name": "❌ [FLOW-05] Seller Commission & Payout Engine Flow",
+      "theme": "rose",
+      "nodes": [
+        {
+          "title": "Playwright Trace: Seller Commission & Payout Engine Flow",
+          "role": "browser_action",
+          "badge_type": "playwright_trace",
+          "summary": "HTTP 500 Internal Server Error intercepted during synthetic user simulation at /api/v1/payouts/estimate.",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Route: /api/v1/payouts/estimate",
+                "status": "info"
+              },
+              {
+                "label": "Error: RangeError: Division by zero or non-integer PPM scale",
+                "status": "error"
+              },
+              {
+                "label": "Request: POST /api/v1/payouts/estimate -> 500",
+                "status": "error"
+              }
+            ]
+          }
+        },
+        {
+          "title": "CDP RAM Heap: calculateNetPayout",
+          "role": "gateway",
+          "summary": "Live in-memory variable state captured via CDP WebSocket without console.log: {\"sellerTier\":\"bronze\",\"rawRate\":\"NaN\",\"feeBasis\":\"0n\"}",
+          "schematic_template": "table_row_lock",
+          "schematic_data": {
+            "metric": "RAM Heap Frozen by CDP",
+            "items": [
+              {
+                "label": "sellerTier: bronze",
+                "status": "warn"
+              },
+              {
+                "label": "rawRate: NaN",
+                "status": "error"
+              },
+              {
+                "label": "feeBasis: 0n",
+                "status": "warn"
+              }
+            ]
+          }
+        },
+        {
+          "title": "Root Cause: payout.engine.ts:88",
+          "role": "root_cause",
+          "badge_type": "root_cause_defect",
+          "summary": "Improper fallback to NaN instead of Bronze tier (70,000 PPM) when rank is unspecified.",
+          "schematic_template": "table_row_lock",
+          "incident_dossier": {
+            "boi_canh_tai": "Flow FLOW-05 execution at /api/v1/payouts/estimate",
+            "nguyen_nhan_goc_re": "Improper fallback to NaN instead of Bronze tier (70,000 PPM) when rank is unspecified.",
+            "ban_kinh_anh_huong": "Business Flow Seller Commission & Payout Engine Flow",
+            "chien_luoc_phong_thu": "Implement null-safety guard and run tests/regression/payout-tier-ppm-bigint.spec.ts"
+          }
+        },
+        {
+          "title": "Regression Shield: payout-tier-ppm-bigint.spec.ts",
+          "role": "defense_test",
+          "badge_type": "regression_shield",
+          "summary": "Automated regression test suite tests/regression/payout-tier-ppm-bigint.spec.ts enforcing invariant in CI/CD pipeline.",
+          "schematic_template": "default",
+          "schematic_data": {
+            "items": [
+              {
+                "label": "Automated Regression Shield",
+                "status": "ok"
+              },
+              {
+                "label": "Test File: payout-tier-ppm-bigint.spec.ts",
+                "status": "info"
+              },
+              {
+                "label": "CI/CD Gate: Mandatory Check",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_flow_06",
+      "name": "✅ [FLOW-06] Escrow Lock & Dispute Resolution Flow",
+      "theme": "emerald",
+      "nodes": [
+        {
+          "title": "FLOW-06: Escrow Lock & Dispute Resolution Flow",
+          "role": "test_case",
+          "badge_type": "test_case_passed",
+          "summary": "Dispute filing, evidence upload, escrow fund freeze, and admin mediation release passed.",
+          "schematic_template": "pipeline_filter",
+          "schematic_data": {
+            "metric": "Status: 200 OK | Latency: 165ms",
+            "items": [
+              {
+                "label": "Test Cases: 7/7 Passed",
+                "status": "ok"
+              },
+              {
+                "label": "Route: /api/v1/disputes",
+                "status": "info"
+              },
+              {
+                "label": "Regression State: Clean ✅",
+                "status": "ok"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
