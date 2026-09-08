@@ -1054,7 +1054,14 @@ export const brainstormRAG = {
     let engineUsed = 'LOCAL_OFFLINE_AST';
     let aiNotice: string | null = null;
 
-    if (options?.forceMode !== 'ast' && provider) {
+    const trimmed = rawText.trim();
+    const isDirectJson = Boolean(filename?.endsWith('.json') || (trimmed.startsWith('{') && trimmed.endsWith('}')));
+
+    if (isDirectJson) {
+      console.log(`[RAG Ingestion] Phát hiện định dạng JSON (${filename || 'raw JSON'}) -> Sử dụng Local AST Parser (0 Token, siêu tốc)...`);
+      rawPayload = parseBrainstormDocument(rawText, filename?.replace(/\.[^/.]+$/, '') || 'Phân Hệ Brainstorm');
+      engineUsed = 'LOCAL_FASTPATH_AST (0 Tokens)';
+    } else if (options?.forceMode !== 'ast' && provider) {
       try {
         console.log(`[RAG Ingestion] Đang sử dụng AI Provider '${provider.config.name}' (${provider.config.model}) để đọc hiểu tài liệu...`);
         const aiResult = await AIGraphService.ingestDocumentWithAI({ rawText, filename });
