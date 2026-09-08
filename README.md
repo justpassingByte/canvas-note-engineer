@@ -8,6 +8,12 @@
 [![Zero-Token Caching](https://img.shields.io/badge/AI-Zero--Token%20Cache%20(SQLite%20WAL)-orange)](#-luu-tru-va-du-lieu)
 [![Architecture](https://img.shields.io/badge/Architecture-DDD%20Bounded%20Context%20%E2%86%92%20Cluster%20%E2%86%92%20Sub--Cluster-indigo)](#-kien-truc-phan-cap-4-tang-bounded-context)
 
+<p align="center">
+  <img src="public/canvas-testops-demo.png" alt="Canvas Note Engineer — Interactive Engineering Graph & SRE Incident Simulator" width="100%" />
+</p>
+
+> **Video Trực Quan Hóa Thực Tế (Screen Recording MP4)**: [Xem Video Thao Tác Canvas & Lan Truyền Sự Cố SRE](public/canvas-demo.mp4) *(Thao tác Zoom, Pan mượt mà, phân tách các Sub-Clusters và kích hoạt hạt xung lực lỗi Bug Vector Particle bò dọc dây nối DAG).*
+
 ---
 
 ## 1. Khái Niệm Cốt Lõi: Canvas Note Engineer Là Gì?
