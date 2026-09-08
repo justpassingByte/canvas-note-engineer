@@ -48,7 +48,17 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
   if (node.sub_cluster_id) {
     let subColor = '#059669';
     const sId = node.sub_cluster_id.toLowerCase();
-    if (sId.includes('redis') || sId.includes('cache') || node.infra_type === 'redis') {
+    if (sId.includes('playwright') || sId.includes('browser') || sId.includes('trace')) {
+      subColor = '#06B6D4'; // Cyan
+    } else if (sId.includes('ram') || sId.includes('cdp') || sId.includes('heap')) {
+      subColor = '#F59E0B'; // Amber
+    } else if (sId.includes('defect') || sId.includes('root') || sId.includes('error') || sId.includes('fail')) {
+      subColor = '#F43F5E'; // Rose Red
+    } else if (sId.includes('regression') || sId.includes('shield') || sId.includes('defense')) {
+      subColor = '#8B5CF6'; // Violet
+    } else if (sId.includes('scenario') || sId.includes('test')) {
+      subColor = '#6366F1'; // Indigo
+    } else if (sId.includes('redis') || sId.includes('cache') || node.infra_type === 'redis') {
       subColor = '#059669';
     } else if (sId.includes('postgres') || sId.includes('db') || sId.includes('storage') || node.infra_type === 'postgres') {
       subColor = '#2563EB';
@@ -240,7 +250,7 @@ export function determineClusterId(node: NodeEntity, nodeMap: Map<string, NodeEn
  * Tính toán các Cụm Topic từ danh sách node hiển thị trên Canvas.
  * Hỗ trợ phân cấp Cụm Dịch Vụ và Cụm Con (Sub-Clusters).
  */
-export function computeClusters(nodes: NodeEntity[], minNodes: number = 2): TopicCluster[] {
+export function computeClusters(nodes: NodeEntity[], minNodes: number = 1): TopicCluster[] {
   if (!nodes || nodes.length === 0) return [];
 
   const nodeMap = new Map<string, NodeEntity>();

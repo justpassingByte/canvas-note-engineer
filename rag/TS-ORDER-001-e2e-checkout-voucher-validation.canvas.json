@@ -33,10 +33,10 @@
           }
         },
         {
-          "title": "TC-02: Standard Percentage Voucher (SALE10)",
+          "title": "TC-02: Percentage Voucher (SALE10)",
           "role": "test_case",
           "badge_type": "test_case_passed",
-          "summary": "Apply valid 10% discount voucher on non-negotiated order. Cart total recalculated successfully.",
+          "summary": "Apply valid 10% discount voucher on non-negotiated order. Cart recalculated.",
           "schematic_template": "pipeline_filter",
           "schematic_data": {
             "status": "passed",
@@ -54,14 +54,14 @@
           }
         },
         {
-          "title": "TC-03: E2E Checkout & Voucher Validation (Edge Case Defect)",
+          "title": "TC-03: Voucher on Negotiated Order (Defect)",
           "role": "test_case",
           "badge_type": "test_case_failed",
           "summary": "Edge Case: Applying voucher on a negotiated price order triggers unhandled TypeError at /checkout.",
           "schematic_template": "pipeline_filter",
           "schematic_data": {
             "status": "failed",
-            "metric": "Status: 500 Internal Server Error | Latency: 315ms",
+            "metric": "Status: 500 Error | Latency: 315ms",
             "items": [
               {
                 "label": "Verdict: FAILED",
@@ -77,12 +77,12 @@
       ]
     },
     {
-      "sub_cluster_id": "sub_browser_trace",
-      "name": "🎭 Browser & Network Trace (Playwright)",
-      "theme": "blue",
+      "sub_cluster_id": "sub_playwright_trace",
+      "name": "🎭 Playwright Browser & Network Trace",
+      "theme": "cyan",
       "nodes": [
         {
-          "title": "Playwright: DOM Interaction (/checkout)",
+          "title": "Playwright: DOM Action (/checkout)",
           "role": "browser_action",
           "badge_type": "playwright_trace",
           "summary": "Fill voucher input \"#voucher-code\" with \"SALE50\" and click \"#btn-apply-voucher\"",
@@ -98,15 +98,16 @@
                 "status": "error"
               },
               {
-                "label": "Artifact: debug_error_1788894674493.png",
+                "label": "Artifact: screenshots/error.png",
                 "status": "info"
               }
             ]
           }
         },
         {
-          "title": "API Intercept: POST /api/v1/orders/voucher",
+          "title": "API Intercept: POST /orders/voucher",
           "role": "gateway",
+          "badge_type": "playwright_trace",
           "summary": "Intercepted backend HTTP response: POST /api/v1/orders/voucher -> 500 Internal Server Error",
           "schematic_template": "circuit_breaker_backoff",
           "schematic_data": {
@@ -117,7 +118,7 @@
                 "status": "error"
               },
               {
-                "label": "Endpoint: /checkout",
+                "label": "Endpoint: /api/v1/orders/voucher",
                 "status": "info"
               }
             ]
@@ -126,21 +127,45 @@
       ]
     },
     {
-      "sub_cluster_id": "sub_defect_defense",
-      "name": "🔍 Root Cause Analysis & Regression Defense",
-      "theme": "rose",
+      "sub_cluster_id": "sub_cdp_ram_root_cause",
+      "name": "🔍 CDP In-Memory State & Root Cause",
+      "theme": "amber",
       "nodes": [
         {
-          "title": "Root Cause: orders.service.ts (Line 142)",
+          "title": "CDP RAM Heap: orders.service.ts",
+          "role": "ram_heap",
+          "badge_type": "root_cause_defect",
+          "summary": "Live In-Memory Heap State: sellerRank = null, order.isNegotiated = true, voucherAmount = 50000n",
+          "schematic_template": "table_row_lock",
+          "schematic_data": {
+            "metric": "sellerRank = null (RAM Error)",
+            "items": [
+              {
+                "label": "Variable: sellerRank = null",
+                "status": "error"
+              },
+              {
+                "label": "State: order.isNegotiated = true",
+                "status": "info"
+              },
+              {
+                "label": "Memory Dump: CDP Port :9229",
+                "status": "info"
+              }
+            ]
+          }
+        },
+        {
+          "title": "Root Cause: orders.service.ts:142",
           "role": "root_cause",
           "badge_type": "root_cause_defect",
-          "summary": "Function applyVoucher: sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
+          "summary": "Function applyVoucher(): sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
           "schematic_template": "table_row_lock",
           "incident_dossier": {
             "boi_canh_tai": "Checkout flow with negotiated pricing order at /checkout",
             "nguyen_nhan_goc_re": "sellerRank object is null when order is in negotiated_price mode, missing optional chaining",
             "ban_kinh_anh_huong": "All orders with negotiated pricing attempting to apply discount vouchers",
-            "chien_luoc_phong_thu": "Add optional chaining: sellerRank?.discount ?? 0 and input validation"
+            "chien_luoc_phong_thu": "Add optional chaining: sellerRank?.discount ?? 0 and BigInt PPM safe division"
           },
           "incident_cases": [
             {
@@ -152,18 +177,25 @@
               "cascading_failure_path": [
                 "1. [User Action]: Fill voucher input \"#voucher-code\" with \"SALE50\" and click \"#btn-apply-voucher\"",
                 "2. [HTTP Fail]: POST /api/v1/orders/voucher -> 500 Internal Server Error",
-                "3. [Frontend Freeze]: TypeError: Cannot read properties of null (reading 'discount')",
+                "3. [CDP RAM Heap]: sellerRank is null, reading properties of null",
                 "4. [Backend Crash]: api/src/modules/orders/orders.service.ts:142"
               ],
-              "mitigation_strategy": "Apply patch in api/src/modules/orders/orders.service.ts and execute automated regression test"
+              "mitigation_strategy": "Apply optional chaining patch and run automated regression test"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "sub_cluster_id": "sub_regression_defense",
+      "name": "🛡️ CI/CD Regression Shield",
+      "theme": "violet",
+      "nodes": [
         {
-          "title": "Regression Defense Suite",
+          "title": "Regression Shield: suite.spec.ts",
           "role": "defense_test",
           "badge_type": "regression_shield",
-          "summary": "Automated test suite: tests/regression/bug-2026-001.spec.ts locking against regressions in CI/CD.",
+          "summary": "Automated regression suite: tests/regression/negotiated-voucher-null-safety.spec.ts locking invariant in CI/CD.",
           "schematic_template": "default",
           "schematic_data": {
             "items": [
@@ -172,11 +204,11 @@
                 "status": "ok"
               },
               {
-                "label": "Test File: bug-2026-001.spec.ts",
+                "label": "Test File: suite.spec.ts",
                 "status": "ok"
               },
               {
-                "label": "CI/CD Pipeline: Protected ✅",
+                "label": "CI/CD Gate: Protected",
                 "status": "ok"
               }
             ]

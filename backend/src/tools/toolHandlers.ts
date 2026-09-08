@@ -108,7 +108,7 @@ export function generateDefaultIncidentCases(title: string, summary: string, clu
 }
 
 
-export const MAX_GRAPH_NODES = 36;
+export const MAX_GRAPH_NODES = 120;
 
 /**
  * Chuẩn hóa nhãn phân tầng kiến trúc (Architectural Layer Standard)
@@ -1150,6 +1150,7 @@ export const toolHandlers = {
     // 2. Multi-Cluster Spawning: Khởi tạo các Cụm Con / Cụm Hạ Tầng Liên Quan (Sub-Clusters)
     if (payload.sub_clusters && payload.sub_clusters.length > 0) {
       let subOffsetIdx = 1;
+      let lastSubClusterExitNode: NodeEntity | null = null;
       for (const sub of payload.sub_clusters) {
         const subSlug = (sub.name || 'sub')
           .toLowerCase()
@@ -1158,8 +1159,9 @@ export const toolHandlers = {
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/^-+|-+$/g, '');
         const subClusterId = sub.sub_cluster_id || `sub-${subSlug}-${timestamp}`;
-        const subOffsetX = sub.position_offset?.x ?? (startX + (cols * 320) + 120);
-        const subOffsetY = sub.position_offset?.y ?? (startY + (subOffsetIdx - 1) * 260);
+        const baseOffsetX = nodesToSpawn.length > 0 ? (startX + (cols * 320) + 120) : startX;
+        const subOffsetX = sub.position_offset?.x ?? baseOffsetX;
+        const subOffsetY = sub.position_offset?.y ?? (startY + (subOffsetIdx - 1) * 320);
 
         const subNodesToSpawn = sub.nodes.slice(0, MAX_GRAPH_NODES - (current.nodes.length + spawnedNodes.length));
         const spawnedSubNodes: NodeEntity[] = [];
@@ -1257,8 +1259,29 @@ export const toolHandlers = {
           spawnedNodes.push(sEntity);
         });
 
-        // Nối dây từ node phù hợp trong service cluster vào entry node của sub-cluster
-        if (spawnedSubNodes.length > 0 && spawnedNodes.length > 0) {
+        // 1. Nối dây tuần tự bên trong sub-cluster
+        for (let i = 0; i < spawnedSubNodes.length - 1; i++) {
+          newEdges.push({
+            from: spawnedSubNodes[i].id,
+            to: spawnedSubNodes[i + 1].id,
+            nhan: 'Luồng Xử Lý',
+            kieu: 'duong-xung-em-ai',
+            loai_lien_ket: 'HOA_GIAI',
+            giai_thich: `Liên kết nội bộ giữa <u>${spawnedSubNodes[i].tieu_de}</u> và <u>${spawnedSubNodes[i + 1].tieu_de}</u>.`
+          });
+        }
+
+        // 2. Nối dây giữa các sub-cluster liền kề (Causal Chain Pipeline)
+        if (lastSubClusterExitNode && spawnedSubNodes.length > 0) {
+          newEdges.push({
+            from: lastSubClusterExitNode.id,
+            to: spawnedSubNodes[0].id,
+            nhan: `${sub.name}`,
+            kieu: 'duong-xung-em-ai',
+            loai_lien_ket: 'HOA_GIAI',
+            giai_thich: `Dòng truyền động giữa các phân cụm từ <u>${lastSubClusterExitNode.tieu_de}</u> sang <u>${spawnedSubNodes[0].tieu_de}</u>.`
+          });
+        } else if (spawnedSubNodes.length > 0 && nodesToSpawn.length > 0) {
           const serviceParentNode = spawnedNodes.find(n => !n.sub_cluster_id) || spawnedNodes[0];
           newEdges.push({
             from: serviceParentNode.id,
@@ -1268,6 +1291,11 @@ export const toolHandlers = {
             loai_lien_ket: 'LUU_TRU',
             giai_thich: `Liên kết nội bộ phân hệ từ <u>${serviceParentNode.tieu_de}</u> sang Cụm con <u>${sub.name}</u>.`
           });
+        }
+
+        if (spawnedSubNodes.length > 0) {
+          const failedNode = spawnedSubNodes.find(n => n.bieu_tuong === 'test_case_failed');
+          lastSubClusterExitNode = failedNode || spawnedSubNodes[spawnedSubNodes.length - 1];
         }
         subOffsetIdx++;
       }
