@@ -12,7 +12,14 @@
   <img src="public/canvas-testops-demo.png" alt="Canvas Note Engineer — Interactive Engineering Graph & SRE Incident Simulator" width="100%" />
 </p>
 
-> **Video Trực Quan Hóa Thực Tế (Screen Recording MP4)**: [Xem Video Thao Tác Canvas & Lan Truyền Sự Cố SRE](public/canvas-demo.mp4) *(Thao tác Zoom, Pan mượt mà, phân tách các Sub-Clusters và kích hoạt hạt xung lực lỗi Bug Vector Particle bò dọc dây nối DAG).*
+<p align="center">
+  <video src="https://github.com/justpassingByte/canvas-note-engineer/raw/main/public/canvas-demo.mp4" controls="controls" width="100%"></video>
+</p>
+
+<p align="center">
+  <em>Mô phỏng kiến trúc phân tán & sự cố SRE trên mặt phẳng vô cực. Hạt xung lực lỗi Bug Vector Particle bò dọc dây nối DAG khi kích hoạt con bọ đỏ.</em><br>
+  <a href="https://github.com/justpassingByte/canvas-note-engineer/raw/main/public/canvas-demo.mp4"><strong>[Bấm vào đây để tải / xem video MP4 chất lượng cao]</strong></a>
+</p>
 
 ---
 
