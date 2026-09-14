@@ -8,14 +8,18 @@
     "type": "git",
     "url": "https://github.com/justpassingByte/canvas-note-engineer.git"
   },
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
     "dev": "npm run dev:all",
     "dev:frontend": "npm run --prefix frontend dev",
     "dev:backend": "npm run --prefix backend dev",
     "dev:all": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "build": "npm run build:frontend && npm run build:backend",
-    "build:frontend": "npm run --prefix frontend build",
-    "build:backend": "npm run --prefix backend build",
+    "build:frontend": "npm --prefix frontend install && npm --prefix frontend run build",
+    "build:backend": "npm --prefix backend install && npm --prefix backend run build",
     "start": "npm run --prefix backend start",
     "test": "vitest run",
     "test:unit": "vitest run frontend/src/utils/__tests__",
@@ -30,9 +34,14 @@
     "better-sqlite3": "^13.0.3",
     "concurrently": "^9.1.2",
     "playwright": "^1.62.1",
+    "typescript": "^5.7.3",
+    "vite": "^6.2.0",
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@libsql/client": "^0.18.0"
+    "@libsql/client": "^0.18.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "zod": "^3.24.2"
   }
 }

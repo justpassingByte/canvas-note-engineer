@@ -18,6 +18,7 @@ const __dirname = path.dirname(__filename);
 
 function getDefaultDbPath(): string {
   if (process.env.SQLITE_DB_PATH) return process.env.SQLITE_DB_PATH;
+  if (process.env.VERCEL) return '/tmp/knowledge.db';
   
   // Luôn hướng về thư mục gốc data/knowledge.db của repository
   const candidates = [
