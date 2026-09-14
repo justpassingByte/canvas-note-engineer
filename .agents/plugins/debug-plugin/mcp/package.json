@@ -1,0 +1,18 @@
+{
+  "name": "debug-mcp-server",
+  "version": "1.0.0",
+  "description": "Zero-dependency Model Context Protocol (MCP) Server for managing Node.js debug ports, processes, and test execution.",
+  "main": "server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "debug",
+    "tools"
+  ],
+  "dependencies": {
+    "playwright": "^1.63.0"
+  }
+}

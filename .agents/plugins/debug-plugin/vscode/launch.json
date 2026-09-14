@@ -1,0 +1,40 @@
+﻿{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "F5: Attach to Node (Inspect Port 9229)",
+      "type": "node",
+      "request": "attach",
+      "port": 9229,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "F5: Attach to Node (Inspect Port 9230)",
+      "type": "node",
+      "request": "attach",
+      "port": 9230,
+      "restart": true,
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "F5: Launch Current File with Node",
+      "type": "node",
+      "request": "launch",
+      "program": "${file}",
+      "outputCapture": "std",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      "name": "F5: Debug All (Frontend + Backend)",
+      "configurations": [
+        "F5: Attach to Node (Inspect Port 9229)",
+        "F5: Attach to Node (Inspect Port 9230)"
+      ]
+    }
+  ]
+}

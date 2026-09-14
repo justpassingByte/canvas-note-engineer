@@ -1,0 +1,25 @@
+{
+  "name": "agentic-test-ops",
+  "version": "1.1.0",
+  "description": "Hybrid Debugging Plugin: Zero-dependency MCP Server for process & port management, Systematic Root Cause Analysis (RCA) skills, and VS Code F5 launch presets.",
+  "author": {
+    "name": "Student Capstone / Trustbase Project"
+  },
+  "keywords": [
+    "debugging",
+    "mcp",
+    "root-cause-analysis",
+    "node-inspect",
+    "vscode-debug",
+    "sre"
+  ],
+  "mcpServers": {
+    "debug-controller": {
+      "command": "node",
+      "args": ["${pluginDir}/mcp/server.mjs"]
+    }
+  },
+  "skills": "./skills",
+  "agents": "./agents",
+  "commands": "./commands"
+}

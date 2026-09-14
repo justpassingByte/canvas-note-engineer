@@ -3,6 +3,12 @@ import fs from 'fs';
 import Database from 'better-sqlite3';
 import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
 import { ProviderConfig } from '../config/providerConfig.js';
+import {
+  InterviewTopicEntity,
+  UserTopicProgress,
+  GapStatus,
+  GapMapSummary
+} from '../types/interviewTypes.js';
 
 import { fileURLToPath } from 'url';
 
@@ -11,13 +17,27 @@ const __dirname = path.dirname(__filename);
 
 function getDefaultDbPath(): string {
   if (process.env.SQLITE_DB_PATH) return process.env.SQLITE_DB_PATH;
-  const rootData = path.resolve(__dirname, '../../../data');
-  if (fs.existsSync(rootData)) return path.join(rootData, 'knowledge.db');
-  const parentData = path.resolve(__dirname, '../../data');
-  if (fs.existsSync(parentData)) return path.join(parentData, 'knowledge.db');
-  const cwdData = path.resolve(process.cwd(), 'data');
-  if (!fs.existsSync(cwdData)) fs.mkdirSync(cwdData, { recursive: true });
-  return path.join(cwdData, 'knowledge.db');
+  
+  // Luôn hướng về thư mục gốc data/knowledge.db của repository
+  const candidates = [
+    path.resolve(process.cwd(), 'data/knowledge.db'),
+    path.resolve(process.cwd(), '../data/knowledge.db'),
+    path.resolve(__dirname, '../../../data/knowledge.db'),
+    path.resolve(__dirname, '../../data/knowledge.db')
+  ];
+
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+
+  // Nếu chưa có, tạo tại thư mục data gốc
+  const fallback = process.cwd().endsWith('backend')
+    ? path.resolve(process.cwd(), '../data/knowledge.db')
+    : path.resolve(process.cwd(), 'data/knowledge.db');
+  
+  const dir = path.dirname(fallback);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return fallback;
 }
 
 export class SQLiteKnowledgeClient {
@@ -72,6 +92,41 @@ export class SQLiteKnowledgeClient {
 
       CREATE INDEX IF NOT EXISTS idx_graphs_updated_at ON knowledge_graphs(updated_at DESC);
       CREATE INDEX IF NOT EXISTS idx_provider_active ON provider_configs(is_active);
+
+      CREATE TABLE IF NOT EXISTS interview_topics (
+        id TEXT PRIMARY KEY,
+        domain_id TEXT NOT NULL,
+        domain_title TEXT NOT NULL,
+        title TEXT NOT NULL,
+        target_intent TEXT NOT NULL,
+        trigger_keywords TEXT NOT NULL,
+        recall_5s TEXT NOT NULL,
+        interview_answer TEXT NOT NULL,
+        deep_dive TEXT NOT NULL,
+        practical_example TEXT,
+        trade_offs TEXT NOT NULL,
+        follow_ups TEXT,
+        common_traps TEXT,
+        active_recall TEXT,
+        layers TEXT NOT NULL,
+        why_ladder TEXT,
+        code_reaction TEXT,
+        cross_link_node_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS interview_user_progress (
+        topic_id TEXT PRIMARY KEY,
+        gap_status TEXT DEFAULT 'MUST_LEARN',
+        reviewed_count INTEGER DEFAULT 0,
+        last_reviewed_at DATETIME,
+        notes TEXT,
+        FOREIGN KEY (topic_id) REFERENCES interview_topics(id) ON DELETE CASCADE
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_topics_domain ON interview_topics(domain_id);
+      CREATE INDEX IF NOT EXISTS idx_progress_status ON interview_user_progress(gap_status);
     `);
   }
 
@@ -318,6 +373,221 @@ export class SQLiteKnowledgeClient {
 
   public deleteProviderConfig(id: string): void {
     this.db.prepare('DELETE FROM provider_configs WHERE id = ?').run(id);
+  }
+
+  // ==========================================
+  // INTERVIEW CHEATSHEET & USER PROGRESS METHODS
+  // ==========================================
+
+  public saveInterviewTopic(topic: InterviewTopicEntity): void {
+    const now = new Date().toISOString();
+    const stmt = this.db.prepare(`
+      INSERT INTO interview_topics (
+        id, domain_id, domain_title, title, target_intent, trigger_keywords,
+        recall_5s, interview_answer, deep_dive, practical_example, trade_offs,
+        follow_ups, common_traps, active_recall, layers, why_ladder, code_reaction,
+        cross_link_node_id, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        domain_id = excluded.domain_id,
+        domain_title = excluded.domain_title,
+        title = excluded.title,
+        target_intent = excluded.target_intent,
+        trigger_keywords = excluded.trigger_keywords,
+        recall_5s = excluded.recall_5s,
+        interview_answer = excluded.interview_answer,
+        deep_dive = excluded.deep_dive,
+        practical_example = excluded.practical_example,
+        trade_offs = excluded.trade_offs,
+        follow_ups = excluded.follow_ups,
+        common_traps = excluded.common_traps,
+        active_recall = excluded.active_recall,
+        layers = excluded.layers,
+        why_ladder = excluded.why_ladder,
+        code_reaction = excluded.code_reaction,
+        cross_link_node_id = excluded.cross_link_node_id,
+        updated_at = excluded.updated_at
+    `);
+
+    stmt.run(
+      topic.id,
+      topic.domain_id,
+      topic.domain_title,
+      topic.title,
+      topic.target_intent,
+      JSON.stringify(topic.trigger_keywords || []),
+      topic.recall_5s,
+      topic.interview_answer,
+      topic.deep_dive,
+      topic.practical_example ? JSON.stringify(topic.practical_example) : null,
+      JSON.stringify(topic.trade_offs),
+      topic.follow_ups ? JSON.stringify(topic.follow_ups) : null,
+      topic.common_traps ? JSON.stringify(topic.common_traps) : null,
+      topic.active_recall ? JSON.stringify(topic.active_recall) : null,
+      JSON.stringify(topic.layers),
+      topic.why_ladder ? JSON.stringify(topic.why_ladder) : null,
+      topic.code_reaction ? JSON.stringify(topic.code_reaction) : null,
+      topic.cross_link_node_id || null,
+      topic.created_at || now,
+      now
+    );
+
+    // Đảm bảo topic có bản ghi progress mặc định nếu chưa có
+    const checkProgress = this.db.prepare('SELECT topic_id FROM interview_user_progress WHERE topic_id = ?').get(topic.id);
+    if (!checkProgress) {
+      this.db.prepare(`
+        INSERT INTO interview_user_progress (topic_id, gap_status, reviewed_count, last_reviewed_at)
+        VALUES (?, 'MUST_LEARN', 0, NULL)
+      `).run(topic.id);
+    }
+  }
+
+  public saveInterviewTopics(topics: InterviewTopicEntity[]): void {
+    const transaction = this.db.transaction(() => {
+      for (const t of topics) {
+        this.saveInterviewTopic(t);
+      }
+    });
+    transaction();
+  }
+
+  private mapTopicRow(row: any): InterviewTopicEntity & { progress?: UserTopicProgress } {
+    return {
+      id: row.id,
+      domain_id: row.domain_id,
+      domain_title: row.domain_title,
+      title: row.title,
+      target_intent: row.target_intent,
+      trigger_keywords: row.trigger_keywords ? JSON.parse(row.trigger_keywords) : [],
+      recall_5s: row.recall_5s,
+      interview_answer: row.interview_answer,
+      deep_dive: row.deep_dive,
+      practical_example: row.practical_example ? JSON.parse(row.practical_example) : undefined,
+      trade_offs: row.trade_offs ? JSON.parse(row.trade_offs) : { when_use: '', when_not_use: '', pros: [], cons: [], alternatives: [] },
+      follow_ups: row.follow_ups ? JSON.parse(row.follow_ups) : [],
+      common_traps: row.common_traps ? JSON.parse(row.common_traps) : [],
+      active_recall: row.active_recall ? JSON.parse(row.active_recall) : [],
+      layers: row.layers ? JSON.parse(row.layers) : { l1_junior: '', l2_middle: '', l3_senior: '' },
+      why_ladder: row.why_ladder ? JSON.parse(row.why_ladder) : [],
+      code_reaction: row.code_reaction ? JSON.parse(row.code_reaction) : undefined,
+      cross_link_node_id: row.cross_link_node_id || undefined,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      progress: row.gap_status ? {
+        topic_id: row.id,
+        gap_status: row.gap_status as GapStatus,
+        reviewed_count: row.reviewed_count || 0,
+        last_reviewed_at: row.last_reviewed_at || null,
+        notes: row.notes || undefined
+      } : undefined
+    };
+  }
+
+  public getInterviewTopic(id: string): (InterviewTopicEntity & { progress?: UserTopicProgress }) | null {
+    const stmt = this.db.prepare(`
+      SELECT t.*, p.gap_status, p.reviewed_count, p.last_reviewed_at, p.notes
+      FROM interview_topics t
+      LEFT JOIN interview_user_progress p ON t.id = p.topic_id
+      WHERE t.id = ?
+    `);
+    const row = stmt.get(id);
+    if (!row) return null;
+    return this.mapTopicRow(row);
+  }
+
+  public getAllInterviewTopics(domainId?: string): Array<InterviewTopicEntity & { progress?: UserTopicProgress }> {
+    let query = `
+      SELECT t.*, p.gap_status, p.reviewed_count, p.last_reviewed_at, p.notes
+      FROM interview_topics t
+      LEFT JOIN interview_user_progress p ON t.id = p.topic_id
+    `;
+    const params: any[] = [];
+    if (domainId) {
+      query += ` WHERE t.domain_id = ?`;
+      params.push(domainId);
+    }
+    query += ` ORDER BY t.created_at ASC`;
+
+    const stmt = this.db.prepare(query);
+    const rows = stmt.all(...params);
+    return rows.map(r => this.mapTopicRow(r));
+  }
+
+  public deleteInterviewTopic(id: string): void {
+    this.db.prepare('DELETE FROM interview_topics WHERE id = ?').run(id);
+    this.db.prepare('DELETE FROM interview_user_progress WHERE topic_id = ?').run(id);
+  }
+
+  public updateUserTopicProgress(progress: {
+    topic_id: string;
+    gap_status?: GapStatus;
+    reviewed_count?: number;
+    last_reviewed_at?: string;
+    notes?: string;
+  }): void {
+    const existing = this.db.prepare('SELECT * FROM interview_user_progress WHERE topic_id = ?').get(progress.topic_id) as any;
+    const now = progress.last_reviewed_at || new Date().toISOString();
+
+    if (existing) {
+      const newReviewedCount = progress.reviewed_count !== undefined
+        ? progress.reviewed_count
+        : (existing.reviewed_count || 0) + 1;
+
+      this.db.prepare(`
+        UPDATE interview_user_progress SET
+          gap_status = COALESCE(?, gap_status),
+          reviewed_count = ?,
+          last_reviewed_at = ?,
+          notes = COALESCE(?, notes)
+        WHERE topic_id = ?
+      `).run(progress.gap_status || null, newReviewedCount, now, progress.notes || null, progress.topic_id);
+    } else {
+      this.db.prepare(`
+        INSERT INTO interview_user_progress (topic_id, gap_status, reviewed_count, last_reviewed_at, notes)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(progress.topic_id, progress.gap_status || 'MUST_LEARN', progress.reviewed_count ?? 1, now, progress.notes || null);
+    }
+  }
+
+  public getGapMapSummary(): GapMapSummary {
+    const totalTopicsRow = this.db.prepare('SELECT COUNT(*) as count FROM interview_topics').get() as { count: number };
+    const totalTopics = totalTopicsRow?.count || 0;
+
+    const domainsCountRow = this.db.prepare('SELECT COUNT(DISTINCT domain_id) as count FROM interview_topics').get() as { count: number };
+    const totalDomains = domainsCountRow?.count || 0;
+
+    const statusCounts = this.db.prepare(`
+      SELECT gap_status, COUNT(*) as count
+      FROM interview_user_progress
+      GROUP BY gap_status
+    `).all() as Array<{ gap_status: string; count: number }>;
+
+    let readyCount = 0;
+    let knowCount = 0;
+    let weakCount = 0;
+    let mustLearnCount = 0;
+
+    for (const sc of statusCounts) {
+      if (sc.gap_status === 'READY') readyCount = sc.count;
+      else if (sc.gap_status === 'KNOW') knowCount = sc.count;
+      else if (sc.gap_status === 'WEAK') weakCount = sc.count;
+      else if (sc.gap_status === 'MUST_LEARN') mustLearnCount = sc.count;
+    }
+
+    const unassigned = Math.max(0, totalTopics - (readyCount + knowCount + weakCount + mustLearnCount));
+    mustLearnCount += unassigned;
+
+    const readyPercentage = totalTopics > 0 ? Math.round((readyCount / totalTopics) * 100) : 0;
+
+    return {
+      total_domains: totalDomains,
+      total_topics: totalTopics,
+      ready_count: readyCount,
+      know_count: knowCount,
+      weak_count: weakCount,
+      must_learn_count: mustLearnCount,
+      ready_percentage: readyPercentage
+    };
   }
 }
 

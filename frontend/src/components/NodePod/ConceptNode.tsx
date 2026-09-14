@@ -164,6 +164,7 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
         cursor: isDragging ? 'grabbing' : 'grab',
         zIndex: isDragging ? 50 : (isSelected ? 10 : 5)
       }}
+      id={node.id}
       data-node-id={node.id}
       onMouseDown={handleMouseDown}
       onClick={handleNodeClick}

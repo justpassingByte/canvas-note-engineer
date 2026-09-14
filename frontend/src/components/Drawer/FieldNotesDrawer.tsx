@@ -13,9 +13,14 @@ import {
   Maximize2,
   GitCommit,
   X,
-  Zap
+  Zap,
+  GraduationCap,
+  ExternalLink,
+  Brain
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
+import { useInterviewStore } from '../../store/useInterviewStore.js';
+import { jumpToInterviewLab, resolveTopicCrossLinkNodeId } from '../../utils/canvasNavigator.js';
 import { LucideIconPod } from '../NodePod/LucideIconPod.js';
 import { DynamicSchematic } from '../Animation/DynamicSchematic.js';
 import { ReflexQuizCard } from '../Quiz/ReflexQuizCard.js';
@@ -39,6 +44,15 @@ export const FieldNotesDrawer: React.FC = () => {
     openDrawer,
     toggleExpandWithAiModal
   } = useGraphStore();
+
+  const interviewTopics = useInterviewStore(state => state.topics);
+  const fetchInterviewTopics = useInterviewStore(state => state.fetchTopics);
+
+  useEffect(() => {
+    if (interviewTopics.length === 0) {
+      fetchInterviewTopics();
+    }
+  }, [interviewTopics.length, fetchInterviewTopics]);
 
   // Tooltip cố định chống tràn mép (Fixed Collision-Free Floating Tooltip)
   const [hoveredTooltip, setHoveredTooltip] = useState<{
@@ -178,6 +192,7 @@ export const FieldNotesDrawer: React.FC = () => {
                   title="Đóng bảng giải thích đường nối (Esc)"
                 >
                   <X size={15} />
+                  <span>Đóng (Esc)</span>
                 </button>
               </div>
             </div>
@@ -237,6 +252,7 @@ export const FieldNotesDrawer: React.FC = () => {
               title="Ẩn Field Notes (Esc)"
             >
               <X size={15} />
+              <span>Đóng (Esc)</span>
             </button>
             <BookOpen size={36} style={{ color: '#9CA3AF', marginBottom: '12px' }} />
             <p style={{ color: 'var(--net-muc-mo)', fontFamily: 'JetBrains Mono', fontSize: '12px' }}>
@@ -252,6 +268,11 @@ export const FieldNotesDrawer: React.FC = () => {
   const childNodes = graph?.nodes.filter(n => n.parent_id === node.id) || [];
   const hasChildren = childNodes.length > 0;
   const isCollapsed = node.is_collapsed || false;
+
+  const linkedTopics = interviewTopics.filter(t => {
+    const matchedNodeId = t.cross_link_node_id || resolveTopicCrossLinkNodeId(t);
+    return matchedNodeId === node.id;
+  });
 
   const handleDelete = () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa vĩnh viễn node '${node.tieu_de}' và các nhánh con liên quan khỏi đồ thị không?`)) {
@@ -309,8 +330,168 @@ export const FieldNotesDrawer: React.FC = () => {
                 title="Ẩn Field Notes để xem toàn màn hình đồ thị (Esc)"
               >
                 <X size={15} />
+                <span>Đóng (Esc)</span>
               </button>
             </div>
+          </div>
+
+          {/* Khối: Đề tài phỏng vấn 3 YoE liên kết với node */}
+          <div className="khoi-noi-dung" style={{
+            background: 'linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%)',
+            border: '1px solid #C7D2FE',
+            borderRadius: '8px',
+            padding: '12px 14px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 800, fontSize: '11.5px', color: '#3730A3', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <GraduationCap size={16} color="#4F46E5" />
+                <span>Đề Tài Phỏng Vấn Thực Chiến (~3 YoE)</span>
+              </div>
+              <span style={{
+                background: '#E0E7FF',
+                color: '#3730A3',
+                fontSize: '10.5px',
+                fontWeight: 800,
+                padding: '2px 8px',
+                borderRadius: '999px',
+                border: '1px solid #C7D2FE'
+              }}>
+                {linkedTopics.length} đề tài liên quan
+              </span>
+            </div>
+
+            {linkedTopics.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {linkedTopics.map((topic) => {
+                  const status = topic.progress?.gap_status || 'MUST_LEARN';
+                  const statusLabel =
+                    status === 'READY' ? '🟢 Sẵn sàng' :
+                    status === 'KNOW' ? '🟡 Đã biết' :
+                    status === 'WEAK' ? '🟠 Yếu' : '🔴 Cần học';
+                  const statusBg =
+                    status === 'READY' ? '#D1FAE5' :
+                    status === 'KNOW' ? '#FEF3C7' :
+                    status === 'WEAK' ? '#FFEDD5' : '#FEE2E2';
+                  const statusColor =
+                    status === 'READY' ? '#065F46' :
+                    status === 'KNOW' ? '#92400E' :
+                    status === 'WEAK' ? '#9A3412' : '#991B1B';
+
+                  return (
+                    <div
+                      key={topic.id}
+                      style={{
+                        background: '#FFFFFF',
+                        border: '1px solid #E0E7FF',
+                        borderRadius: '6px',
+                        padding: '10px 12px',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#6366F1', textTransform: 'uppercase' }}>
+                          {topic.domain_title}
+                        </span>
+                        <span style={{
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          background: statusBg,
+                          color: statusColor
+                        }}>
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: '13px', fontWeight: 700, color: '#1E1B4B', marginBottom: '6px' }}>
+                        {topic.title}
+                      </div>
+
+                      <div style={{ fontSize: '11px', color: '#4B5563', fontStyle: 'italic', marginBottom: '8px', lineHeight: 1.4 }}>
+                        "{topic.recall_5s.slice(0, 110)}..."
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => jumpToInterviewLab({ topicId: topic.id, domainId: topic.domain_id, tab: 'reader' })}
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '5px',
+                            background: '#4F46E5',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '5px',
+                            padding: '5px 8px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <BookOpen size={12} />
+                          <span>Đọc Cheatsheet</span>
+                        </button>
+                        <button
+                          onClick={() => jumpToInterviewLab({ topicId: topic.id, domainId: topic.domain_id, tab: 'drill' })}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '4px',
+                            background: '#EEF2FF',
+                            color: '#4338CA',
+                            border: '1px solid #C7D2FE',
+                            borderRadius: '5px',
+                            padding: '5px 9px',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Zap size={12} />
+                          <span>Drill</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{
+                background: '#FFFFFF',
+                border: '1px dashed #CBD5E1',
+                borderRadius: '6px',
+                padding: '10px 12px',
+                fontSize: '11px',
+                color: '#64748B',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 6px 0' }}>Khám phá kho 99+ chủ đề phỏng vấn 3 YoE theo 29 domain chuyên sâu.</p>
+                <button
+                  onClick={() => jumpToInterviewLab()}
+                  style={{
+                    background: '#4F46E5',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '5px',
+                    padding: '4px 10px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                >
+                  <Brain size={12} />
+                  <span>Vào Interview Lab (99 Đề tài)</span>
+                </button>
+              </div>
+            )}
           </div>
 
         {/* Khối 1: Bản chất cốt lõi có icon BookOpen */}
@@ -515,10 +696,19 @@ export const FieldNotesDrawer: React.FC = () => {
         )}
       </div>
 
-      <footer className="chan-trang-thao-tac">
-        <button className="nut-kiem-tra" onClick={toggleReflexQuiz}>
+      <footer className="chan-trang-thao-tac" style={{ display: 'flex', gap: '8px' }}>
+        <button className="nut-kiem-tra" onClick={toggleReflexQuiz} style={{ flex: 1 }}>
           <HelpCircle className="lucide-icon-sm" />
           <span>{isReflexQuizOpen ? 'Đóng thử thách phản xạ' : 'Kiểm tra kiến thức phản xạ'}</span>
+        </button>
+        <button
+          className="nut-thao-tac-phu-drawer nut-dong-drawer"
+          onClick={closeDrawer}
+          title="Đóng / Ẩn Sổ tay (Esc)"
+          style={{ padding: '0 12px', height: '36px', borderRadius: '6px' }}
+        >
+          <X size={15} />
+          <span>Đóng (Esc)</span>
         </button>
       </footer>
       {renderFixedTooltip()}

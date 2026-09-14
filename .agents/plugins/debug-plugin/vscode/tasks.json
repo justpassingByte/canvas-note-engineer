@@ -1,0 +1,19 @@
+﻿{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Kill Debug Ports (9229, 9230, 9231)",
+      "type": "shell",
+      "windows": {
+        "command": "Get-NetTCPConnection -LocalPort 9229,9230,9231 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Stop-Process -Force -ErrorAction SilentlyContinue"
+      },
+      "linux": {
+        "command": "fuser -k 9229/tcp 9230/tcp 9231/tcp || true"
+      },
+      "osx": {
+        "command": "lsof -ti :9229,:9230,:9231 | xargs kill -9 || true"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

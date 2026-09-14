@@ -9,6 +9,8 @@ import { PROVIDER_PRESETS, ProviderConfig } from './config/providerConfig.js';
 import { ProviderFactory } from './providers/providerFactory.js';
 import { AIGraphService } from './services/aiGraphService.js';
 import { EnvManager } from './config/envManager.js';
+import { interviewService } from './services/interviewService.js';
+import { InterviewGenerator } from './services/interviewGenerator.js';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -374,6 +376,103 @@ app.post('/api/rag/upload', async (req, res) => {
 
     const result = await brainstormRAG.saveAndIngest(filename, content, { forceMode: mode });
     res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==========================================
+// INTERVIEW LAB & REFLEX CHEATSHEET ROUTES
+// ==========================================
+
+app.get('/api/interview/domains', (req, res) => {
+  try {
+    const domains = interviewService.getDomains();
+    res.json(domains);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/interview/topics', (req, res) => {
+  try {
+    const domainId = req.query.domain_id as string | undefined;
+    const topics = interviewService.getTopics(domainId);
+    res.json(topics);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/interview/topics/:id', (req, res) => {
+  try {
+    const topic = interviewService.getTopicById(req.params.id);
+    if (!topic) return res.status(404).json({ error: 'Không tìm thấy topic' });
+    res.json(topic);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/interview/topics', (req, res) => {
+  try {
+    const topic = req.body;
+    if (!topic.title || !topic.domain_id) {
+      return res.status(400).json({ error: 'Thiếu title hoặc domain_id' });
+    }
+    interviewService.saveTopic(topic);
+    res.json({ success: true, topic });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/interview/topics/:id', (req, res) => {
+  try {
+    interviewService.deleteTopic(req.params.id);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/interview/progress', (req, res) => {
+  try {
+    const { topic_id, gap_status, reviewed_count, last_reviewed_at, notes } = req.body;
+    if (!topic_id) return res.status(400).json({ error: 'Thiếu topic_id' });
+    interviewService.updateProgress({ topic_id, gap_status, reviewed_count, last_reviewed_at, notes });
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/interview/gap-map', (req, res) => {
+  try {
+    const summary = interviewService.getGapMap();
+    res.json(summary);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/interview/generate-topic', async (req, res) => {
+  try {
+    const { topic_prompt, domain_id } = req.body;
+    if (!topic_prompt) return res.status(400).json({ error: 'Thiếu topic_prompt' });
+    const topic = await InterviewGenerator.generateTopic(topic_prompt, domain_id);
+    res.json({ success: true, topic });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/interview/generate-domain', async (req, res) => {
+  try {
+    const { domain_id } = req.body;
+    if (!domain_id) return res.status(400).json({ error: 'Thiếu domain_id' });
+    const topics = await InterviewGenerator.generateDomainTopics(domain_id);
+    res.json({ success: true, topics });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

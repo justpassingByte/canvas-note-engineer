@@ -29,6 +29,9 @@ aside.trang-so-ghi-chep.dong {
 }
 
 .dau-trang-chi-tiet {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   border: 2px solid var(--net-muc-chinh);
   background: #FAFAF8;
   padding: 12px 14px;
@@ -153,16 +156,20 @@ aside.trang-so-ghi-chep.dong {
 }
 
 .nut-thao-tac-phu-drawer.nut-dong-drawer {
-  background: #FFFFFF;
-  color: var(--net-muc-chinh);
-  border: 1.5px solid var(--net-muc-chinh);
+  background: #FEE2E2;
+  color: #B91C1C;
+  border: 1.5px solid #DC2626;
   font-weight: 800;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .nut-thao-tac-phu-drawer.nut-dong-drawer:hover {
-  background: #FEE2E2;
-  border-color: #DC2626;
-  color: #DC2626;
+  background: #DC2626;
+  border-color: #991B1B;
+  color: #FFFFFF;
 }
 
 /* THẺ NỔI MỞ SỔ TAY KHI ĐANG THU GỌN / ẨN */

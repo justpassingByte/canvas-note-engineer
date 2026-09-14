@@ -5,6 +5,8 @@ node_modules/
 # Production builds
 dist/
 build/
+*.tsbuildinfo
+
 
 # Environment and secrets
 .env
@@ -25,7 +27,9 @@ yarn-debug.log*
 pnpm-debug.log*
 screenshots/
 test-results/
-data/
+/data/
+*.mp4
+
 
 # System files
 .DS_Store

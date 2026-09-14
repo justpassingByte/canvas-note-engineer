@@ -1,0 +1,120 @@
+{
+  "domain_id": "domain-order-escrow",
+  "cluster_name": "Sự Cố Ký Quỹ & Tương Tranh Huỷ Đơn Hàng",
+  "cluster_theme": "rose",
+  "sub_title": "Phân tích nguyên nhân lỗi giải phóng tiền ký quỹ kép (Double Refund Bug)",
+  "is_public_interface": true,
+  "nodes": [
+    {
+      "title": "Giao Diện Huỷ Đơn (Checkout UI)",
+      "role": "BROWSER_INGRESS",
+      "summary": "Nút bấm huỷ đơn trên Next.js/React gửi request huỷ đơn kèm trạng thái xác thực người dùng.",
+      "is_public_interface": true,
+      "schematic_template": "pipeline_filter",
+      "schematic_params": {
+        "client": "BROWSER CLIENT",
+        "action": "CLICK HUY DON",
+        "event": "FAST DOUBLE CLICK (100ms)"
+      },
+      "ban_chat": "Tầng giao diện người dùng gửi sự kiện huỷ đơn hàng qua HTTP POST. Thiếu cơ chế debounce nút bấm khiến người dùng có thể gửi đúp request trong tích tắc.",
+      "ca_thuc_te": [
+        "Khách hàng mạng lag bấm nút 'Huỷ đơn' 2 lần liên tiếp do nút không bị vô hiệu hoá ngay lập tức (Disabled State missing)."
+      ],
+      "rui_ro": [
+        "Phát tán nhiều request trùng lặp dồn dập xuống backend trong cùng một mili-giây."
+      ]
+    },
+    {
+      "title": "Cổng API Orders Ingress Controller",
+      "role": "API_CONTROLLER",
+      "summary": "Tiếp nhận request POST /orders/:id/cancel, parse JWT token và chuyển tiếp vào Application Service.",
+      "is_public_interface": false,
+      "schematic_template": "zero_trust_pep",
+      "schematic_params": {
+        "ingress": "EXPRESS CONTROLLER",
+        "validation": "ZOD ORDER ID",
+        "auth": "BEARER TOKEN"
+      },
+      "ban_chat": "Tầng điều phối API tiếp nhận gói tin, kiểm tra quyền sở hữu đơn hàng (Order Ownership) trước khi gọi Escrow Domain Service."
+    },
+    {
+      "title": "Dịch Vụ Điều Phối Huỷ Ký Quỹ (Escrow Service)",
+      "role": "SAGA_ORCHESTRATOR",
+      "summary": "Thực hiện chu trình 2 pha: Kiểm tra số dư ký quỹ ➔ Trả tiền cho người mua ➔ Cập nhật trạng thái đơn.",
+      "is_public_interface": false,
+      "schematic_template": "two_phase_state_machine",
+      "schematic_params": {
+        "flow": "ESCROW CANCELLATION SAGA",
+        "phase1": "READ BALANCE",
+        "phase2": "TRANSFER WALLET"
+      },
+      "ban_chat": "Trái tim nghiệp vụ xử lý giao dịch huỷ đơn. Lỗi xảy ra tại đây do đọc số dư và hoàn tiền không nằm trong cùng một khoá dòng nguyên tử.",
+      "incident_dossier": {
+        "boi_canh_tai": "100 requests huỷ đơn đồng thời trong đợt flash-sale khi khách hàng đổi ý.",
+        "nguyen_nhan_goc_re": "Race condition giữa 2 luồng đọc số dư ký quỹ trước khi cập nhật trạng thái CANCELLED.",
+        "ban_kinh_anh_huong": "Khách hàng nhận được 2 lần tiền hoàn (Double Refund), thất thoát số dư ký quỹ của sàn.",
+        "chien_luoc_phong_thu": "Khóa dòng Pessimistic Lock (SELECT FOR UPDATE) trên bảng escrow_accounts + Khóa phân tán Redis Idempotency Key 60s."
+      },
+      "incident_cases": [
+        {
+          "id": "case_escrow_double_refund",
+          "title": "Double Refund Under Concurrent Cancellation",
+          "traffic_profile": "Người dùng click đúp hoặc 2 tab trình duyệt cùng gửi lệnh huỷ đơn trong khoảng 80ms.",
+          "root_cause_analysis": "Luồng 1 và Luồng 2 cùng đọc escrow.balance = 500.000đ trước khi luồng nào kịp trừ tiền. Cả 2 luồng đều thực hiện cộng 500.000đ vào ví người mua.",
+          "blast_radius": "Khách hàng được hoàn 1.000.000đ thay vì 500.000đ. Thất thoát tài chính thực tế.",
+          "cascading_failure_path": [
+            "1. [Trigger]: Hai request huỷ đơn cùng mã đơn hàng gửi tới hệ thống cách nhau 80ms.",
+            "2. [Race Condition]: Cả 2 transaction cùng đọc số dư ký quỹ > 0 do thiếu khóa dòng FOR UPDATE.",
+            "3. [Double Transfer]: Hai bút toán hoàn tiền cùng được ghi nhận vào sổ cái ví người mua.",
+            "4. [Financial Mismatch]: Số dư ví ký quỹ bị âm, lệch sổ kế toán đối soát cuối ngày."
+          ],
+          "mitigation_strategy": "Áp dụng SELECT ... FOR UPDATE trên dòng escrow_account và đặt Idempotency-Key UUID trên request header."
+        }
+      ],
+      "trac_nghiem": {
+        "cau_hoi": "Giải pháp triệt để nhất để ngăn chặn lỗi hoàn tiền kép khi có 2 request huỷ đơn gửi song song là gì?",
+        "lua_chon": [
+          "Sử dụng Transaction với khóa dòng Pessimistic Lock (SELECT FOR UPDATE) kết hợp Idempotency Key",
+          "Chỉ cần vô hiệu hóa nút bấm trên giao diện người dùng (Disabled button)"
+        ],
+        "dung": 0,
+        "giai_thich": "Vô hiệu hoá nút bấm frontend chỉ chặn được người dùng bấm nhầm, còn hacker hoặc mạng lag vẫn có thể gửi request song song. Khóa dòng DB và Idempotency Key ở backend là chốt chặn an toàn bắt buộc."
+      }
+    }
+  ],
+  "sub_clusters": [
+    {
+      "name": "PostgreSQL Escrow & Ledger Subsystem",
+      "infra_type": "postgres",
+      "nodes": [
+        {
+          "title": "PostgreSQL Escrow Accounts Table",
+          "summary": "Bảng lưu trữ số dư ký quỹ với khóa dòng Pessimistic Lock bảo vệ toàn vẹn ACID.",
+          "infra_type": "postgres",
+          "schematic_template": "table_row_lock",
+          "schematic_params": {
+            "table": "escrow_accounts",
+            "lock_mode": "ROW SHARE FOR UPDATE"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Redis Distributed Lock & Rate Limit",
+      "infra_type": "redis",
+      "namespace": "order:cancel:lock:*",
+      "nodes": [
+        {
+          "title": "Redis Idempotency Lock (SETNX)",
+          "summary": "Khóa phân tán 60s ngăn chặn xử lý trùng lặp request huỷ đơn từ tầng gateway.",
+          "infra_type": "redis",
+          "schematic_template": "cache_ttl_lock",
+          "schematic_params": {
+            "key": "order:cancel:lock:{orderId}",
+            "ttl": "60s"
+          }
+        }
+      ]
+    }
+  ]
+}

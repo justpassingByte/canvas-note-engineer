@@ -1,5 +1,5 @@
 import { sqliteClient } from '../db/sqliteClient.js';
-import { INITIAL_PAYMENT_GRAPH, DELTA_NODES_QUEUE_CACHE } from '../data/defaultGraph.js';
+import { INITIAL_PAYMENT_GRAPH, MASTER_FULLSTACK_GRAPH, DELTA_NODES_QUEUE_CACHE } from '../data/defaultGraph.js';
 import {
   GraphData,
   NodeEntity,
@@ -325,12 +325,11 @@ export interface SpawnPayload {
 }
 
 function createCleanGraph(topic?: string): GraphData {
-  return {
-    id: 'graph-interactive-workspace',
-    topic: topic || 'Kiến Trúc Hệ Thống Phân Tán',
-    nodes: [],
-    edges: []
-  };
+  const clone: GraphData = JSON.parse(JSON.stringify(MASTER_FULLSTACK_GRAPH));
+  if (topic) {
+    clone.topic = topic;
+  }
+  return clone;
 }
 
 export const toolHandlers = {
@@ -340,13 +339,29 @@ export const toolHandlers = {
    */
   async createKnowledgeGraph(topic?: string): Promise<{ graph: GraphData; from_cache: boolean }> {
     const existing = sqliteClient.getCurrentGraph();
-    if (existing) {
+    if (existing && existing.nodes && existing.nodes.length > 0) {
+      // Tự động bổ sung các node & edge cốt lõi nếu đồ thị interactive còn thiếu (ví dụ bản cũ 10 node lên 14 node)
+      if (existing.id === 'graph-interactive-workspace' && existing.nodes.length < MASTER_FULLSTACK_GRAPH.nodes.length) {
+        for (const mNode of MASTER_FULLSTACK_GRAPH.nodes) {
+          if (!existing.nodes.some(n => n.id === mNode.id)) {
+            existing.nodes.push(mNode);
+          }
+        }
+        for (const mEdge of MASTER_FULLSTACK_GRAPH.edges) {
+          if (!existing.edges.some(e => e.from === mEdge.from && e.to === mEdge.to)) {
+            existing.edges.push(mEdge);
+          }
+        }
+        sqliteClient.saveGraph(existing);
+        return { graph: existing, from_cache: true };
+      }
+
       if (!topic || existing.topic.toLowerCase().includes(topic.toLowerCase())) {
         return { graph: existing, from_cache: true };
       }
     }
 
-    // Khởi tạo đồ thị sạch 100% không hardcode
+    // Khởi tạo đồ thị chuẩn Master Fullstack
     const initialGraph = createCleanGraph(topic);
     sqliteClient.saveGraph(initialGraph);
     return { graph: initialGraph, from_cache: false };
@@ -635,7 +650,7 @@ export const toolHandlers = {
         });
       }
     } else if (typeLower.includes('ddos') || typeLower.includes('waf') || typeLower.includes('rate')) {
-      const existingWaf = current.nodes.find(n => n.id.includes('ddos') || n.id.includes('waf') || n.tieu_de.toLowerCase().includes('waf') || n.tieu_de.toLowerCase().includes('ddos'));
+      const existingWaf = current.nodes.find(n => n.id === 'node-ddos-waf' || (n.id.includes('ddos') && !n.id.includes('gateway')));
       if (existingWaf) {
         return {
           graph: current,
@@ -1470,6 +1485,6 @@ export const toolHandlers = {
   async resetToRoot(): Promise<{ graph: GraphData; message: string }> {
     const cleanGraph = createCleanGraph();
     sqliteClient.saveGraph(cleanGraph);
-    return { graph: cleanGraph, message: 'Đã dọn sạch toàn bộ đồ thị về canvas mới (0 token).' };
+    return { graph: cleanGraph, message: 'Đã khôi phục đồ thị về sơ đồ kiến trúc Fullstack 3 YoE chuẩn (10 nodes).' };
   }
 };

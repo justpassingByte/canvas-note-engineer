@@ -17,7 +17,8 @@
     "zero_token_cache": true,
     "local_storage": "sqlite",
     "delta_expansion": true,
-    "branch_pruning": true
+    "branch_pruning": true,
+    "interview_reaction_lab": true
   },
   "tools": [
     {
