@@ -34,3 +34,7 @@ test-results/
 # System files
 .DS_Store
 Thumbs.db
+
+# Test artifacts & Playwright
+.playwright-mcp/
+*.png

@@ -31,11 +31,17 @@ import {
   Calendar,
   Search,
   PlusCircle,
-  BookOpen
+  BookOpen,
+  X
 } from 'lucide-react';
 import { useInterviewStore } from '../../store/useInterviewStore.js';
 import { DomainMeta } from '../../types/interviewTypes.js';
 import { resolveTopicCrossLinkNodeId, jumpToCanvasNode } from '../../utils/canvasNavigator.js';
+
+interface DomainSidebarProps {
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
+}
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   Code: <Code size={14} />,
@@ -69,7 +75,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Calendar: <Calendar size={14} />
 };
 
-export const DomainSidebar: React.FC = () => {
+export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCloseMobile }) => {
   const {
     domains,
     selectedDomainId,
@@ -90,44 +96,54 @@ export const DomainSidebar: React.FC = () => {
   );
 
   return (
-    <aside className="domain-sidebar" style={{
-      width: '320px',
-      borderRight: '1px solid var(--net-ke-bang, #E5E7EB)',
-      background: 'var(--nen-giay-am, #FAF9F6)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      overflow: 'hidden',
-      flexShrink: 0
-    }}>
-      {/* Top Header & Search */}
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--net-ke-bang, #E5E7EB)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '12.5px', color: '#1F2937' }}>
-            <BookOpen size={16} color="#4F46E5" />
-            <span>29 DOMAINS PHỎNG VẤN</span>
+    <>
+      {isMobileOpen && (
+        <div
+          className="domain-sidebar-mobile-backdrop"
+          onClick={onCloseMobile}
+        />
+      )}
+      <aside className={`domain-sidebar ${isMobileOpen ? 'mobile-open' : ''}`}>
+        {/* Top Header & Search */}
+        <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--net-ke-bang, #E5E7EB)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, fontSize: '12.5px', color: '#1F2937' }}>
+              <BookOpen size={16} color="#4F46E5" />
+              <span>29 DOMAINS PHỎNG VẤN</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                onClick={() => toggleGenerateModal(true)}
+                style={{
+                  background: '#EEF2FF',
+                  color: '#4F46E5',
+                  border: '1px solid #C7D2FE',
+                  borderRadius: '5px',
+                  padding: '3px 8px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Sinh thêm Topic hoặc sinh trọn gói Domain bằng AI"
+              >
+                <PlusCircle size={12} />
+                <span>Sinh AI</span>
+              </button>
+
+              {onCloseMobile && (
+                <button
+                  className="nut-dong-sidebar-mobile"
+                  onClick={onCloseMobile}
+                  title="Đóng danh sách domain (Esc)"
+                >
+                  <X size={15} />
+                </button>
+              )}
+            </div>
           </div>
-          <button
-            onClick={() => toggleGenerateModal(true)}
-            style={{
-              background: '#EEF2FF',
-              color: '#4F46E5',
-              border: '1px solid #C7D2FE',
-              borderRadius: '5px',
-              padding: '3px 8px',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Sinh thêm Topic hoặc sinh trọn gói Domain bằng AI"
-          >
-            <PlusCircle size={12} />
-            <span>Sinh AI</span>
-          </button>
-        </div>
 
         <div style={{
           display: 'flex',
@@ -261,6 +277,7 @@ export const DomainSidebar: React.FC = () => {
                         onClick={(e) => {
                           e.stopPropagation();
                           selectTopic(t.id);
+                          onCloseMobile?.();
                         }}
                         style={{
                           padding: '4px 6px',
@@ -287,6 +304,7 @@ export const DomainSidebar: React.FC = () => {
                               e.stopPropagation();
                               const targetNodeId = resolveTopicCrossLinkNodeId(t);
                               jumpToCanvasNode(targetNodeId);
+                              onCloseMobile?.();
                             }}
                             style={{
                               background: '#EEF2FF',
@@ -317,5 +335,6 @@ export const DomainSidebar: React.FC = () => {
         })}
       </div>
     </aside>
+  </>
   );
 };

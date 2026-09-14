@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   BookOpen,
   Zap,
   BarChart2,
   Sparkles,
   ArrowLeft,
-  GraduationCap
+  GraduationCap,
+  Menu,
+  Layers
 } from 'lucide-react';
 import { useInterviewStore } from '../../store/useInterviewStore.js';
 import { DomainSidebar } from './DomainSidebar.js';
@@ -19,6 +21,7 @@ interface InterviewLabViewProps {
 }
 
 export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanvas }) => {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const {
     activeTab,
     setActiveTab,
@@ -36,37 +39,20 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
   }, [fetchDomains, fetchTopics, fetchGapMap, selectedDomainId]);
 
   return (
-    <div className="interview-lab-view" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      width: '100vw',
-      background: '#FFFFFF',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-      overflow: 'hidden'
-    }}>
+    <div className="interview-lab-view">
       {/* 1. Top Navigation Bar */}
-      <header style={{
-        height: '50px',
-        borderBottom: '1px solid #E5E7EB',
-        background: '#FFFFFF',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 16px',
-        flexShrink: 0,
-        zIndex: 10
-      }}>
+      <header className="interview-lab-header">
         {/* Left: Brand & Back to Canvas */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="interview-header-left">
           {onBackToCanvas && (
             <button
               onClick={onBackToCanvas}
+              className="nut-quay-lai-canvas"
               style={{
                 background: '#F3F4F6',
                 border: '1px solid #D1D5DB',
                 borderRadius: '6px',
-                padding: '5px 10px',
+                padding: '6px 10px',
                 fontSize: '11.5px',
                 fontWeight: 700,
                 color: '#374151',
@@ -77,8 +63,19 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
               }}
               title="Quay lại Sơ đồ Kiến trúc Hệ thống"
             >
-              <ArrowLeft size={13} />
-              <span>Sơ đồ Kiến trúc</span>
+              <ArrowLeft size={14} />
+              <span>Canvas</span>
+            </button>
+          )}
+
+          {activeTab !== 'gap_map' && (
+            <button
+              className="nut-mo-sidebar-mobile"
+              onClick={() => setIsMobileSidebarOpen(true)}
+              title="Mở danh sách 29 Domain và các Topic"
+            >
+              <Menu size={14} />
+              <span>Domains</span>
             </button>
           )}
 
@@ -91,15 +88,16 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
               borderRadius: '6px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              flexShrink: 0
             }}>
               <GraduationCap size={15} />
             </div>
             <div>
-              <span style={{ fontSize: '13px', fontWeight: 800, color: '#111827' }}>
-                Phòng Luyện Phản Xạ Phỏng Vấn (Interview Lab)
+              <span className="tieu-de-interview-full" style={{ fontSize: '13px', fontWeight: 800, color: '#111827' }}>
+                Phòng Luyện Phản Xạ Phỏng Vấn
               </span>
-              <span style={{
+              <span className="badge-fullstack" style={{
                 marginLeft: '8px',
                 background: '#EEF2FF',
                 color: '#4F46E5',
@@ -115,75 +113,52 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
         </div>
 
         {/* Center: 3 Hub Tabs */}
-        <div style={{ display: 'flex', background: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
+        <div className="interview-header-center">
           <button
-            onClick={() => setActiveTab('reader')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: activeTab === 'reader' ? 800 : 600,
-              background: activeTab === 'reader' ? '#FFFFFF' : 'transparent',
-              color: activeTab === 'reader' ? '#4F46E5' : '#64748B',
-              border: 'none',
-              boxShadow: activeTab === 'reader' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              cursor: 'pointer'
+            onClick={() => {
+              setActiveTab('reader');
+              setIsMobileSidebarOpen(false);
             }}
+            className={`nut-tab-hub ${activeTab === 'reader' ? 'active' : 'inactive'}`}
+            title="Sổ Tay Phản Xạ (Cheatsheet)"
           >
             <BookOpen size={13} />
-            <span>Sổ Tay Phản Xạ (Cheatsheet)</span>
+            <span className="tab-label-full">Sổ Tay Phản Xạ (Cheatsheet)</span>
+            <span className="tab-label-short">Cheatsheet</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('drill')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: activeTab === 'drill' ? 800 : 600,
-              background: activeTab === 'drill' ? '#FFFFFF' : 'transparent',
-              color: activeTab === 'drill' ? '#4F46E5' : '#64748B',
-              border: 'none',
-              boxShadow: activeTab === 'drill' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              cursor: 'pointer'
+            onClick={() => {
+              setActiveTab('drill');
+              setIsMobileSidebarOpen(false);
             }}
+            className={`nut-tab-hub ${activeTab === 'drill' ? 'active' : 'inactive'}`}
+            title="Flashcard & Luyện Phản Xạ"
           >
             <Zap size={13} />
-            <span>Flashcard & Luyện Phản Xạ</span>
+            <span className="tab-label-full">Flashcard & Luyện Phản Xạ</span>
+            <span className="tab-label-short">Flashcard</span>
           </button>
 
           <button
-            onClick={() => setActiveTab('gap_map')}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '6px',
-              fontSize: '12px',
-              fontWeight: activeTab === 'gap_map' ? 800 : 600,
-              background: activeTab === 'gap_map' ? '#FFFFFF' : 'transparent',
-              color: activeTab === 'gap_map' ? '#4F46E5' : '#64748B',
-              border: 'none',
-              boxShadow: activeTab === 'gap_map' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              cursor: 'pointer'
+            onClick={() => {
+              setActiveTab('gap_map');
+              setIsMobileSidebarOpen(false);
             }}
+            className={`nut-tab-hub ${activeTab === 'gap_map' ? 'active' : 'inactive'}`}
+            title="Gap Map & 30-Day Routine"
           >
             <BarChart2 size={13} />
-            <span>Gap Map & 30-Day Routine</span>
+            <span className="tab-label-full">Gap Map & 30-Day Routine</span>
+            <span className="tab-label-short">Gap Map</span>
           </button>
         </div>
 
         {/* Right: AI Generate Button */}
-        <div>
+        <div className="interview-header-right">
           <button
             onClick={() => toggleGenerateModal(true)}
+            className="nut-sinh-ai-header"
             style={{
               background: 'linear-gradient(135deg, #4F46E5 0%, #6366F1 100%)',
               color: '#FFFFFF',
@@ -198,22 +173,30 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
               gap: '5px',
               boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)'
             }}
+            title="Sinh câu hỏi và cheatsheet bằng AI"
           >
             <Sparkles size={13} />
-            <span>Sinh Topic Bằng AI</span>
+            <span>Sinh AI</span>
           </button>
         </div>
       </header>
 
       {/* 2. Main Content Body */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
         {activeTab === 'gap_map' ? (
           <GapMapDashboard />
         ) : (
           <>
-            <DomainSidebar />
-            {activeTab === 'reader' && <CheatsheetReader />}
-            {activeTab === 'drill' && <FlashcardDrill />}
+            <DomainSidebar
+              isMobileOpen={isMobileSidebarOpen}
+              onCloseMobile={() => setIsMobileSidebarOpen(false)}
+            />
+            {activeTab === 'reader' && (
+              <CheatsheetReader onOpenDomains={() => setIsMobileSidebarOpen(true)} />
+            )}
+            {activeTab === 'drill' && (
+              <FlashcardDrill onOpenDomains={() => setIsMobileSidebarOpen(true)} />
+            )}
           </>
         )}
       </div>

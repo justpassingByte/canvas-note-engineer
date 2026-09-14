@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import Database from 'better-sqlite3';
+import { TursoKnowledgeClient } from './tursoClient.js';
 import { GraphData, NodeEntity, EdgeEntity } from '../types/graphTypes.js';
 import { ProviderConfig } from '../config/providerConfig.js';
 import {
@@ -43,8 +44,17 @@ function getDefaultDbPath(): string {
 export class SQLiteKnowledgeClient {
   private db: Database.Database;
   private dbPath: string;
+  private tursoClient: TursoKnowledgeClient | null = null;
 
   constructor(customPath?: string) {
+    if (process.env.TURSO_DATABASE_URL) {
+      console.log(`[Database Adapter] Phát hiện TURSO_DATABASE_URL. Kết nối Turso LibSQL Cloud.`);
+      this.tursoClient = new TursoKnowledgeClient(
+        process.env.TURSO_DATABASE_URL,
+        process.env.TURSO_AUTH_TOKEN
+      );
+    }
+
     this.dbPath = customPath || getDefaultDbPath();
     const dir = path.dirname(this.dbPath);
     if (!fs.existsSync(dir)) {
@@ -588,6 +598,96 @@ export class SQLiteKnowledgeClient {
       must_learn_count: mustLearnCount,
       ready_percentage: readyPercentage
     };
+  }
+
+  // ==========================================
+  // DUAL-ENGINE ASYNC APIS (TURSO CLOUD + LOCAL SQLITE)
+  // ==========================================
+  public isTursoEnabled(): boolean {
+    return this.tursoClient !== null;
+  }
+
+  public async getCurrentGraphAsync(): Promise<GraphData | null> {
+    if (this.tursoClient) return this.tursoClient.getCurrentGraph();
+    return this.getCurrentGraph();
+  }
+
+  public async getGraphAsync(id: string): Promise<GraphData | null> {
+    if (this.tursoClient) return this.tursoClient.getGraph(id);
+    return this.getGraph(id);
+  }
+
+  public async saveGraphAsync(graph: GraphData): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.saveGraph(graph);
+    }
+    this.saveGraph(graph);
+  }
+
+  public async getAllProviderConfigsAsync(): Promise<ProviderConfig[]> {
+    if (this.tursoClient) return this.tursoClient.getAllProviderConfigs();
+    return this.getAllProviderConfigs();
+  }
+
+  public async getActiveProviderConfigAsync(): Promise<ProviderConfig | null> {
+    if (this.tursoClient) return this.tursoClient.getActiveProviderConfig();
+    return this.getActiveProviderConfig();
+  }
+
+  public async saveProviderConfigAsync(config: ProviderConfig): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.saveProviderConfig(config);
+    }
+    this.saveProviderConfig(config);
+  }
+
+  public async setActiveProviderConfigAsync(id: string): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.setActiveProviderConfig(id);
+    }
+    this.setActiveProviderConfig(id);
+  }
+
+  public async deleteProviderConfigAsync(id: string): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.deleteProviderConfig(id);
+    }
+    this.deleteProviderConfig(id);
+  }
+
+  public async getAllInterviewTopicsAsync(domainId?: string): Promise<Array<InterviewTopicEntity & { progress?: UserTopicProgress }>> {
+    if (this.tursoClient) return this.tursoClient.getAllInterviewTopics(domainId);
+    return this.getAllInterviewTopics(domainId);
+  }
+
+  public async getInterviewTopicAsync(id: string): Promise<(InterviewTopicEntity & { progress?: UserTopicProgress }) | null> {
+    if (this.tursoClient) return this.tursoClient.getInterviewTopic(id);
+    return this.getInterviewTopic(id);
+  }
+
+  public async saveInterviewTopicAsync(topic: InterviewTopicEntity): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.saveInterviewTopic(topic);
+    }
+    this.saveInterviewTopic(topic);
+  }
+
+  public async updateUserTopicProgressAsync(progress: {
+    topic_id: string;
+    gap_status?: GapStatus;
+    reviewed_count?: number;
+    last_reviewed_at?: string;
+    notes?: string;
+  }): Promise<void> {
+    if (this.tursoClient) {
+      await this.tursoClient.updateUserTopicProgress(progress);
+    }
+    this.updateUserTopicProgress(progress);
+  }
+
+  public async getGapMapSummaryAsync(): Promise<GapMapSummary> {
+    if (this.tursoClient) return this.tursoClient.getGapMapSummary();
+    return this.getGapMapSummary();
   }
 }
 

@@ -18,14 +18,19 @@ import {
   AlertTriangle,
   Flame,
   Check,
-  Compass
+  Compass,
+  Target
 } from 'lucide-react';
 import { useInterviewStore } from '../../store/useInterviewStore.js';
 import { useGraphStore } from '../../store/useGraphStore.js';
 import { GapStatus } from '../../types/interviewTypes.js';
 import { resolveTopicCrossLinkNodeId, jumpToCanvasNode, getNodeMeta } from '../../utils/canvasNavigator.js';
 
-export const CheatsheetReader: React.FC = () => {
+interface CheatsheetReaderProps {
+  onOpenDomains?: () => void;
+}
+
+export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomains }) => {
   const {
     topics,
     selectedTopicId,
@@ -96,167 +101,129 @@ export const CheatsheetReader: React.FC = () => {
       color: '#1F2937',
       lineHeight: 1.6
     }}>
-      {/* 1. Header & Target Intent */}
-      <div style={{ borderBottom: '1px solid #E5E7EB', paddingBottom: '16px', marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 700, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      {/* 1. Header Area: 2-Row Layout (Meta Row + Title & Status Row) */}
+      <div className="cheatsheet-hero-header">
+        {/* Row 1: Domain Meta & Canvas Cross-Link */}
+        <div className="cheatsheet-hero-meta">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="cheatsheet-domain-tag">
               {topic.domain_title}
-            </div>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: '4px 0 0 0' }}>
-              {topic.title}
-            </h1>
+            </span>
+            {onOpenDomains && (
+              <button
+                className="nut-doi-domain-mini"
+                onClick={onOpenDomains}
+                title="Mở danh sách 29 Domain để đổi chủ đề"
+              >
+                <span>Đổi Domain ▾</span>
+              </button>
+            )}
           </div>
 
-          {/* Actions: Gap Status & Cross-link */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {(() => {
-              const targetNodeId = resolveTopicCrossLinkNodeId(topic);
-              const meta = getNodeMeta(targetNodeId);
+          {(() => {
+            const targetNodeId = resolveTopicCrossLinkNodeId(topic);
+            const meta = getNodeMeta(targetNodeId);
+            return (
+              <button
+                className="nut-cross-link-canvas-mini"
+                onClick={() => {
+                  selectNode(targetNodeId);
+                  jumpToCanvasNode(targetNodeId);
+                }}
+                title={`Mở và phóng to node "${meta.title}" trên Canvas`}
+              >
+                <Compass size={13} />
+                <span>Sơ đồ: {meta.title}</span>
+                <ExternalLink size={11} style={{ opacity: 0.8 }} />
+              </button>
+            );
+          })()}
+        </div>
+
+        {/* Row 2: Title H1 & Gap Status Segmented Bar */}
+        <div className="cheatsheet-title-row">
+          <h1 className="cheatsheet-title-h1">
+            {topic.title}
+          </h1>
+
+          {/* Gap Status Linear/Apple Segmented Pill Bar */}
+          <div className="gap-status-segmented-bar">
+            {[
+              { status: 'MUST_LEARN' as GapStatus, label: 'Cần học', color: '#E11D48', dotBg: '#F43F5E', border: 'rgba(244, 63, 94, 0.35)' },
+              { status: 'WEAK' as GapStatus, label: 'Yếu', color: '#D97706', dotBg: '#F59E0B', border: 'rgba(245, 158, 11, 0.35)' },
+              { status: 'KNOW' as GapStatus, label: 'Đã biết', color: '#2563EB', dotBg: '#3B82F6', border: 'rgba(59, 130, 246, 0.35)' },
+              { status: 'READY' as GapStatus, label: 'Sẵn sàng', color: '#059669', dotBg: '#10B981', border: 'rgba(16, 185, 129, 0.4)' }
+            ].map(({ status, label, color, dotBg, border }) => {
+              const isCurrent = currentStatus === status;
               return (
                 <button
-                  onClick={() => {
-                    selectNode(targetNodeId);
-                    jumpToCanvasNode(targetNodeId);
-                  }}
+                  key={status}
+                  onClick={() => updateTopicProgress(topic.id, status)}
+                  className={`nut-trang-thai-pill ${isCurrent ? 'active' : ''}`}
                   style={{
-                    background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '7px',
-                    padding: '6px 12px',
-                    fontSize: '11.5px',
-                    fontWeight: 700,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
-                    transition: 'all 0.15s ease'
+                    color: isCurrent ? color : '#64748B',
+                    borderColor: isCurrent ? border : 'transparent'
                   }}
-                  title={`Mở và phóng to node "${meta.title}" trên Canvas`}
+                  title={`Đánh dấu tiến độ: ${label}`}
                 >
-                  <Compass size={13} />
-                  <span>Sơ đồ: {meta.title}</span>
-                  <ExternalLink size={11} style={{ opacity: 0.8 }} />
+                  <span
+                    className="pill-dot"
+                    style={{
+                      backgroundColor: dotBg,
+                      boxShadow: isCurrent ? `0 0 7px ${dotBg}` : 'none'
+                    }}
+                  />
+                  <span>{label}</span>
                 </button>
               );
-            })()}
+            })}
+          </div>
+        </div>
+      </div>
 
-            {/* Gap Status Pill Selector */}
-            <div style={{ display: 'flex', background: '#F3F4F6', padding: '3px', borderRadius: '7px', border: '1px solid #E5E7EB' }}>
-              {(['MUST_LEARN', 'WEAK', 'KNOW', 'READY'] as GapStatus[]).map((status) => {
-                const isCurrent = currentStatus === status;
-                const label =
-                  status === 'MUST_LEARN' ? '🔴 Cần học' :
-                  status === 'WEAK' ? '🟠 Yếu' :
-                  status === 'KNOW' ? '🟡 Đã biết' : '🟢 Sẵn sàng';
+      {/* 2. Bento Grid: Intent + Trigger Keywords (Col 1) & 5-Second Recall (Col 2) */}
+      <div className="bento-intro-grid">
+        {/* Col 1: Target Intent & Trigger Keywords */}
+        <div className="bento-card bento-card-intent">
+          <div className="bento-intent-label">
+            <Target size={14} color="#2563EB" />
+            <span>INTERVIEWER ĐANG TEST GÌ?</span>
+          </div>
+          <p className="bento-intent-text">
+            {topic.target_intent}
+          </p>
 
-                const bg =
-                  status === 'MUST_LEARN' ? '#FEE2E2' :
-                  status === 'WEAK' ? '#FFEDD5' :
-                  status === 'KNOW' ? '#FEF3C7' : '#D1FAE5';
-
-                const textCol =
-                  status === 'MUST_LEARN' ? '#991B1B' :
-                  status === 'WEAK' ? '#9A3412' :
-                  status === 'KNOW' ? '#92400E' : '#065F46';
-
-                return (
-                  <button
-                    key={status}
-                    onClick={() => updateTopicProgress(topic.id, status)}
-                    style={{
-                      background: isCurrent ? bg : 'transparent',
-                      color: isCurrent ? textCol : '#6B7280',
-                      border: isCurrent ? '1px solid currentColor' : 'none',
-                      borderRadius: '5px',
-                      padding: '4px 8px',
-                      fontSize: '11px',
-                      fontWeight: isCurrent ? 800 : 500,
-                      cursor: 'pointer',
-                      transition: 'all 0.1s ease'
-                    }}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
+          {/* Trigger Keywords Flow */}
+          <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #E2E8F0' }}>
+            <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#6366F1', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Zap size={12} />
+              <span>CHUỖI TỪ KHÓA BẬT PHẢN XẠ:</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              {topic.trigger_keywords.map((kw, idx) => (
+                <React.Fragment key={idx}>
+                  <span className="chip-trigger-kw">
+                    {kw}
+                  </span>
+                  {idx < topic.trigger_keywords.length - 1 && (
+                    <span style={{ color: '#818CF8', fontWeight: 800, fontSize: '11px' }}>→</span>
+                  )}
+                </React.Fragment>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Target Intent Banner */}
-        <div style={{
-          marginTop: '12px',
-          background: '#F8FAFC',
-          borderLeft: '3px solid #3B82F6',
-          padding: '8px 12px',
-          borderRadius: '0 6px 6px 0',
-          fontSize: '12.5px',
-          color: '#1E293B',
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: '8px'
-        }}>
-          <span style={{ fontWeight: 800, color: '#2563EB', whiteSpace: 'nowrap' }}>🎯 INTERVIEWER ĐANG TEST GÌ:</span>
-          <span>{topic.target_intent}</span>
+        {/* Col 2: 5-Second Recall Card */}
+        <div className="bento-card bento-card-recall">
+          <div className="bento-recall-label">
+            <Brain size={14} color="#A5B4FC" />
+            <span>5-SECOND RECALL (MÔ HÌNH NẰM LÒNG)</span>
+          </div>
+          <p className="bento-recall-text">
+            {topic.recall_5s}
+          </p>
         </div>
-      </div>
-
-      {/* 2. Trigger Keywords Flow */}
-      <div style={{ marginBottom: '20px' }}>
-        <div style={{ fontSize: '11.5px', fontWeight: 800, color: '#6366F1', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Zap size={14} />
-          <span>TRIGGER KEYWORDS (CHUỖI BẬT PHẢN XẠ)</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          {topic.trigger_keywords.map((kw, idx) => (
-            <React.Fragment key={idx}>
-              <span style={{
-                background: '#EEF2FF',
-                color: '#3730A3',
-                border: '1px solid #C7D2FE',
-                borderRadius: '6px',
-                padding: '4px 10px',
-                fontSize: '12px',
-                fontWeight: 700,
-                fontFamily: "'JetBrains Mono', monospace"
-              }}>
-                {kw}
-              </span>
-              {idx < topic.trigger_keywords.length - 1 && (
-                <span style={{ color: '#818CF8', fontWeight: 800 }}>→</span>
-              )}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
-      {/* 3. 5-Second Recall Card */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1E1B4B 0%, #312E81 100%)',
-        color: '#FAF5FF',
-        borderRadius: '8px',
-        padding: '16px 18px',
-        marginBottom: '24px',
-        boxShadow: '0 4px 12px rgba(49, 46, 129, 0.15)',
-        border: '1px solid rgba(199, 210, 254, 0.2)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', fontWeight: 800, color: '#A5B4FC', letterSpacing: '0.05em' }}>
-          <Brain size={15} />
-          <span>5-SECOND RECALL (MÔ HÌNH TƯ DUY NẰM LÒNG)</span>
-        </div>
-        <p style={{
-          fontSize: '14px',
-          fontWeight: 600,
-          lineHeight: 1.55,
-          marginTop: '6px',
-          marginBottom: 0,
-          color: '#FFFFFF'
-        }}>
-          {topic.recall_5s}
-        </p>
       </div>
 
       {/* 4. Interview Spoken Answer & Speech Practice Timer */}
@@ -507,6 +474,7 @@ export const CheatsheetReader: React.FC = () => {
             {topic.why_ladder.map((item, idx) => (
               <div
                 key={idx}
+                className="bac-thang-why-item"
                 style={{
                   border: '1px solid #E5E7EB',
                   borderRadius: '6px',
@@ -515,7 +483,7 @@ export const CheatsheetReader: React.FC = () => {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '8px',
-                  marginLeft: `${idx * 16}px`,
+                  ['--why-depth' as any]: idx,
                   borderLeft: '3px solid #D97706'
                 }}
               >

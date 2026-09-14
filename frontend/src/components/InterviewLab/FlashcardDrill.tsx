@@ -21,7 +21,11 @@ import { useGraphStore } from '../../store/useGraphStore.js';
 import { GapStatus } from '../../types/interviewTypes.js';
 import { resolveTopicCrossLinkNodeId, jumpToCanvasNode, getNodeMeta } from '../../utils/canvasNavigator.js';
 
-export const FlashcardDrill: React.FC = () => {
+interface FlashcardDrillProps {
+  onOpenDomains?: () => void;
+}
+
+export const FlashcardDrill: React.FC<FlashcardDrillProps> = ({ onOpenDomains }) => {
   const {
     topics,
     domains,
@@ -115,8 +119,8 @@ export const FlashcardDrill: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '40px',
-        color: '#6B7280'
+        color: '#6B7280',
+        padding: '32px'
       }}>
         <AlertCircle size={48} color="#9CA3AF" style={{ marginBottom: '16px' }} />
         <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#374151' }}>
@@ -175,7 +179,7 @@ export const FlashcardDrill: React.FC = () => {
         marginBottom: '16px'
       }}>
         {/* Left: Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <Filter size={14} color="#6B7280" />
           {/* Domain filter */}
           <select
@@ -189,7 +193,8 @@ export const FlashcardDrill: React.FC = () => {
               fontSize: '12px',
               fontWeight: 600,
               color: '#374151',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              maxWidth: '180px'
             }}
           >
             <option value="ALL">Tất cả Domain ({topics.length} topics)</option>
@@ -210,7 +215,8 @@ export const FlashcardDrill: React.FC = () => {
               fontSize: '12px',
               fontWeight: 600,
               color: '#374151',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              maxWidth: '140px'
             }}
           >
             <option value="ALL">Tất cả mức độ nhớ</option>
@@ -265,23 +271,23 @@ export const FlashcardDrill: React.FC = () => {
 
       {/* 2. Main 3D Flip Card Container */}
       <div
+        className="the-flashcard-chinh"
         onClick={flipCard}
         style={{
-          flex: 1,
-          minHeight: '380px',
-          background: isCardFlipped ? '#FFFFFF' : '#FFFFFF',
+          background: '#FFFFFF',
           border: isCardFlipped ? '2px solid #4F46E5' : '1.5px solid #E2E8F0',
           borderRadius: '12px',
           boxShadow: isCardFlipped
             ? '0 10px 25px -5px rgba(79, 70, 229, 0.15)'
             : '0 4px 12px rgba(0, 0, 0, 0.05)',
           cursor: 'pointer',
-          padding: '28px 36px',
+          padding: '24px 28px',
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          gap: '16px',
           transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          position: 'relative'
+          position: 'relative',
+          marginBottom: '16px'
         }}
       >
         {/* Card Header */}
@@ -397,9 +403,9 @@ export const FlashcardDrill: React.FC = () => {
           )}
         </div>
 
-        {/* Card Footer: Status info & Canvas Quick-Jump */}
-        <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#64748B', flexWrap: 'wrap', gap: '8px' }}>
-          <div>
+        {/* Card Footer: Recall Status & Cross-link to Canvas */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', borderTop: '1px solid #F1F5F9', paddingTop: '12px' }}>
+          <div style={{ fontSize: '11px', color: '#64748B' }}>
             Độ thành thạo hiện tại: <strong>
               {currentStatus === 'READY' ? '🟢 Sẵn sàng' :
                currentStatus === 'KNOW' ? '🟡 Đã biết' :
@@ -450,7 +456,7 @@ export const FlashcardDrill: React.FC = () => {
         flexWrap: 'wrap',
         gap: '10px'
       }}>
-        {/* Navigation buttons & Canvas Jump */}
+        {/* Navigation buttons */}
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             onClick={prevDrillCard}
@@ -459,7 +465,7 @@ export const FlashcardDrill: React.FC = () => {
               background: '#FFFFFF',
               border: '1px solid #D1D5DB',
               borderRadius: '6px',
-              padding: '8px 12px',
+              padding: '8px 14px',
               fontSize: '12px',
               fontWeight: 700,
               color: currentIndex === 0 ? '#9CA3AF' : '#374151',
@@ -480,7 +486,7 @@ export const FlashcardDrill: React.FC = () => {
               background: '#FFFFFF',
               border: '1px solid #D1D5DB',
               borderRadius: '6px',
-              padding: '8px 12px',
+              padding: '8px 14px',
               fontSize: '12px',
               fontWeight: 700,
               color: currentIndex >= deck.length - 1 ? '#9CA3AF' : '#374151',
@@ -493,134 +499,54 @@ export const FlashcardDrill: React.FC = () => {
             <span>Sau [→]</span>
             <ArrowRight size={14} />
           </button>
-
-          {(() => {
-            const targetNodeId = resolveTopicCrossLinkNodeId(currentCard);
-            const meta = getNodeMeta(targetNodeId);
-            return (
-              <button
-                onClick={() => {
-                  useGraphStore.getState().selectNode(targetNodeId);
-                  jumpToCanvasNode(targetNodeId);
-                }}
-                style={{
-                  background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '8px 12px',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)',
-                  marginLeft: '4px'
-                }}
-                title={`Chưa hiểu câu hỏi này? Bấm để chuyển sang Canvas xem cấu trúc node "${meta.title}" và mở Drawer giải thích`}
-              >
-                <Compass size={13} />
-                <span>Chưa hiểu? Xem Sơ đồ</span>
-                <ExternalLink size={10} style={{ opacity: 0.8 }} />
-              </button>
-            );
-          })()}
         </div>
 
         {/* 4 Manual Rating Buttons */}
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button
-            onClick={() => {
-              updateTopicProgress(currentCard.id, 'MUST_LEARN');
-              nextDrillCard();
-            }}
-            style={{
-              background: '#FEE2E2',
-              color: '#991B1B',
-              border: '1px solid #FCA5A5',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '11.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Nhấn phím 1"
-          >
-            <span>🔴 1. Chưa Nhớ</span>
-          </button>
-
-          <button
-            onClick={() => {
-              updateTopicProgress(currentCard.id, 'WEAK');
-              nextDrillCard();
-            }}
-            style={{
-              background: '#FFEDD5',
-              color: '#9A3412',
-              border: '1px solid #FDBA74',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '11.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Nhấn phím 2"
-          >
-            <span>🟠 2. Yếu / Khó</span>
-          </button>
-
-          <button
-            onClick={() => {
-              updateTopicProgress(currentCard.id, 'KNOW');
-              nextDrillCard();
-            }}
-            style={{
-              background: '#FEF3C7',
-              color: '#92400E',
-              border: '1px solid #FCD34D',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '11.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Nhấn phím 3"
-          >
-            <span>🟡 3. Đã Biết</span>
-          </button>
-
-          <button
-            onClick={() => {
-              updateTopicProgress(currentCard.id, 'READY');
-              nextDrillCard();
-            }}
-            style={{
-              background: '#DEF7EC',
-              color: '#03543F',
-              border: '1px solid #86EFAC',
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '11.5px',
-              fontWeight: 800,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            title="Nhấn phím 4"
-          >
-            <span>🟢 4. Sẵn Sàng</span>
-          </button>
+        <div className="nhom-nut-danh-gia-flashcard" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: '8px' }}>
+          {[
+            { status: 'MUST_LEARN' as GapStatus, num: '1', label: 'Chưa nhớ', dotBg: '#F43F5E', color: '#9F1239', bg: '#FFF1F2', border: '#FECDD3' },
+            { status: 'WEAK' as GapStatus, num: '2', label: 'Yếu / Khó', dotBg: '#F59E0B', color: '#92400E', bg: '#FFFBEB', border: '#FDE68A' },
+            { status: 'KNOW' as GapStatus, num: '3', label: 'Đã biết', dotBg: '#3B82F6', color: '#1E40AF', bg: '#EFF6FF', border: '#BFDBFE' },
+            { status: 'READY' as GapStatus, num: '4', label: 'Sẵn sàng', dotBg: '#10B981', color: '#065F46', bg: '#ECFDF5', border: '#A7F3D0' }
+          ].map(({ status, num, label, dotBg, color, bg, border }) => (
+            <button
+              key={status}
+              onClick={() => {
+                updateTopicProgress(currentCard.id, status);
+                nextDrillCard();
+              }}
+              className="nut-danh-gia-card"
+              style={{
+                background: bg,
+                color: color,
+                border: `1px solid ${border}`,
+                borderRadius: '8px',
+                padding: '8px 12px',
+                fontSize: '11.5px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.15s cubic-bezier(0.16, 1, 0.3, 1)'
+              }}
+              title={`Nhấn phím ${num}`}
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: dotBg,
+                  boxShadow: `0 0 5px ${dotBg}`,
+                  flexShrink: 0
+                }}
+              />
+              <span>{num}. {label}</span>
+            </button>
+          ))}
         </div>
       </div>
     </div>

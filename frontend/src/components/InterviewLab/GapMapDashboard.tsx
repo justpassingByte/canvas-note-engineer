@@ -67,7 +67,7 @@ export const GapMapDashboard: React.FC = () => {
         </h1>
 
         {/* 4 Stat Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+        <div className="stat-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
           {/* Card 1: Readiness Score */}
           <div style={{
             background: 'linear-gradient(135deg, #1E1B4B 0%, #3730A3 100%)',
@@ -173,9 +173,9 @@ export const GapMapDashboard: React.FC = () => {
           <span style={{ fontSize: '12px', color: '#64748B' }}>Bấm vào domain để xem chi tiết các topic</span>
         </div>
 
-        <div style={{
+        <div className="matrix-domains-grid" style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: '12px'
         }}>
           {domains.map((d) => {

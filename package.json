@@ -21,7 +21,8 @@
     "test:unit": "vitest run frontend/src/utils/__tests__",
     "test:integration": "vitest run backend/src/__tests__",
     "test:e2e": "playwright test",
-    "test:all": "vitest run && playwright test"
+    "test:all": "vitest run && playwright test",
+    "seed:turso": "tsx backend/src/scripts/seedTurso.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -30,5 +31,8 @@
     "concurrently": "^9.1.2",
     "playwright": "^1.62.1",
     "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0"
   }
 }

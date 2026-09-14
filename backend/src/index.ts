@@ -488,17 +488,30 @@ const frontendCandidates = [
 const FRONTEND_DIST = frontendCandidates.find(p => fs.existsSync(p));
 if (FRONTEND_DIST) {
   console.log(`[DSH Plugin Backend] Đang phục vụ frontend từ: ${FRONTEND_DIST}`);
-  app.use(express.static(FRONTEND_DIST));
+  app.use(express.static(FRONTEND_DIST, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    }
+  }));
   app.get('*', (req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(path.join(FRONTEND_DIST, 'index.html'));
   });
 }
 
 export { app };
+export default app;
 
-if (process.env.NODE_ENV !== 'test' && !process.env.VITEST) {
+if (process.env.NODE_ENV !== 'test' && !process.env.VITEST && !process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`[DSH Plugin Backend] Máy chủ đang chạy tại http://localhost:${PORT}`);
-    console.log(`[DSH Plugin Backend] SQLite Cache: Sẵn sàng cho 0-token caching.`);
+    console.log(`[DSH Plugin Backend] Database: ${sqliteClient.isTursoEnabled() ? 'Turso LibSQL Cloud' : 'SQLite WAL Local'}`);
   });
 }
+

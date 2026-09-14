@@ -78,7 +78,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   revealedRecallNodes: [],
   searchQuery: '',
   isWhatBreaksActive: false,
-  isDrawerOpen: true,
+  isDrawerOpen: typeof window !== 'undefined' ? window.innerWidth > 768 : true,
   pan: { x: 0, y: 0 },
   zoom: 1.0,
   isLoading: false,

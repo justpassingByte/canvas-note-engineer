@@ -44,8 +44,8 @@ describe('Cluster Engine - Automated Architecture Topic Grouping (Clean Single-L
       createMockNode('node-tmdt', 'hop_kien_hang_domain', 700, 100) // isolated 1 node
     ];
 
-    // Mặc định minNodes = 2: chỉ nhóm có >= 2 node mới vẽ viền cụm
-    const clusters = computeClusters(nodes);
+    // Khi minNodes = 2: chỉ nhóm có >= 2 node mới vẽ viền cụm
+    const clusters = computeClusters(nodes, 2);
 
     expect(clusters.length).toBe(1);
     expect(clusters[0].id).toBe('cum-idempotency-app');

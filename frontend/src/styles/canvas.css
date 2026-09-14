@@ -553,3 +553,148 @@ svg.lop-nhan-duong-noi .nhom-nhan-svg {
   letter-spacing: 0.5px;
 }
 
+/* NÚT CHUYỂN INTERVIEW LAB NỔI TRÊN CANVAS (BOTTOM HUD PILL) */
+.nut-chuyen-interview-lab-wrap {
+  position: fixed;
+  bottom: 24px;
+  bottom: max(24px, env(safe-area-inset-bottom, 24px));
+  left: 50%;
+  transform: translateX(-50%);
+  transition: left 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, transform 0.2s ease;
+  z-index: 999;
+}
+
+.nut-chuyen-interview-lab-wrap.drawer-mo {
+  left: calc(50% - 260px);
+}
+
+.nut-chuyen-interview-lab {
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.42), 0 2px 6px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.nut-chuyen-interview-lab:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(79, 70, 229, 0.55), 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.badge-nut-chuyen {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   CANVAS & TOOLBAR MOBILE RESPONSIVE (<= 768px)
+   ========================================================================== */
+@media (max-width: 768px) {
+  .mat-giay-caro {
+    touch-action: none;
+  }
+
+  .thanh-cong-cu-noi {
+    top: 10px;
+    left: 10px;
+    max-width: calc(100vw - 20px);
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .chu-tieu-de-noi {
+    display: none;
+  }
+
+  .nhom-tieu-de-noi {
+    gap: 4px;
+  }
+
+  .nhan-dem-node {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  .nhom-zoom-noi {
+    padding: 1px 2px;
+    gap: 1px;
+  }
+
+  .nut-zoom-nho {
+    width: 22px;
+    height: 22px;
+  }
+
+  .nhan-phan-tram-zoom {
+    font-size: 10px;
+    min-width: 32px;
+    padding: 0 2px;
+  }
+
+  .o-tim-kiem-wrap {
+    padding: 2px 6px;
+  }
+
+  .o-tim-kiem-input {
+    width: 75px;
+    font-size: 10px;
+  }
+
+  .nut-thao-tac-noi span:not(.lucide) {
+    display: none;
+  }
+
+  .nut-thao-tac-noi {
+    padding: 5px 8px;
+  }
+
+  .nut-icon-phu {
+    width: 26px;
+    height: 26px;
+  }
+
+  .nut-chuyen-interview-lab-wrap {
+    top: auto;
+    bottom: 20px;
+    bottom: max(20px, env(safe-area-inset-bottom, 20px));
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+  }
+
+  /* Khi drawer mở trên mobile (<=768px), ẩn floating button để không đè nút đóng và không tràn ngoài màn hình */
+  .nut-chuyen-interview-lab-wrap.drawer-mo {
+    left: 50%;
+    right: auto;
+    bottom: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) scale(0.9);
+  }
+
+  .nut-chuyen-interview-lab {
+    padding: 9px 15px;
+    font-size: 12px;
+    gap: 6px;
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45);
+  }
+
+  .badge-nut-chuyen {
+    display: none;
+  }
+}
+
+

@@ -14,7 +14,8 @@ import {
   Maximize,
   FolderOpen,
   Settings,
-  GitBranch
+  GitBranch,
+  GraduationCap
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
 import { BrainstormRagModal } from '../RAG/BrainstormRagModal.js';
@@ -214,6 +215,23 @@ export const FloatingToolbar: React.FC = () => {
       >
         <FolderOpen className="lucide-icon-sm" color="#4F46E5" />
         <span>RAG Brainstorm</span>
+      </button>
+
+      {/* Nút Chuyển sang Phòng Luyện Phỏng Vấn (Luôn hiện diện trên Toolbar) */}
+      <button
+        className="nut-thao-tac-noi nut-toolbar-interview"
+        onClick={() => window.dispatchEvent(new CustomEvent('switch-to-interview', { detail: {} }))}
+        title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Fullstack 3 YoE - 99 đề tài / 29 domain)"
+        style={{
+          background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
+          color: '#FFFFFF',
+          borderColor: '#4338CA',
+          fontWeight: 800,
+          boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)'
+        }}
+      >
+        <GraduationCap className="lucide-icon-sm" color="#FFFFFF" />
+        <span>Interview Lab</span>
       </button>
 
       {/* Nút Cấu hình AI Provider / .env */}

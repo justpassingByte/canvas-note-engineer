@@ -3,6 +3,7 @@ import './styles/engineering-tokens.css';
 import './styles/canvas.css';
 import './styles/node.css';
 import './styles/drawer.css';
+import './styles/interview.css';
 
 import { SvgGridCanvas } from './components/Canvas/SvgGridCanvas.js';
 import { FieldNotesDrawer } from './components/Drawer/FieldNotesDrawer.js';
@@ -106,44 +107,16 @@ export const App: React.FC = () => {
 
   return (
     <main className="khong-gian-lam-viec" style={{ position: 'relative' }}>
-      {/* Floating Button chuyển sang Phòng Luyện Phỏng Vấn (Tự động dịch sang trái khi Drawer mở để không đè nút đóng) */}
-      <div style={{
-        position: 'fixed',
-        top: '16px',
-        right: isDrawerOpen ? '536px' : '16px',
-        transition: 'right 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
-        zIndex: 900
-      }}>
+      {/* Floating Button chuyển sang Phòng Luyện Phỏng Vấn (Tự động dịch sang trái hoặc ẩn trên mobile khi Drawer mở) */}
+      <div className={`nut-chuyen-interview-lab-wrap ${isDrawerOpen ? 'drawer-mo' : ''}`}>
         <button
           onClick={() => setAppMode('interview_lab')}
-          style={{
-            background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
-            color: '#FFFFFF',
-            border: '1px solid rgba(255, 255, 255, 0.25)',
-            borderRadius: '8px',
-            padding: '8px 14px',
-            fontSize: '12px',
-            fontWeight: 800,
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(79, 70, 229, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.15s ease'
-          }}
+          className="nut-chuyen-interview-lab"
           title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Fullstack 3 YoE - 99 Đề tài / 29 Domain)"
         >
           <GraduationCap size={16} />
-          <span>Luyện Phỏng Vấn (Interview Lab)</span>
-          <span style={{
-            background: 'rgba(255, 255, 255, 0.22)',
-            borderRadius: '999px',
-            padding: '2px 7px',
-            fontSize: '10.5px',
-            fontWeight: 800
-          }}>
-            99 đề tài
-          </span>
+          <span className="nhan-nut-chuyen">Luyện Phỏng Vấn (Interview Lab)</span>
+          <span className="badge-nut-chuyen">99 đề tài</span>
         </button>
       </div>
 
