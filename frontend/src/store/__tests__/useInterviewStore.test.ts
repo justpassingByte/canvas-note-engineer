@@ -11,6 +11,7 @@ const mockTopics: InterviewTopicEntity[] = [
     target_intent: 'Test mental model',
     recall_5s: 'Memory address equality',
     interview_answer: 'Sample answer',
+    deep_dive: 'Deep dive details for useCallback',
     layers: {
       l1_junior: 'Junior explanation',
       l2_middle: 'Middle explanation',
@@ -22,7 +23,8 @@ const mockTopics: InterviewTopicEntity[] = [
       when_use: 'Expensive props',
       when_not_use: 'Inline handlers',
       pros: ['Prevent re-render'],
-      cons: ['Extra memory']
+      cons: ['Extra memory'],
+      alternatives: ['useMemo']
     },
     common_traps: ['Over-optimizing'],
     follow_ups: []
@@ -35,6 +37,7 @@ const mockTopics: InterviewTopicEntity[] = [
     target_intent: 'Test Node concurrency model',
     recall_5s: 'libuv event loop phases',
     interview_answer: 'Sample answer 2',
+    deep_dive: 'Deep dive details for event loop',
     layers: {
       l1_junior: 'Junior explanation 2',
       l2_middle: 'Middle explanation 2',
@@ -46,7 +49,8 @@ const mockTopics: InterviewTopicEntity[] = [
       when_use: 'I/O heavy',
       when_not_use: 'CPU heavy',
       pros: ['High concurrency'],
-      cons: ['Single threaded']
+      cons: ['Single threaded'],
+      alternatives: ['Cluster module']
     },
     common_traps: ['Blocking main thread'],
     follow_ups: []
