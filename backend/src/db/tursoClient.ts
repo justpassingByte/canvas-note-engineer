@@ -430,4 +430,35 @@ export class TursoKnowledgeClient {
       ready_percentage: readyPercentage
     };
   }
+
+  public async cleanBoilerplateTopics(): Promise<number> {
+    await this.initSchema();
+    const badRows = await this.client.execute(`
+      SELECT id FROM interview_topics
+      WHERE recall_5s LIKE '%không nằm ở cú pháp sáo rỗng%'
+         OR practical_example LIKE '%handleProductionWorkload%'
+    `);
+
+    const badIds = badRows.rows.map(r => r.id as string);
+    if (badIds.length > 0) {
+      for (const id of badIds) {
+        await this.client.execute({
+          sql: 'DELETE FROM interview_user_progress WHERE topic_id = ?',
+          args: [id]
+        });
+        await this.client.execute({
+          sql: 'DELETE FROM interview_topics WHERE id = ?',
+          args: [id]
+        });
+      }
+    }
+
+    await this.client.execute(`
+      DELETE FROM interview_user_progress
+      WHERE topic_id NOT IN (SELECT id FROM interview_topics)
+    `);
+
+    return badIds.length;
+  }
 }
+

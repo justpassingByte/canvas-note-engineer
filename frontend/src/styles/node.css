@@ -8,7 +8,6 @@
   -webkit-user-select: none;
   touch-action: none;
   pointer-events: auto;
-  transition: transform 0.15s ease;
 }
 
 .cum-thuc-the.dang-keo-node {

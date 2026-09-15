@@ -467,7 +467,7 @@ svg.lop-nhan-duong-noi .nhom-nhan-svg {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
   cursor: pointer;
   user-select: none;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: box-shadow 0.15s ease;
   white-space: nowrap;
   z-index: 10;
 }

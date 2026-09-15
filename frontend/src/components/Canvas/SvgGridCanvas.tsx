@@ -49,6 +49,9 @@ export const SvgGridCanvas: React.FC = () => {
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   // Quản lý Touch Pan & Pinch Zoom trên Mobile
+  const isTouchActiveRef = useRef(false);
+  const touchDebounceTimerRef = useRef<number | null>(null);
+
   const touchPanRef = useRef<{
     startX: number;
     startY: number;
@@ -407,6 +410,7 @@ export const SvgGridCanvas: React.FC = () => {
 
   // Xử lý kéo rê chuột (Pan)
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isTouchActiveRef.current) return;
     // Đóng contextMenu nếu click ra ngoài
     if (contextMenu) setContextMenu(null);
     // Đóng inlinePrompt nếu click ra ngoài popup
@@ -464,6 +468,8 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (isTouchActiveRef.current) return;
+
     // 1. Kéo thả từng Node riêng lẻ
     if (nodeDragRef.current && graph) {
       const { nodeId, startMouseX, startMouseY, initialX, initialY } = nodeDragRef.current;
@@ -581,11 +587,18 @@ export const SvgGridCanvas: React.FC = () => {
   };
 
   const handleMouseUp = () => {
+    if (isTouchActiveRef.current) return;
     finalizeDrag();
   };
 
   // Quản lý Touch: Chạm 1 ngón vuốt để Pan, 2 ngón để Pinch Zoom, Kéo Node khi Long-press
   const handleTouchStart = (e: React.TouchEvent) => {
+    isTouchActiveRef.current = true;
+    if (touchDebounceTimerRef.current) {
+      clearTimeout(touchDebounceTimerRef.current);
+      touchDebounceTimerRef.current = null;
+    }
+
     // Đóng contextMenu nếu chạm ra ngoài
     if (contextMenu) setContextMenu(null);
     // Đóng inlinePrompt nếu chạm ra ngoài popup
@@ -734,6 +747,12 @@ export const SvgGridCanvas: React.FC = () => {
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (e.touches.length === 0) {
       finalizeDrag();
+      if (touchDebounceTimerRef.current) {
+        clearTimeout(touchDebounceTimerRef.current);
+      }
+      touchDebounceTimerRef.current = window.setTimeout(() => {
+        isTouchActiveRef.current = false;
+      }, 350);
     } else if (e.touches.length === 1) {
       // Khi nhấc 1 ngón tay sau khi pinch zoom: mượt mà chuyển về pan mà không giật màn hình
       touchPinchRef.current = null;

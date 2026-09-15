@@ -722,6 +722,13 @@ export class SQLiteKnowledgeClient {
     if (this.tursoClient) return this.tursoClient.getGapMapSummary();
     return this.getGapMapSummary();
   }
+
+  public async cleanBoilerplateTopicsAsync(): Promise<number> {
+    if (this.tursoClient) {
+      await this.tursoClient.cleanBoilerplateTopics();
+    }
+    return this.cleanBoilerplateTopics();
+  }
 }
 
 // Singleton client cho toàn bộ runtime backend

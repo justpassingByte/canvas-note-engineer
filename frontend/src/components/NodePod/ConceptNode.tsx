@@ -101,6 +101,7 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
   const wasJustTouchedRef = React.useRef(false);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (wasJustTouchedRef.current || isLongPressActiveRef.current) return;
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('.chan-the-thu-gon')) return;
     onNodeDragStart?.(e, node);
@@ -110,9 +111,14 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
     if (e.touches.length !== 1) return;
     if ((e.target as HTMLElement).closest('.chan-the-thu-gon')) return;
 
+    wasJustTouchedRef.current = true;
     const touch = e.touches[0];
     touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
     isLongPressActiveRef.current = false;
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
 
     // Hẹn giờ 280ms cho Long-press để kích hoạt kéo Node trên mobile
     longPressTimerRef.current = window.setTimeout(() => {
@@ -147,11 +153,6 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
 
     // Nếu là chạm nhanh Tap (chưa kích hoạt long-press drag): Xem Field Notes
     if (!isLongPressActiveRef.current && touchStartPosRef.current) {
-      wasJustTouchedRef.current = true;
-      setTimeout(() => {
-        wasJustTouchedRef.current = false;
-      }, 350);
-
       if (isMaskedInRecall) {
         revealRecallNode(node.id);
       } else {
@@ -161,6 +162,9 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
 
     touchStartPosRef.current = null;
     isLongPressActiveRef.current = false;
+    setTimeout(() => {
+      wasJustTouchedRef.current = false;
+    }, 400);
   };
 
   const handleNodeClick = () => {

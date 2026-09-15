@@ -100,8 +100,12 @@ async function main() {
     });
   }
 
-  // 4. Đẩy 99 Đề tài Phỏng vấn và Tiến độ lên Turso
-  console.log(`[Turso Seed] 4/4 Đang đồng bộ ${topics.length} đề tài phỏng vấn sang Turso Cloud...`);
+  // 4. Dọn sạch dữ liệu rỗng/template cũ và đồng bộ các đề tài phỏng vấn lên Turso
+  console.log('[Turso Seed] 4/5 Đang dọn dẹp các bản ghi boilerplate cũ trên Turso Cloud...');
+  await turso.execute("DELETE FROM interview_topics WHERE recall_5s LIKE '%không nằm ở cú pháp sáo rỗng%' OR practical_example LIKE '%handleProductionWorkload%'");
+  await turso.execute("DELETE FROM interview_user_progress WHERE topic_id NOT IN (SELECT id FROM interview_topics)");
+
+  console.log(`[Turso Seed] 5/5 Đang đồng bộ ${topics.length} đề tài phỏng vấn sang Turso Cloud...`);
   const batchStatements: any[] = [];
 
   for (const t of topics) {
