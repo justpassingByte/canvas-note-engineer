@@ -6,7 +6,10 @@ import { enrichHtmlWithTooltips } from '../../dictionary/technicalDictionary.js'
 
 interface ConceptNodeProps {
   node: NodeEntity;
-  onNodeDragStart?: (e: React.MouseEvent, node: NodeEntity) => void;
+  onNodeDragStart?: (
+    eOrCoords: React.MouseEvent | { clientX: number; clientY: number },
+    node: NodeEntity
+  ) => void;
   isDragging?: boolean;
 }
 
@@ -92,13 +95,76 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
   const hasChildren = totalDescendants > 0;
   const isCollapsed = node.is_collapsed || false;
 
+  const longPressTimerRef = React.useRef<number | null>(null);
+  const touchStartPosRef = React.useRef<{ x: number; y: number } | null>(null);
+  const isLongPressActiveRef = React.useRef(false);
+  const wasJustTouchedRef = React.useRef(false);
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if ((e.target as HTMLElement).closest('.chan-the-thu-gon')) return;
     onNodeDragStart?.(e, node);
   };
 
-  const handleNodeClick = (e: React.MouseEvent) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    if ((e.target as HTMLElement).closest('.chan-the-thu-gon')) return;
+
+    const touch = e.touches[0];
+    touchStartPosRef.current = { x: touch.clientX, y: touch.clientY };
+    isLongPressActiveRef.current = false;
+
+    // Hẹn giờ 280ms cho Long-press để kích hoạt kéo Node trên mobile
+    longPressTimerRef.current = window.setTimeout(() => {
+      isLongPressActiveRef.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (_) {}
+      }
+      onNodeDragStart?.({ clientX: touch.clientX, clientY: touch.clientY }, node);
+    }, 280);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPosRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartPosRef.current.x;
+    const dy = touch.clientY - touchStartPosRef.current.y;
+
+    // Nếu ngón tay dịch chuyển quá 8px trước khi đủ 280ms: hủy timer (người dùng đang vuốt)
+    if (!isLongPressActiveRef.current && Math.hypot(dx, dy) > 8) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    // Nếu là chạm nhanh Tap (chưa kích hoạt long-press drag): Xem Field Notes
+    if (!isLongPressActiveRef.current && touchStartPosRef.current) {
+      wasJustTouchedRef.current = true;
+      setTimeout(() => {
+        wasJustTouchedRef.current = false;
+      }, 350);
+
+      if (isMaskedInRecall) {
+        revealRecallNode(node.id);
+      } else {
+        selectNode(node.id);
+      }
+    }
+
+    touchStartPosRef.current = null;
+    isLongPressActiveRef.current = false;
+  };
+
+  const handleNodeClick = () => {
+    if (wasJustTouchedRef.current) return;
     if (isMaskedInRecall) {
       revealRecallNode(node.id);
       return;
@@ -167,8 +233,12 @@ export const ConceptNode: React.FC<ConceptNodeProps> = ({ node, onNodeDragStart,
       id={node.id}
       data-node-id={node.id}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       onClick={handleNodeClick}
-      title="Kéo chuột để di chuyển node | Click để mở sổ tay kỹ thuật"
+      title="Kéo chuột để di chuyển node | Chạm để xem Field Notes, Chạm giữ để di chuyển"
     >
       {/* Mini Stage Pill Badge khi kích hoạt Failure Cascade */}
       {cascadeStageInfo && (

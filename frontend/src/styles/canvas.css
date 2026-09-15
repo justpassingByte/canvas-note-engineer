@@ -8,6 +8,9 @@
   position: relative;
   overflow: hidden;
   display: flex;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* THANH CÔNG CỤ NỔI TRÊN MẶT GIẤY */

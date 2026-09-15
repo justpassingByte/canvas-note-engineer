@@ -48,6 +48,27 @@ export const SvgGridCanvas: React.FC = () => {
   const [isPanning, setIsPanning] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Quản lý Touch Pan & Pinch Zoom trên Mobile
+  const touchPanRef = useRef<{
+    startX: number;
+    startY: number;
+    initialPanX: number;
+    initialPanY: number;
+  } | null>(null);
+
+  const touchPinchRef = useRef<{
+    initialDist: number;
+    initialZoom: number;
+    initialPan: { x: number; y: number };
+    midX: number;
+    midY: number;
+  } | null>(null);
+
+  // Quản lý touch cho Cụm phân hệ
+  const clusterLongPressTimerRef = useRef<number | null>(null);
+  const clusterTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const isClusterLongPressActiveRef = useRef(false);
+
   // Inline Prompt Popup cho Agent
   const [inlinePrompt, setInlinePrompt] = useState<{
     type: 'cluster' | 'concept';
@@ -293,15 +314,20 @@ export const SvgGridCanvas: React.FC = () => {
     setPan({ x: newPanX, y: newPanY });
   };
 
-  // Khởi động kéo thả từng Node riêng lẻ
-  const handleNodeDragStart = (e: React.MouseEvent, node: NodeEntity) => {
-    if (e.button !== 0) return;
-    e.stopPropagation();
+  // Khởi động kéo thả từng Node riêng lẻ (Hỗ trợ cả Chuột Desktop và Touch Mobile)
+  const handleNodeDragStart = (
+    eOrCoords: React.MouseEvent | { clientX: number; clientY: number },
+    node: NodeEntity
+  ) => {
+    if ('button' in eOrCoords && eOrCoords.button !== 0) return;
+    if ('stopPropagation' in eOrCoords && typeof eOrCoords.stopPropagation === 'function') {
+      eOrCoords.stopPropagation();
+    }
 
     nodeDragRef.current = {
       nodeId: node.id,
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
+      startMouseX: eOrCoords.clientX,
+      startMouseY: eOrCoords.clientY,
       initialX: node.toa_do.x,
       initialY: node.toa_do.y,
       hasMoved: false
@@ -309,10 +335,15 @@ export const SvgGridCanvas: React.FC = () => {
     setDraggingNodeId(node.id);
   };
 
-  // Khởi động kéo thả Cụm phân hệ
-  const handleClusterDragStart = (e: React.MouseEvent, cluster: TopicCluster) => {
-    if (e.button !== 0) return;
-    e.stopPropagation();
+  // Khởi động kéo thả Cụm phân hệ (Hỗ trợ cả Chuột Desktop và Touch Mobile)
+  const handleClusterDragStart = (
+    eOrCoords: React.MouseEvent | { clientX: number; clientY: number },
+    cluster: TopicCluster
+  ) => {
+    if ('button' in eOrCoords && eOrCoords.button !== 0) return;
+    if ('stopPropagation' in eOrCoords && typeof eOrCoords.stopPropagation === 'function') {
+      eOrCoords.stopPropagation();
+    }
 
     const initialPositions = new Map<string, { x: number; y: number }>();
     cluster.nodeIds.forEach(id => {
@@ -324,12 +355,54 @@ export const SvgGridCanvas: React.FC = () => {
 
     clusterDragRef.current = {
       clusterId: cluster.id,
-      startMouseX: e.clientX,
-      startMouseY: e.clientY,
+      startMouseX: eOrCoords.clientX,
+      startMouseY: eOrCoords.clientY,
       hasMoved: false,
       initialPositions
     };
     setIsDraggingCluster(true);
+  };
+
+  // Quản lý Touch trên Thẻ Tiêu Đề Cụm (Tap để căn giữa, Giữ 280ms để kéo di chuyển cụm)
+  const handleClusterTouchStart = (e: React.TouchEvent, cluster: TopicCluster) => {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    const touch = e.touches[0];
+    clusterTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    isClusterLongPressActiveRef.current = false;
+
+    clusterLongPressTimerRef.current = window.setTimeout(() => {
+      isClusterLongPressActiveRef.current = true;
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (_) {}
+      }
+      handleClusterDragStart({ clientX: touch.clientX, clientY: touch.clientY }, cluster);
+    }, 280);
+  };
+
+  const handleClusterTouchMove = (e: React.TouchEvent) => {
+    if (!clusterTouchStartRef.current) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - clusterTouchStartRef.current.x;
+    const dy = touch.clientY - clusterTouchStartRef.current.y;
+    if (!isClusterLongPressActiveRef.current && Math.hypot(dx, dy) > 8) {
+      if (clusterLongPressTimerRef.current) {
+        clearTimeout(clusterLongPressTimerRef.current);
+        clusterLongPressTimerRef.current = null;
+      }
+    }
+  };
+
+  const handleClusterTouchEnd = (cluster: TopicCluster) => {
+    if (clusterLongPressTimerRef.current) {
+      clearTimeout(clusterLongPressTimerRef.current);
+      clusterLongPressTimerRef.current = null;
+    }
+    if (!isClusterLongPressActiveRef.current && clusterTouchStartRef.current) {
+      focusCluster(cluster);
+    }
+    clusterTouchStartRef.current = null;
+    isClusterLongPressActiveRef.current = false;
   };
 
   // Xử lý kéo rê chuột (Pan)
@@ -447,7 +520,7 @@ export const SvgGridCanvas: React.FC = () => {
       return;
     }
 
-    // 2. Kéo rê Canvas (Pan)
+    // 3. Kéo rê Canvas bằng chuột (Pan)
     if (!isPanning) return;
     setPan({
       x: e.clientX - dragStartRef.current.x,
@@ -455,10 +528,11 @@ export const SvgGridCanvas: React.FC = () => {
     });
   };
 
-  const handleMouseUp = () => {
+  // Hàm hoàn tất kéo thả thống nhất (hỗ trợ cả Chuột Desktop và Cảm ứng Mobile)
+  const finalizeDrag = () => {
     let didMove = false;
 
-    // Lưu vị trí node đơn lẻ xuống SQLite khi buông chuột
+    // Lưu vị trí node đơn lẻ xuống SQLite khi buông chuột / nhấc ngón tay
     if (nodeDragRef.current) {
       if (nodeDragRef.current.hasMoved && graph) {
         didMove = true;
@@ -475,7 +549,7 @@ export const SvgGridCanvas: React.FC = () => {
       setDraggingNodeId(null);
     }
 
-    // Lưu vị trí cụm mới xuống SQLite khi buông chuột
+    // Lưu vị trí cụm mới xuống SQLite khi buông chuột / nhấc ngón tay
     if (clusterDragRef.current) {
       if (clusterDragRef.current.hasMoved && graph) {
         didMove = true;
@@ -502,6 +576,174 @@ export const SvgGridCanvas: React.FC = () => {
     }
 
     setIsPanning(false);
+    touchPanRef.current = null;
+    touchPinchRef.current = null;
+  };
+
+  const handleMouseUp = () => {
+    finalizeDrag();
+  };
+
+  // Quản lý Touch: Chạm 1 ngón vuốt để Pan, 2 ngón để Pinch Zoom, Kéo Node khi Long-press
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // Đóng contextMenu nếu chạm ra ngoài
+    if (contextMenu) setContextMenu(null);
+    // Đóng inlinePrompt nếu chạm ra ngoài popup
+    if (inlinePrompt && !(e.target as HTMLElement).closest('.canvas-inline-prompt-popup')) {
+      setInlinePrompt(null);
+    }
+
+    // 1. Hai ngón tay: Khởi động Pinch-to-zoom
+    if (e.touches.length === 2) {
+      setIsPanning(false);
+      touchPanRef.current = null;
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      const midX = (t0.clientX + t1.clientX) / 2;
+      const midY = (t0.clientY + t1.clientY) / 2;
+      touchPinchRef.current = {
+        initialDist: dist,
+        initialZoom: zoom,
+        initialPan: { ...pan },
+        midX,
+        midY
+      };
+      return;
+    }
+
+    // 2. Một ngón tay: Kiểm tra xem có chạm vào thành phần tương tác riêng không
+    if (e.touches.length === 1) {
+      const target = e.target as HTMLElement;
+      if (
+        target.closest('.cum-thuc-the') ||
+        target.closest('.nhom-duong-noi-svg') ||
+        target.closest('.nhom-nhan-svg') ||
+        target.closest('button') ||
+        target.closest('.the-tieu-de-cum') ||
+        target.closest('.canvas-inline-prompt-popup') ||
+        target.closest('.canvas-dynamic-context-menu')
+      ) {
+        return;
+      }
+
+      setIsPanning(true);
+      const t = e.touches[0];
+      touchPanRef.current = {
+        startX: t.clientX,
+        startY: t.clientY,
+        initialPanX: pan.x,
+        initialPanY: pan.y
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    // 1. Xử lý Pinch-to-zoom với 2 ngón tay
+    if (e.touches.length >= 2 && touchPinchRef.current) {
+      const t0 = e.touches[0];
+      const t1 = e.touches[1];
+      const dist = Math.hypot(t0.clientX - t1.clientX, t0.clientY - t1.clientY);
+      const { initialDist, initialZoom, initialPan, midX, midY } = touchPinchRef.current;
+      if (initialDist > 0) {
+        const scaleFactor = dist / initialDist;
+        const nextZoom = Math.min(Math.max(initialZoom * scaleFactor, 0.25), 2.5);
+        if (canvasRef.current) {
+          const rect = canvasRef.current.getBoundingClientRect();
+          const canvasMidX = midX - rect.left;
+          const canvasMidY = midY - rect.top;
+          const newPanX = canvasMidX - (canvasMidX - initialPan.x) * (nextZoom / initialZoom);
+          const newPanY = canvasMidY - (canvasMidY - initialPan.y) * (nextZoom / initialZoom);
+          setZoom(nextZoom);
+          setPan({ x: newPanX, y: newPanY });
+        }
+      }
+      return;
+    }
+
+    // 2. Kéo thả từng Node riêng lẻ trên Mobile (sau khi Long-press kích hoạt)
+    if (nodeDragRef.current && graph && e.touches.length === 1) {
+      const t = e.touches[0];
+      const { nodeId, startMouseX, startMouseY, initialX, initialY } = nodeDragRef.current;
+      const dx = (t.clientX - startMouseX) / zoom;
+      const dy = (t.clientY - startMouseY) / zoom;
+
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        nodeDragRef.current.hasMoved = true;
+      }
+
+      const newX = Math.round(initialX + dx);
+      const newY = Math.round(initialY + dy);
+
+      const updatedNodes = graph.nodes.map(n => {
+        if (n.id === nodeId) {
+          return {
+            ...n,
+            toa_do: { x: newX, y: newY },
+            tam: { x: newX + 110, y: newY + 72 }
+          };
+        }
+        return n;
+      });
+
+      setGraph({ ...graph, nodes: updatedNodes });
+      return;
+    }
+
+    // 3. Kéo thả Cụm phân hệ trên Mobile
+    if (clusterDragRef.current && graph && e.touches.length === 1) {
+      const t = e.touches[0];
+      const { startMouseX, startMouseY, initialPositions } = clusterDragRef.current;
+      const dx = (t.clientX - startMouseX) / zoom;
+      const dy = (t.clientY - startMouseY) / zoom;
+
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        clusterDragRef.current.hasMoved = true;
+      }
+
+      const updatedNodes = graph.nodes.map(n => {
+        const init = initialPositions.get(n.id);
+        if (init) {
+          const newX = Math.round(init.x + dx);
+          const newY = Math.round(init.y + dy);
+          return {
+            ...n,
+            toa_do: { x: newX, y: newY },
+            tam: { x: newX + 110, y: newY + 72 }
+          };
+        }
+        return n;
+      });
+
+      setGraph({ ...graph, nodes: updatedNodes });
+      return;
+    }
+
+    // 4. Kéo Pan Camera bằng 1 ngón tay trên khoảng trống Canvas
+    if (touchPanRef.current && isPanning && e.touches.length === 1) {
+      const t = e.touches[0];
+      const dx = t.clientX - touchPanRef.current.startX;
+      const dy = t.clientY - touchPanRef.current.startY;
+      setPan({
+        x: touchPanRef.current.initialPanX + dx,
+        y: touchPanRef.current.initialPanY + dy
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (e.touches.length === 0) {
+      finalizeDrag();
+    } else if (e.touches.length === 1) {
+      // Khi nhấc 1 ngón tay sau khi pinch zoom: mượt mà chuyển về pan mà không giật màn hình
+      touchPinchRef.current = null;
+      touchPanRef.current = {
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        initialPanX: pan.x,
+        initialPanY: pan.y
+      };
+    }
   };
 
   // Xử lý lăn chuột Zoom mượt mà theo tâm con trỏ chuột
@@ -539,6 +781,10 @@ export const SvgGridCanvas: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       onWheel={handleWheel}
       onContextMenu={handleContextMenu}
     >
@@ -618,12 +864,16 @@ export const SvgGridCanvas: React.FC = () => {
                       cursor: isDraggingCluster ? 'grabbing' : 'grab'
                     }}
                     onMouseDown={(e) => handleClusterDragStart(e, cluster)}
+                    onTouchStart={(e) => handleClusterTouchStart(e, cluster)}
+                    onTouchMove={handleClusterTouchMove}
+                    onTouchEnd={() => handleClusterTouchEnd(cluster)}
+                    onTouchCancel={() => handleClusterTouchEnd(cluster)}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (wasJustDraggedRef.current) return;
                       focusCluster(cluster);
                     }}
-                    title={`Kéo chuột để di chuyển cụm "${cluster.ten_cum}" | Click để căn giữa`}
+                    title={`Kéo chuột hoặc nhấn giữ để di chuyển cụm "${cluster.ten_cum}" | Chạm để căn giữa`}
                   >
                     <div className="cham-mau-cum" style={{ backgroundColor: cluster.mau }}></div>
                     <div className="noi-dung-chu-cum">

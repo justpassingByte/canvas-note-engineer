@@ -5,8 +5,22 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
   pointer-events: auto;
   transition: transform 0.15s ease;
+}
+
+.cum-thuc-the.dang-keo-node {
+  transform: scale(1.05);
+  filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.28));
+  transition: none !important;
+  z-index: 100 !important;
+}
+
+.cum-thuc-the.dang-keo-node .the-nhan-duoi {
+  border-color: #3B82F6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 4px 6px 0px #2563EB !important;
 }
 
 .cum-thuc-the.dang-chon .the-nhan-duoi {
