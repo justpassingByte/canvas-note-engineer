@@ -605,5 +605,280 @@ function handlePayment(rawJson: unknown) {
       explanation: 'Dùng type assertion `as ...` lừa compiler. Nếu backend trả về `{ error: "User not found" }` (không có roles), `data.roles` là undefined và `.includes()` sẽ ném TypeError: Cannot read properties of undefined.',
       fix: 'Sử dụng Zod để parse: `const data = UserSchema.parse(await res.json())`.'
     }
+  },
+  // ==========================================
+  // DOMAIN 2: BROWSER & WEB PLATFORM (ADVANCED)
+  // ==========================================
+  {
+    id: 'topic-browser-cors-headers',
+    domain_id: 'domain-02-browser-platform',
+    domain_title: 'Domain 2 — Browser & Web Platform',
+    title: 'CORS Preflight, SameSite Cookies & Security Headers',
+    target_intent: 'Đánh giá hiểu biết sâu sắc về ranh giới bảo mật Same-Origin Policy (SOP) của trình duyệt, cơ chế preflight OPTIONS, chính sách Cookie SameSite trong kỷ nguyên chặn 3rd-party cookie và các header bảo vệ website (CSP, HSTS).',
+    trigger_keywords: ['Same-Origin Policy', 'CORS Preflight (OPTIONS)', 'Simple Request', 'Access-Control-Allow-Origin', 'SameSite=Lax/Strict', 'CSP nonce'],
+    recall_5s: 'CORS không phải là cơ chế bảo vệ Server, mà là cơ chế trình duyệt bảo vệ Người dùng. Request phức tạp (như có header Authorization hoặc Content-Type: application/json) bắt buộc trình duyệt gửi trước gói OPTIONS Preflight để hỏi ý kiến server.',
+    interview_answer: 'CORS (Cross-Origin Resource Sharing) là cơ chế do trình duyệt thực thi dựa trên Same-Origin Policy (khác biệt về protocol, domain, hoặc port). Một quan niệm sai lầm lớn là nghĩ CORS bảo vệ Server khỏi bị tấn công; thực tế server vẫn nhận và xử lý request nếu không có auth, nhưng browser chặn không cho script client đọc response. Khi client gửi request có header tùy biến (Authorization) hoặc Content-Type application/json, browser tự động bắn một request HTTP OPTIONS (Preflight) để kiểm tra xem server có cho phép origin đó đọc dữ liệu không. Trong môi trường production, chúng ta cấu hình `Access-Control-Allow-Origin` đúng domain thay vì `*` khi dùng credentials, và tối ưu `Access-Control-Max-Age` (thường 86400s) để giảm tải các round-trip preflight vô ích.',
+    deep_dive: 'Simple Request (GET/POST với Content-Type text/plain hoặc application/x-www-form-urlencoded) không kích hoạt Preflight. Đây chính là lý do CSRF nguy hiểm vì browser gửi trực tiếp request kèm cookie. Để phòng ngừa, cần kết hợp SameSite=Lax (mặc định của browser hiện đại), SameSite=Strict cho các tác vụ nhạy cảm, kèm Custom Headers (X-Requested-With) hoặc CSRF tokens.',
+    practical_example: {
+      title: 'Cấu hình CORS an toàn trong Express/NestJS',
+      code: `import cors from 'cors';
+
+const allowedOrigins = ['https://app.production.com', 'https://admin.production.com'];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Cho phép mobile apps hoặc server-to-server (origin undefined)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Blocked by CORS policy'));
+    }
+  },
+  credentials: true, // Cho phép truyền HttpOnly cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key'],
+  maxAge: 86400 // Cache preflight OPTIONS trong 24 giờ, tránh spam server
+}));`,
+      scenario: 'Tránh lỗi phổ biến khi set Access-Control-Allow-Origin: * nhưng lại bật credentials: true khiến browser chặn ngay lập tức.'
+    },
+    trade_offs: {
+      when_use: 'Khi frontend và backend nằm trên 2 domain/subdomain khác nhau (ví dụ client.com và api.client.com).',
+      when_not_use: 'Không cần khi triển khai reverse proxy (Nginx/Cloudflare) gom chung về cùng một origin.',
+      pros: ['Cho phép chia sẻ tài nguyên an toàn giữa các domain có kiểm soát', 'Ngăn chặn malicious sites đọc trộm dữ liệu nhạy cảm'],
+      cons: ['Mỗi request phức tạp tốn thêm 1 round-trip Preflight OPTIONS tăng latency', 'Dễ cấu hình sai gây security leak (* wildcard)'],
+      alternatives: ['BFF (Backend for Frontend) reverse proxy', 'API Gateway gom chung domain']
+    },
+    follow_ups: [
+      {
+        question: 'Tại sao Access-Control-Allow-Origin: * lại không hoạt động khi credentials: true?',
+        answer_skeleton: 'Chuẩn bảo mật W3C/WHATWG nghiêm cấm wildcard khi truyền thông tin xác thực (cookies/auth headers) để ngăn chặn bất kỳ trang web nào cũng có thể đọc được dữ liệu phiên đăng nhập của người dùng.'
+      },
+      {
+        question: 'Làm thế nào để giảm latency gây ra bởi preflight OPTIONS?',
+        answer_skeleton: 'Cấu hình header Access-Control-Max-Age để trình duyệt cache kết quả preflight (ví dụ 24 giờ), hoặc dùng reverse proxy để frontend và API cùng origin.'
+      }
+    ],
+    common_traps: [
+      'Nghĩ rằng CORS bảo vệ server khỏi hacker dùng curl hay Postman (chỉ browser tôn trọng CORS).',
+      'Cấu hình origin: * kèm credentials: true dẫn đến trình duyệt từ chối response hoàn toàn.',
+      'Quên xử lý router cho method OPTIONS khiến server trả về 404 hoặc 405 cho preflight.'
+    ],
+    active_recall: [
+      'CORS bảo vệ đối tượng nào: Server hay Client Browser?',
+      'Điều kiện gì biến một request thành Non-simple Request và kích hoạt Preflight OPTIONS?'
+    ],
+    layers: {
+      l1_junior: 'CORS là lỗi trình duyệt báo khi frontend ở localhost gọi API ở một domain khác.',
+      l2_middle: 'Browser áp dụng Same-Origin Policy. Khi gọi cross-origin, nó gửi OPTIONS Preflight để xác minh quyền truy cập.',
+      l3_senior: 'Ở mức 3 YoE, cần kiểm soát Access-Control-Max-Age giảm round-trips, hiểu rủi ro CSRF của Simple Request, cơ chế cookie SameSite=Lax/Strict, và cách cấu hình Content-Security-Policy (CSP) với cryptographic nonce chống XSS.'
+    },
+    why_ladder: [
+      { question: 'Tại sao browser lại chặn cross-origin?', answer: 'Để ngăn chặn website độc hại gửi request ngầm đọc trộm tài khoản ngân hàng của bạn.' },
+      { question: 'Tại sao cần Preflight OPTIONS?', answer: 'Để kiểm tra xem server đích có hiểu và chấp nhận request trước khi client gửi payload chính thức có thể gây side-effect.' },
+      { question: 'Tại sao curl gọi được mà browser thì không?', answer: 'Vì curl không chạy engine Same-Origin Policy của trình duyệt.' }
+    ],
+    code_reaction: {
+      code: `// Express CORS setup:
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Credentials", "true"); // <-- LỖI
+  next();
+});`,
+      question: 'Khi client gọi API với axios `{ withCredentials: true }`, trình duyệt sẽ hiển thị lỗi gì?',
+      explanation: 'Browser ném lỗi CORS: "The value of the \'Access-Control-Allow-Origin\' header in the response must not be the wildcard \'*\' when the request\'s credentials mode is \'include\'".',
+      fix: 'Thay wildcard \'*\' bằng origin cụ thể từ `req.headers.origin` sau khi đối chiếu whitelist.'
+    },
+    cross_link_node_id: 'node-cong-gateway'
+  },
+  // ==========================================
+  // DOMAIN 4 & 5: REACT 19 MODERN ACTIONS & COMPILER
+  // ==========================================
+  {
+    id: 'topic-react19-actions-compiler',
+    domain_id: 'domain-04-react-hooks',
+    domain_title: 'Domain 4 — React Hooks',
+    title: 'React 19 Actions (useActionState, useOptimistic) & React Compiler',
+    target_intent: 'Đánh giá khả năng nắm bắt xu hướng hiện đại nhất của React (2025/2026), hiểu sâu về mô hình "Server-First", async transitions và cách React Compiler thay đổi vĩnh viễn tư duy tối ưu hóa memoization.',
+    trigger_keywords: ['React 19 Actions', 'useActionState', 'useOptimistic', 'React Compiler', 'Server Actions', 'Automatic Memoization'],
+    recall_5s: 'React 19 chuyển dịch từ mô hình "useEffect + useState fetch data" sang "Actions". useActionState quản lý async pending/error/state tự động. React Compiler loại bỏ hoàn toàn nhu cầu viết useCallback và useMemo thủ công ở build-time.',
+    interview_answer: 'Trong React 19, một bước chuyển dịch lớn là chuẩn hóa "Actions" - các hàm bất đồng bộ xử lý data mutation. Thay vì phải tự quản lý `const [loading, setLoading] = useState(false)` và `try/catch` thủ công, chúng ta dùng hook `useActionState(actionFn, initialState)`. Nó tự động theo dõi `isPending`, kết quả trả về và lỗi, tích hợp trực tiếp với `<form action={action}>` hỗ trợ Progressive Enhancement. Để mang lại trải nghiệm người dùng tức thì, `useOptimistic` cho phép cập nhật UI ngay lập tức trước khi server phản hồi, và tự động rollback nếu action thất bại. Đặc biệt, với React Compiler (Forget), compiler tự động phân tích luồng dữ liệu và memoize Virtual DOM nodes, giúp loại bỏ các nghi thức boilerplate như `useCallback`, `useMemo` và `React.memo` vốn hay gây lỗi stale closure.',
+    deep_dive: 'Cơ chế hoạt động của React Compiler: Khác với babel plugin truyền thống, Compiler phân tích SSA (Static Single Assignment) và Scope Dependency Graph của JavaScript để chèn các cấu trúc cache memoization (`c[0] = ...`) tại mức low-level IR. Do đó, quy tắc "bọc mọi hàm bằng useCallback" trở thành antipattern thừa thãi. Tuy nhiên, nếu một codebase chưa bật Compiler, kỹ sư vẫn cần hiểu bản chất referential equality để giao tiếp với các thư viện bên ngoài.',
+    practical_example: {
+      title: 'Mẫu Form Update Profile với React 19 useActionState & useOptimistic',
+      code: `'use client';
+import { useActionState, useOptimistic } from 'react';
+import { updateUsernameAction } from './actions';
+
+export function ProfileForm({ currentName }: { currentName: string }) {
+  // 1. Quản lý Action State: tự động có isPending và state trả về
+  const [state, formAction, isPending] = useActionState(
+    async (previousState: any, formData: FormData) => {
+      const newName = formData.get('username') as string;
+      setOptimisticName(newName); // Cập nhật tức thì UI
+      return await updateUsernameAction(newName);
+    },
+    { success: false, error: null }
+  );
+
+  // 2. Optimistic State: hiển thị giá trị mới ngay lập tức
+  const [optimisticName, setOptimisticName] = useOptimistic(
+    currentName,
+    (oldName, newName: string) => newName
+  );
+
+  return (
+    <form action={formAction}>
+      <h3>Xin chào: {optimisticName} {isPending && '⏳ (Đang lưu...)'}</h3>
+      <input name="username" defaultValue={optimisticName} disabled={isPending} />
+      <button type="submit" disabled={isPending}>Lưu thay đổi</button>
+      {state.error && <p style={{ color: 'red' }}>{state.error}</p>}
+    </form>
+  );
+}`,
+      scenario: 'UI đổi tên người dùng ngay trong 0ms khi bấm Submit. Nếu mạng lỗi hoặc server từ chối, UI tự động rollback về currentName cũ.'
+    },
+    trade_offs: {
+      when_use: 'Sử dụng React 19 Actions cho mọi form submission, data mutation, và giao diện cần phản hồi lạc quan (like button, comment post).',
+      when_not_use: 'Không dùng cho các tác vụ stream liên tục hoặc polling realtime tần suất cao (dùng WebSocket / SSE).',
+      pros: ['Loại bỏ hàng chục dòng boilerplate useState/useEffect/isSubmitting', 'Hỗ trợ Progressive Enhancement', 'Tránh triệt để stale closure'],
+      cons: ['Đòi hỏi React 19+ và bundler hỗ trợ Compiler', 'Tư duy bất đồng bộ theo Transition thay vì state setter truyền thống'],
+      alternatives: ['React Hook Form + Zod', 'TanStack Query Mutations']
+    },
+    follow_ups: [
+      {
+        question: 'React Compiler có thay thế hoàn toàn useMemo và useCallback không?',
+        answer_skeleton: 'Đối với 95% trường hợp component nội bộ thì có. Nhưng với code tương tác với third-party imperative APIs (như custom data visualization D3, canvas) hoặc các ref object đặc biệt, việc kiểm soát thủ công vẫn có thể cần thiết.'
+      },
+      {
+        question: 'Chuyện gì xảy ra nếu Server Action bị treo kết nối?',
+        answer_skeleton: 'isPending sẽ giữ true cho tới khi timeout. Cần áp dụng AbortSignal hoặc đặt timeout giới hạn ở server-side action để trả về error payload cho useActionState.'
+      }
+    ],
+    common_traps: [
+      'Vẫn giữ thói quen bọc useCallback cho mọi handler khi dự án đã kích hoạt React Compiler.',
+      'Dùng Server Action cho các tác vụ cần bảo mật cao nhưng quên validate authorization ở đầu hàm action (Server Actions về bản chất là public POST endpoints!).'
+    ],
+    active_recall: [
+      'Bộ ba giá trị trả về của `useActionState` là gì?',
+      'React Compiler tối ưu hóa re-render bằng cách nào thay vì dựa vào con người viết hook?'
+    ],
+    layers: {
+      l1_junior: 'React 19 cho phép viết form action dễ dàng hơn và có hook useActionState thay cho useState loading.',
+      l2_middle: 'useActionState kết hợp useOptimistic giúp quản lý vòng đời mutation, optimistic updates và rollback tự động.',
+      l3_senior: 'Ở mức 3 YoE, phải nắm rõ cách React Compiler thay đổi kiến trúc tối ưu hóa memoization, ranh giới serialize của Server Actions, và giải pháp bảo mật CSRF/Auth cho các action endpoints.'
+    },
+    why_ladder: [
+      { question: 'Tại sao React tạo ra useActionState?', answer: 'Để chấm dứt thảm họa viết useState(loading), useState(error), useState(data) lặp lại ở mọi form.' },
+      { question: 'Tại sao lại cần useOptimistic?', answer: 'Để người dùng thấy kết quả ngay lập tức (0ms) thay vì phải nhìn spinner quay 500ms.' },
+      { question: 'Tại sao React Compiler là bước ngoặt?', answer: 'Vì con người thường xuyên cấu hình sai dependency array của useMemo/useCallback gây memory leak hoặc stale state.' }
+    ],
+    code_reaction: {
+      code: `// actions.ts (Server Action)
+'use server';
+
+export async function deleteUser(userId: string) {
+  // Thực hiện xóa user ngay lập tức mà không kiểm tra auth!
+  await db.user.delete({ where: { id: userId } });
+}`,
+      question: 'Lỗ hổng bảo mật nghiêm trọng nào tồn tại trong Server Action trên?',
+      explanation: 'Server Actions bản chất là một public HTTP POST endpoint có thể bị gọi bởi bất kỳ ai bằng curl hoặc Postman. Nếu không kiểm tra session/auth của người gọi trước khi delete, bất kỳ ai cũng có thể xóa tài khoản của người khác (Broken Access Control).',
+      fix: 'Luôn xác thực session ở đầu Server Action: `const session = await auth(); if (!session?.user?.isAdmin) throw new Error("Unauthorized");`.'
+    },
+    cross_link_node_id: 'node-ui-view'
+  },
+  // ==========================================
+  // DOMAIN 6: NEXT.JS APP ROUTER (MODERN RENDERING)
+  // ==========================================
+  {
+    id: 'topic-nextjs-rendering-matrix',
+    domain_id: 'domain-06-nextjs',
+    domain_title: 'Domain 6 — Next.js App Router',
+    title: 'SSR vs CSR vs SSG vs ISR Matrix & Next.js 15 Un-cached Fetch',
+    target_intent: 'Kiểm tra năng lực ra quyết định kiến trúc: Chọn đúng chiến lược rendering cho từng trang web cụ thể (E-commerce, Dashboard, Blog, Landing Page) và hiểu rõ sự thay đổi cốt lõi trong cơ chế caching của Next.js 15.',
+    trigger_keywords: ['SSR', 'CSR', 'SSG', 'ISR (Incremental Static Regeneration)', 'Next.js 15 Un-cached Fetch', 'Partial Prerendering (PPR)'],
+    recall_5s: 'SSG cho trang tĩnh ít đổi (Landing/Docs). ISR cho nội dung lớn cần làm mới theo chu kỳ hoặc on-demand (E-commerce catalog). SSR cho trang dữ liệu cá nhân hóa phụ thuộc request (Dashboard). Next.js 15 bỏ thói quen cache fetch mặc định, chuyển sang no-store để bảo vệ dữ liệu tươi mới.',
+    interview_answer: 'Khi thiết kế một web app với Next.js App Router, tôi chia trang thành 4 mô hình: (1) Static Site Generation (SSG): HTML dựng trước tại build time, cache tại Edge CDN cho tốc độ TTFB cực nhanh (thích hợp Blog, Marketing). (2) Incremental Static Regeneration (ISR): Trang tĩnh nhưng có thể tự làm mới ngầm sau khoảng thời gian `revalidate: 60` hoặc theo event `revalidateTag()`. (3) Server-Side Rendering (SSR / Dynamic Rendering): Dựng HTML trên mỗi request khi truy cập cookies/headers (thích hợp trang nội bộ, profile). (4) Client-Side Rendering (CSR): Hydrate dữ liệu động sau khi tải vỏ HTML (thích hợp đồ thị realtime, modal tương tác cao). Cần đặc biệt lưu ý Next.js 15 đã loại bỏ cơ chế mặc định cache fetch vĩnh viễn (force-cache của Next 14) mà chuyển sang un-cached (`no-store`) để tránh rủi ro hiển thị dữ liệu stale cho người dùng.',
+    deep_dive: 'Trong Next.js 15, các API động như `cookies()`, `headers()`, `params` và `searchParams` đều được chuyển thành Async Promise (`await cookies()`). Điều này phục vụ kiến trúc Partial Prerendering (PPR): Máy chủ gửi ngay phần static shell (navbar, footer, sidebar) từ CDN trong mili-giây đầu tiên, sau đó stream phần nội dung động (Dynamic hole) bọc trong React Suspense xuống sau khi fetch xong.',
+    practical_example: {
+      title: 'Thiết kế trang Chi tiết Sản phẩm E-Commerce kết hợp ISR & On-Demand Revalidation',
+      code: `// app/products/[id]/page.tsx
+import { revalidateTag } from 'next/cache';
+
+// Sinh trước 100 sản phẩm hot nhất ở build time (SSG)
+export async function generateStaticParams() {
+  const hotProducts = await db.product.findMany({ take: 100 });
+  return hotProducts.map(p => ({ id: p.id }));
+}
+
+export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params; // Next.js 15: params là Promise!
+  
+  // Fetch có gắn cache tag để hỗ trợ On-Demand Invalidation khi admin sửa kho
+  const res = await fetch(\`https://api.internal/products/\${id}\`, {
+    next: { tags: [\`product-\${id}\`], revalidate: 3600 } // Tự làm mới sau 1 giờ hoặc qua webhook
+  });
+  const product = await res.json();
+
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>Giá: {product.price.toLocaleString()} VNĐ</p>
+      <span>Tồn kho: {product.stock}</span>
+    </div>
+  );
+}
+
+// Khi Admin cập nhật giá/kho, webhook gọi hàm:
+// revalidateTag(\`product-\${id}\`); -> Trang được cập nhật tức thì trên CDN!`,
+      scenario: 'Hàng triệu lượt xem sản phẩm không chạm vào DB vì đã cache trên CDN, nhưng khi đổi giá thì CDN cập nhật ngay lập tức không cần rebuild web.'
+    },
+    trade_offs: {
+      when_use: 'ISR cho các trang có hàng trăm nghìn URLs như TMĐT, tin tức; SSR cho trang cần bảo mật dữ liệu theo người dùng đăng nhập; SSG cho trang cố định.',
+      when_not_use: 'Không dùng SSG cho trang cá nhân hóa (dashboard có avatar, số dư ví). Không dùng SSR thuần cho trang đọc hàng triệu lượt nếu không có CDN cache.',
+      pros: ['Đạt chỉ số TTFB dưới 50ms cho trang static/ISR', 'Tối ưu SEO 100% cho bot tìm kiếm', 'Tiết kiệm tải database server'],
+      cons: ['Mô hình tư duy phức tạp giữa Build-time, Request-time và Invalidation', 'Dễ lộ dữ liệu người dùng nếu cấu hình cache nhầm cho route cá nhân'],
+      alternatives: ['Single Page Application thuần (Vite) + TanStack Query', 'Remix / React Router v7']
+    },
+    follow_ups: [
+      {
+        question: 'Điểm khác biệt giữa Time-based Revalidation và On-Demand Revalidation trong Next.js là gì?',
+        answer_skeleton: 'Time-based kiểm tra sau mỗi N giây khi có request tiếp theo. On-Demand kích hoạt thủ công qua webhook hoặc server action dùng revalidatePath() / revalidateTag() giúp cập nhật tức thì 0 giây.'
+      },
+      {
+        question: 'Tại sao Next.js 15 lại bỏ cơ chế mặc định cache của hàm fetch()?',
+        answer_skeleton: 'Vì trong Next.js 14, việc mặc định cache khiến nhiều lập trình viên bất ngờ khi dữ liệu bị stale hoặc cập nhật DB mà giao diện không đổi, gây nhiều bug nghiêm trọng trong thực tế.'
+      }
+    ],
+    common_traps: [
+      'Dùng SSR gọi DB trực tiếp cho toàn bộ trang chủ TMĐT chịu hàng triệu view khiến Database sập do quá tải connection pool.',
+      'Quên await `params` trong Next.js 15 gây lỗi runtime: "Route params should be awaited".'
+    ],
+    active_recall: [
+      'Trong 4 mô hình (CSR, SSR, SSG, ISR), mô hình nào tối ưu nhất cho trang chi tiết 500,000 sản phẩm?',
+      'Tại sao trong Next.js 15, `cookies()` và `headers()` lại phải dùng `await`?'
+    ],
+    layers: {
+      l1_junior: 'SSG tạo HTML khi build, SSR tạo HTML khi người dùng request, CSR chạy code ở browser.',
+      l2_middle: 'ISR cho phép tạo lại trang tĩnh ngầm mà không cần build lại toàn bộ website. Next.js 15 chuyển đổi params/headers sang async.',
+      l3_senior: 'Ở mức 3 YoE, cần làm chủ chiến lược Cache Tags (revalidateTag), kiến trúc Partial Prerendering (PPR) với streaming chunks, và cấu hình Edge CDN stale-while-revalidate headers.'
+    },
+    why_ladder: [
+      { question: 'Tại sao không render toàn bộ ở Client (CSR)?', answer: 'Vì SEO kém, TTFB lâu và thiết bị cấu hình yếu sẽ bị giật lag khi parse JS bundle lớn.' },
+      { question: 'Tại sao không SSR toàn bộ cho tươi mới?', answer: 'Vì chi phí CPU server quá cao và thời gian phản hồi TTFB phụ thuộc vào tốc độ query database.' },
+      { question: 'ISR giải quyết mâu thuẫn đó như thế nào?', answer: 'Bằng cách trả về bản cache tĩnh siêu tốc từ CDN, đồng thời kích hoạt background worker cập nhật bản ghi mới.' }
+    ],
+    code_reaction: {
+      code: `// app/dashboard/page.tsx
+export default async function DashboardPage({ params, searchParams }: any) {
+  // Next.js 15:
+  const query = searchParams.q; // <-- LỖI RUNTIME TRÊN NEXT.JS 15
+  return <div>Tìm kiếm: {query}</div>;
+}`,
+      question: 'Đoạn code trên sẽ bị cảnh báo hoặc ném lỗi gì khi nâng cấp lên Next.js 15?',
+      explanation: 'Trong Next.js 15, `searchParams` và `params` là Promises. Truy cập trực tiếp thuộc tính đồng bộ `searchParams.q` sẽ ném cảnh báo hoặc lỗi: "searchParams should be awaited before using its properties".',
+      fix: 'Thêm async/await: `const { q } = await searchParams;`'
+    },
+    cross_link_node_id: 'node-rendering-ssr'
   }
 ];
+

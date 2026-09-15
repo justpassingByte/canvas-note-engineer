@@ -221,8 +221,8 @@ Lưu ý:
 
     const provider = ProviderFactory.getActiveProvider();
     if (!provider) {
-      // Offline fallback: Sinh 3 chủ đề trọng tâm cho domain này hoàn toàn tự động
-      return defaults.map(name => this.generateOfflineTopic(name, domain));
+      // Không có AI Provider: Không tự động sinh dữ liệu template rác
+      return [];
     }
 
     const outlinePrompt = `
@@ -247,18 +247,14 @@ Trả về duy nhất một JSON array chứa 3 string tên topic, ví dụ:
       topicNames = JSON.parse(cleanJson);
       if (!Array.isArray(topicNames)) topicNames = [];
     } catch (err: any) {
-      console.warn(`[InterviewGenerator] External provider outline failed (${err.message}). Dùng danh mục mặc định chuẩn 3 YoE.`);
-      topicNames = defaults;
-    }
-
-    if (topicNames.length === 0) {
-      topicNames = defaults;
+      console.warn(`[InterviewGenerator] External provider outline failed (${err.message}).`);
+      return [];
     }
 
     const generatedTopics: InterviewTopicEntity[] = [];
     for (const name of topicNames.slice(0, 3)) {
       try {
-        const topic = await this.generateTopic(name, domain.id);
+        const topic = await this.generateTopic(name, domain.id, false);
         generatedTopics.push(topic);
       } catch (e: any) {
         console.error(`Lỗi sinh topic ${name}:`, e.message);
@@ -277,103 +273,35 @@ Trả về duy nhất một JSON array chứa 3 string tên topic, ví dụ:
 
     const titleClean = topicPrompt.trim();
 
-    // Sinh mental model chuẩn 3 YoE tự động theo ngữ cảnh
+    // Để rỗng sạch sẽ thay vì sinh template giả mạo, đáp ứng yêu cầu người dùng
     const entity: InterviewTopicEntity = {
       id: topicSlug,
       domain_id: domain.id,
       domain_title: domain.title,
       title: titleClean,
-      target_intent: `Đánh giá khả năng hiểu bản chất cơ chế hoạt động, trade-offs thực chiến và kỹ năng giải quyết sự cố sản xuất (production troubleshooting) trong phạm vi ${titleClean}.`,
-      trigger_keywords: [
-        titleClean,
-        'Mental Model',
-        'Referential / Memory State',
-        'Concurrency & Trade-offs',
-        'Production Guardrails'
-      ],
-      recall_5s: `Cốt lõi của ${titleClean} không nằm ở cú pháp sáo rỗng, mà nằm ở: (1) Bản chất mô hình bộ nhớ/luồng thực thi, (2) Khả năng chịu tải và điểm nghẽn (bottleneck), (3) Chiến lược xử lý khi xảy ra lỗi/failover.`,
-      interview_answer: `Khi tiếp cận ${titleClean} trong hệ thống thực tế (~3 YoE), tôi luôn xem xét từ 3 khía cạnh: Thứ nhất là nguyên lý vận hành bên dưới (under the hood) để tránh bẫy hiệu năng hoặc rò rỉ bộ nhớ. Thứ hai là trade-off giữa độ phức tạp và tính nhất quán/hiệu năng. Thứ ba là cơ chế phòng vệ (defensive programming / failure handling) khi có lưu lượng đột biến hoặc sự cố mạng.`,
-      deep_dive: `Interviewer thường sẽ đào sâu vào 3 điểm mấu chốt:
-1. Cơ chế thực thi bên dưới (runtime internals, asynchronous dispatch hoặc locking mechanisms).
-2. Các điểm nghẽn (concurrency race conditions, memory footprint, cache invalidation, network timeouts).
-3. Cách thiết kế idempotency, observability (metrics, logs) và rollback khi triển khai trên production.`,
-      practical_example: {
-        title: `Kiến trúc chuẩn áp dụng ${titleClean} trong Production`,
-        code: `// Triển khai mẫu an toàn, có defensive error handling & timeout
-async function handleProductionWorkload(payload: unknown): Promise<void> {
-  const timeoutCtrl = new AbortController();
-  const timer = setTimeout(() => timeoutCtrl.abort(), 5000);
-  try {
-    // 1. Validate payload ở runtime
-    // 2. Thực thi logic với cơ chế idempotency
-    // 3. Emit metrics và graceful cleanup
-  } catch (err: any) {
-    if (err.name === 'AbortError') {
-      logger.error('Workload timed out after 5s', { topic: '${titleClean}' });
-    }
-    throw err;
-  } finally {
-    clearTimeout(timer);
-  }
-}`,
-        scenario: `Ngữ cảnh hệ thống cần đảm bảo tính sẵn sàng cao (High Availability), không bị treo luồng khi dịch vụ phụ trợ phản hồi chậm.`
-      },
+      target_intent: `Chủ đề "${titleClean}" thuộc chuyên đề ${domain.title}.`,
+      trigger_keywords: [titleClean],
+      recall_5s: `Chủ đề "${titleClean}" hiện chưa có nội dung thực chiến soạn sẵn. Vui lòng cấu hình AI Provider hoặc tự biên soạn phản xạ.`,
+      interview_answer: '',
+      deep_dive: '',
+      practical_example: undefined,
       trade_offs: {
-        when_use: `Áp dụng khi cần kiểm soát chặt chẽ luồng dữ liệu, hiệu năng cao hoặc xử lý giao dịch tài chính/tương tác nhạy cảm.`,
-        when_not_use: `Tránh áp dụng quá mức (over-engineering) cho các tác vụ đơn giản không đòi hỏi tính tương tranh hoặc tải thấp.`,
-        pros: [
-          'Đảm bảo tính tin cậy và kiểm soát lỗi dự đoán được',
-          'Tối ưu hóa tài nguyên phần cứng (CPU/RAM/Network)',
-          'Dễ dàng debug và scale ngang (horizontal scaling)'
-        ],
-        cons: [
-          'Tăng độ phức tạp mã nguồn ban đầu',
-          'Đòi hỏi đội ngũ hiểu rõ cơ chế nội tại để tránh antipatterns'
-        ],
-        alternatives: [
-          'Sử dụng giải pháp đơn giản hóa (KISS principle) nếu hệ thống ở giai đoạn MVP',
-          'Chuyển giao việc xử lý cho hạ tầng quản lý (Managed Cloud Services)'
-        ]
+        when_use: '',
+        when_not_use: '',
+        pros: [],
+        cons: [],
+        alternatives: []
       },
-      follow_ups: [
-        {
-          question: `Điểm nghẽn lớn nhất khi tải tăng đột biến gấp 10 lần với ${titleClean} là gì?`,
-          answer_skeleton: `Xác định thành phần chịu áp lực chính (I/O, connection pool, memory footprint) → Áp dụng rate limiting / backpressure hoặc distributed queue.`
-        },
-        {
-          question: `Làm thế nào để kiểm thử (test) tính ổn định của ${titleClean} khi mạng bị ngắt giữa chừng?`,
-          answer_skeleton: `Viết integration test mô phỏng network failure (Chaos engineering / timeout mocking) và kiểm tra tính Idempotent.`
-        }
-      ],
-      common_traps: [
-        `Chỉ trả lời định nghĩa sách vở mà không nêu được trade-offs và kịch bản lỗi thực tế.`,
-        `Quên xử lý timeout và unhandled rejection khiến server bị treo tiến trình (zombie process).`
-      ],
-      active_recall: [
-        `3 từ khóa cốt lõi để giải thích ${titleClean} trong 15 giây đầu tiên là gì?`,
-        `Kịch bản failure tồi tệ nhất trên production nếu cấu hình sai ${titleClean} là gì?`
-      ],
+      follow_ups: [],
+      common_traps: [],
+      active_recall: [],
       layers: {
-        l1_junior: `Nắm vững định nghĩa cơ bản và cú pháp sử dụng ${titleClean}.`,
-        l2_middle: `Hiểu rõ cơ chế bên dưới, vòng đời (lifecycle) và mối liên kết với các thành phần khác.`,
-        l3_senior: `Tự tin phân tích trade-offs, thiết kế khả năng chịu lỗi (fault tolerance), concurrency control và monitoring trong môi trường production.`
+        l1_junior: '',
+        l2_middle: '',
+        l3_senior: ''
       },
-      why_ladder: [
-        { question: `Tại sao lại cần quan tâm đến ${titleClean}?`, answer: `Vì đây là mắt xích quyết định hiệu năng và tính ổn định của luồng dữ liệu.` },
-        { question: `Tại sao không dùng giải pháp mặc định đơn giản hơn?`, answer: `Vì giải pháp mặc định thường không xử lý được tương tranh và tải cao.` },
-        { question: `Chuyện gì xảy ra nếu hệ thống bị crash ở bước này?`, answer: `Dữ liệu có thể bị phân mảnh hoặc mất đồng bộ nếu thiếu transaction / idempotency.` },
-        { question: `Khi nào thì KHÔNG nên áp dụng?`, answer: `Khi quy mô nhỏ, dữ liệu không đòi hỏi tính nhất quán nghiêm ngặt.` }
-      ],
-      code_reaction: {
-        code: `// Tình huống xử lý thiếu timeout / error boundary:
-async function processTask(id: string) {
-  const res = await fetch(\`/api/resource/\${id}\`);
-  return res.json();
-}`,
-        question: `Đoạn code trên có thể gây sập hệ thống hoặc kẹt connection pool như thế nào?`,
-        explanation: `fetch mặc định trong Node.js/Browser không có timeout. Nếu endpoint đích bị treo kết nối, Promise này sẽ không bao giờ resolve/reject, giữ kết nối mãi mãi gây cạn kiệt socket/RAM.`,
-        fix: `Sử dụng AbortSignal.timeout(5000) hoặc AbortController kết hợp setTimeout để ngắt kết nối dứt khoát sau 5 giây.`
-      },
+      why_ladder: [],
+      code_reaction: undefined,
       cross_link_node_id: resolveTopicCrossLinkNodeId(domain.id, titleClean),
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -383,4 +311,5 @@ async function processTask(id: string) {
     return entity;
   }
 }
+
 

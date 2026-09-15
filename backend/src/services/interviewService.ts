@@ -22,7 +22,8 @@ export class InterviewService {
   }
 
   private seedInitialTopicsIfNeeded(): void {
-    const existing = sqliteClient.getAllInterviewTopics();
+    // 1. Tự động dọn sạch các topic sinh từ template rỗng cũ (nếu có)
+    sqliteClient.cleanBoilerplateTopics();
 
     const seedTopics: InterviewTopicEntity[] = [
       {
@@ -81,7 +82,7 @@ const OrderList = ({ orders }: { orders: Order[] }) => {
         layers: {
           l1_junior: 'useCallback là một hook dùng để ghi nhớ (cache) định nghĩa của một hàm giữa các lần re-render.',
           l2_middle: 'Nó giữ nguyên tính đồng nhất tham chiếu (referential equality) của hàm, tránh việc hàm con bọc React.memo bị re-render do nhận prop mới.',
-          l3_senior: 'Ở góc độ 3 YoE, lạm dụng useCallback gây hại hiệu năng hơn là có lợi do chi phí so sánh deps. Phải cân nhắc giữa chi phí re-render của con so với chi phí memoization, đồng thời kiểm soát stale closure và race conditions.'
+          l3_senior: 'Ở góc độ 3 YoE, cần nhận thức rõ: Với React 19 và React Compiler (Forget), compiler tự động memoize Virtual DOM và props tại build-time, loại bỏ nhu cầu viết useCallback/useMemo thủ công. Nhưng trong các dự án chưa bật Compiler hoặc thư viện ngoài, lạm dụng useCallback bừa bãi gây hại hiệu năng do overhead tạo closure và so sánh dependency array. Chỉ dùng khi truyền hàm xuống component con bọc bởi React.memo hoặc làm dependency cho hook khác.'
         },
         why_ladder: [
           { question: 'Tại sao cần useCallback?', answer: 'Để ổn định tham chiếu của hàm (stable function reference).' },
@@ -453,6 +454,8 @@ await db.query('INSERT INTO payments (key) VALUES ($1)', [key]);`,
       }
     ];
 
+    const existing = sqliteClient.getAllInterviewTopics();
+
     const allSeeds: InterviewTopicEntity[] = [
       ...seedTopics,
       ...SEED_TOPICS_PART1,
@@ -460,22 +463,10 @@ await db.query('INSERT INTO payments (key) VALUES ($1)', [key]);`,
       ...SEED_TOPICS_PART3
     ];
 
-    // Ensure all 29 domains have at least 3 comprehensive battle-tested topics (~87+ total)
-    for (const domain of DOMAIN_CATALOG) {
-      const defaultTitles = DOMAIN_DEFAULTS[domain.id] || [];
-      for (const title of defaultTitles) {
-        const titleNormalized = title.toLowerCase().trim();
-        const alreadyExists =
-          allSeeds.some(s => s.domain_id === domain.id && (s.title.toLowerCase().trim() === titleNormalized || s.title.toLowerCase().includes(titleNormalized.slice(0, 15)))) ||
-          existing.some(e => e.domain_id === domain.id && (e.title.toLowerCase().trim() === titleNormalized || e.title.toLowerCase().includes(titleNormalized.slice(0, 15))));
-
-        if (!alreadyExists) {
-          const generatedTopic = InterviewGenerator.generateOfflineTopic(title, domain);
-          if (!generatedTopic.cross_link_node_id) {
-            generatedTopic.cross_link_node_id = resolveTopicCrossLinkNodeId(domain.id, generatedTopic.title);
-          }
-          allSeeds.push(generatedTopic);
-        }
+    // Gán cross_link_node_id cho các topic chưa có
+    for (const seed of allSeeds) {
+      if (!seed.cross_link_node_id) {
+        seed.cross_link_node_id = resolveTopicCrossLinkNodeId(seed.domain_id, seed.title);
       }
     }
 

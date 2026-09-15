@@ -574,5 +574,279 @@ test('Luồng thanh toán giỏ hàng hoàn chỉnh', async ({ page }) => {
       explanation: 'Nếu server CI phản hồi chậm hơn 3 giây, `waitForTimeout(3000)` hết giờ trước khi API xóa xong -> Test rớt oan. Ngược lại nếu xóa xong trong 50ms, nó lãng phí 2.95s chờ đợi vô ích.',
       fix: 'Dùng auto-waiting assertion: `await expect(page.locator(\'.item\')).toHaveCount(0);`'
     }
+  },
+  // ==========================================
+  // DOMAIN 14: POSTGRESQL & SQL (MVCC & CONCURRENCY)
+  // ==========================================
+  {
+    id: 'topic-postgres-mvcc-isolation',
+    domain_id: 'domain-14-postgresql',
+    domain_title: 'Domain 14 — PostgreSQL & SQL',
+    title: 'ACID Transactions, MVCC & Isolation Levels (Read Committed vs Serializable)',
+    target_intent: 'Kiểm tra xem ứng viên có hiểu cách PostgreSQL xử lý tương tranh đa phiên bản (Multi-Version Concurrency Control - MVCC), 4 mức độ cô lập (Isolation Levels) và cách dùng SELECT FOR UPDATE SKIP LOCKED để tránh Deadlock.',
+    trigger_keywords: ['ACID', 'MVCC (Multi-Version Concurrency Control)', 'Isolation Levels', 'Read Committed', 'Repeatable Read', 'Serializable', 'FOR UPDATE SKIP LOCKED'],
+    recall_5s: 'PostgreSQL dùng MVCC: "Người đọc không chặn người ghi, người ghi không chặn người đọc". Mỗi hàng có xmin/xmax để xác định snapshot. Mặc định là Read Committed (mỗi câu query thấy snapshot mới). Dùng FOR UPDATE SKIP LOCKED để nhiều worker rút job song song mà không tranh chấp.',
+    interview_answer: 'PostgreSQL đảm bảo tính cô lập (Isolation) bằng cơ chế MVCC thay vì khóa toàn bộ bảng. Khi một dòng được UPDATE, Postgres không ghi đè dữ liệu cũ mà chèn một dòng mới với transaction ID `xmin` mới và đánh dấu dòng cũ là `xmax`, sau đó tiến trình Autovacuum sẽ dọn dẹp các dead tuples này ngầm. Có 4 mức cô lập chuẩn SQL: Read Uncommitted (Postgres tự ép lên Read Committed), Read Committed (mặc định - mỗi statement nhìn thấy snapshot dữ liệu committed tại thời điểm câu lệnh đó bắt đầu), Repeatable Read (toàn bộ transaction nhìn thấy snapshot cố định tại thời điểm transaction bắt đầu, ngăn chặn Non-repeatable Read và Phantom Read), và Serializable (mô phỏng thực thi tuần tự hoàn toàn, ném Serialization Failure nếu phát hiện write skew để client tự retry). Trong các bài toán xử lý hàng đợi (task queue) hoặc giữ vé xem phim, tôi sử dụng `SELECT ... FOR UPDATE SKIP LOCKED` để các worker lấy các bản ghi khác nhau mà không bao giờ bị nghẽn (deadlock) lẫn nhau.',
+    deep_dive: 'Vấn đề Write Skew trong Repeatable Read: Giả sử phòng khám cần ít nhất 1 bác sĩ trực. Bác sĩ A và B cùng gửi yêu cầu xin nghỉ. Cả 2 transaction cùng đọc thấy có 2 người trực (thỏa mãn điều kiện > 1) và cùng cập nhật trạng thái nghỉ. Kết quả là phòng khám không còn ai trực! Mức Repeatable Read không bắt được lỗi này vì 2 transaction ghi vào 2 hàng khác nhau. Chỉ mức Serializable (dùng SSI - Serializable Snapshot Isolation) hoặc khóa rõ ràng (Explicit Row/Table Lock) mới ngăn chặn được.',
+    practical_example: {
+      title: 'Xử lý Hàng đợi Job với SELECT FOR UPDATE SKIP LOCKED',
+      code: `// Worker lấy job an toàn, không tranh chấp giữa 10 containers song song
+async function fetchAndProcessNextJob(workerId: string) {
+  return await db.$transaction(async (tx) => {
+    // 1. Khóa và lấy bản ghi PENDING đầu tiên mà KHÔNG BỊ BLOCK bởi worker khác
+    const jobs = await tx.$queryRaw<Job[]>\`
+      SELECT * FROM background_jobs
+      WHERE status = 'PENDING'
+      ORDER BY priority DESC, created_at ASC
+      LIMIT 1
+      FOR UPDATE SKIP LOCKED
+    \`;
+
+    if (jobs.length === 0) return null;
+    const job = jobs[0];
+
+    // 2. Chuyển trạng thái sang PROCESSING
+    await tx.backgroundJob.update({
+      where: { id: job.id },
+      data: { status: 'PROCESSING', locked_by: workerId, locked_at: new Date() }
+    });
+
+    return job;
+  });
+}`,
+      scenario: 'Nhiều worker chạy song song lấy đúng các job khác nhau mà không phải chờ đợi lẫn nhau (zero lock contention).'
+    },
+    trade_offs: {
+      when_use: 'Sử dụng FOR UPDATE SKIP LOCKED cho worker queues, đặt vé, trừ kho; Dùng Serializable cho giao dịch tài chính chéo bảng phức tạp.',
+      when_not_use: 'Không lạm dụng Serializable cho toàn bộ hệ thống vì tỷ lệ xung đột cao sẽ khiến ứng dụng phải retry liên tục làm tăng latency.',
+      pros: ['Đảm bảo tính toàn vẹn dữ liệu tuyệt đối', 'Không bị gián đoạn đọc khi đang ghi'],
+      cons: ['Tạo dead tuples làm phình to đĩa nếu autovacuum không theo kịp', 'Long-running transactions làm nghẽn vacuuming'],
+      alternatives: ['Optimistic Concurrency Control với cột version', 'Distributed Lock trên Redis']
+    },
+    follow_ups: [
+      {
+        question: 'Tại sao long-running transactions lại gây nguy hiểm cho PostgreSQL?',
+        answer_skeleton: 'Nó ngăn cản Autovacuum dọn dẹp các dead tuples cũ hơn xmin của transaction đó, dẫn đến hiện tượng Table Bloat (bảng phình to hàng chục GB) và cạn kiệt Transaction ID (Wraparound emergency).'
+      },
+      {
+        question: 'Khác biệt giữa FOR UPDATE và FOR UPDATE SKIP LOCKED là gì?',
+        answer_skeleton: 'FOR UPDATE khiến các transaction khác phải dừng lại chờ giải phóng khóa. SKIP LOCKED bỏ qua các hàng đang bị khóa và lấy ngay các hàng tự do tiếp theo, loại bỏ hoàn toàn độ trễ chờ đợi.'
+      }
+    ],
+    common_traps: [
+      'Nghĩ rằng Read Committed ngăn được lỗi Race Condition (vẫn bị Lost Update nếu 2 luồng cùng đọc và tăng giá trị).',
+      'Mở Transaction dài trong đó gọi API bên ngoài (Third-party HTTP request) khiến giữ DB Connection và Table Lock quá lâu.'
+    ],
+    active_recall: [
+      'MVCC trong PostgreSQL hoạt động dựa trên 2 trường hệ thống ẩn nào trong mỗi row?',
+      'Tại sao không bao giờ nên gọi HTTP request bên trong một Database Transaction?'
+    ],
+    layers: {
+      l1_junior: 'Transaction đảm bảo nguyên tắc ACID: tất cả thành công hoặc tất cả thất bại.',
+      l2_middle: 'Postgres dùng MVCC snapshot. Mức cô lập Read Committed cho phép đọc bản ghi đã commit, Repeatable Read giữ nguyên snapshot.',
+      l3_senior: 'Ở mức 3 YoE, phải xử lý Write Skew bằng SSI (Serializable), dùng SKIP LOCKED cho high-throughput worker queues, và cấu hình autovacuum bảo vệ bảng khỏi bloat.'
+    },
+    why_ladder: [
+      { question: 'Tại sao database cần MVCC?', answer: 'Để các truy vấn SELECT đọc dữ liệu không bao giờ bị chặn bởi các lệnh UPDATE/INSERT ghi dữ liệu.' },
+      { question: 'Tại sao cần các mức Isolation khác nhau?', answer: 'Vì tính cô lập càng cao (Serializable) thì chi phí kiểm tra và tỷ lệ retry càng tốn CPU.' },
+      { question: 'SKIP LOCKED giải quyết bài toán gì?', answer: 'Giải quyết bài toán 100 worker cùng tranh nhau dòng đầu tiên của bảng hàng đợi.' }
+    ],
+    code_reaction: {
+      code: `// Chuyển tiền giữa 2 tài khoản:
+async function transfer(fromId: string, toId: string, amount: number) {
+  await db.$transaction(async (tx) => {
+    // Luồng 1: fromId=A, toId=B
+    // Luồng 2: fromId=B, toId=A (Chạy đồng thời!)
+    await tx.$executeRaw\`SELECT * FROM accounts WHERE id = \${fromId} FOR UPDATE\`;
+    await tx.$executeRaw\`SELECT * FROM accounts WHERE id = \${toId} FOR UPDATE\`;
+    // Thực hiện trừ/cộng tiền...
+  });
+}`,
+      question: 'Kịch bản nào sẽ khiến đoạn code chuyển tiền trên bị dính DEADLOCK 100% trong database?',
+      explanation: 'Cross-dependency Deadlock: Luồng 1 khóa A và chờ khóa B. Cùng lúc đó Luồng 2 khóa B và chờ khóa A. Cả 2 luồng khóa lẫn nhau khiến Postgres phải kích hoạt Deadlock Detection để tự hủy một trong hai giao dịch.',
+      fix: 'Sắp xếp thứ tự khóa theo ID nhất quán: `const [first, second] = [fromId, toId].sort();` và luôn khóa `first` trước rồi mới tới `second`.'
+    },
+    cross_link_node_id: 'node-tru-db'
+  },
+  // ==========================================
+  // DOMAIN 15: REDIS STREAMS & HORIZONTAL SCALING
+  // ==========================================
+  {
+    id: 'topic-redis-streams-vs-pubsub',
+    domain_id: 'domain-15-redis',
+    domain_title: 'Domain 15 — Redis & In-Memory',
+    title: 'Redis Streams vs Pub/Sub for Realtime WebSocket Cluster Scaling',
+    target_intent: 'Đánh giá khả năng thiết kế hệ thống realtime có khả năng scale ngang (Horizontal Scaling) trên nhiều instances, phân biệt rõ ràng giữa cơ chế Pub/Sub tạm thời và Message Streaming bền vững.',
+    trigger_keywords: ['Redis Pub/Sub', 'Redis Streams', 'Consumer Groups', 'XADD / XREADGROUP', 'Horizontal Scaling', 'WebSocket Cluster'],
+    recall_5s: 'Redis Pub/Sub là "Fire-and-forget", không lưu trữ tin nhắn. Nếu subscriber bị mất mạng lúc phát tin, tin nhắn mất vĩnh viễn. Redis Streams có cấu trúc Log tuần tự (Append-only), hỗ trợ Consumer Groups, ACK và lưu lại lịch sử tin nhắn.',
+    interview_answer: 'Khi mở rộng ứng dụng WebSocket ra nhiều server nằm sau Load Balancer, các client kết nối tới các server khác nhau không thể nói chuyện trực tiếp. Giải pháp truyền thống là dùng Redis Pub/Sub làm message bus để phát tán (broadcast) tin nhắn giữa các node (như socket.io-redis adapter). Tuy nhiên, Redis Pub/Sub có hạn chế chí mạng: Nó hoàn toàn là "Fire-and-forget", không có bộ đệm lưu trữ, không có xác nhận ACK. Nếu một client bị rớt mạng 3 giây và kết nối lại, toàn bộ tin nhắn trong 3 giây đó bị mất sạch. Đối với các hệ thống đòi hỏi độ tin cậy cao như Chat, Đặt xe, hoặc Thông báo tài chính, chúng tôi chuyển sang dùng Redis Streams (`XADD`, `XREADGROUP`, `XACK`). Redis Streams tổ chức dữ liệu dạng Log tuần tự, hỗ trợ Consumer Groups chia tải và cho phép client đọc bù tin nhắn từ ID cuối cùng đã nhận (`last_delivered_id`).',
+    deep_dive: 'Bên dưới Redis Streams: Mỗi stream entry được gắn một ID theo thời gian thực `timestamp-sequence` (ví dụ `1710500000000-0`). Consumer Group theo dõi Pending Entries List (PEL) - danh sách các tin nhắn đã gửi cho consumer nhưng chưa nhận được `XACK`. Nếu một worker bị crash giữa chừng, worker khác có thể dùng lệnh `XCLAIM` để nhận lại tin nhắn đó và xử lý tiếp, đảm bảo ngữ nghĩa At-least-once delivery.',
+    practical_example: {
+      title: 'Mô hình Fan-out Broadcast tin nhắn Realtime qua Redis Pub/Sub',
+      code: `import { createClient } from 'redis';
+
+const pub = createClient({ url: process.env.REDIS_URL });
+const sub = pub.duplicate();
+await pub.connect();
+await sub.connect();
+
+// 1. Khi Client gửi tin nhắn vào Room X ở Node Server này
+export async function sendChatMessage(roomId: string, message: any) {
+  // Bắn event lên kênh Redis chung cho toàn bộ cụm server
+  await pub.publish(\`room:\${roomId}\`, JSON.stringify(message));
+}
+
+// 2. Mọi Node Server lắng nghe kênh và phát xuống local WebSocket connections
+await sub.subscribe('room:*', (message, channel) => {
+  const roomId = channel.replace('room:', '');
+  localWebSocketServer.to(roomId).emit('new_message', JSON.parse(message));
+});`,
+      scenario: 'User A kết nối tới Server 1 nhắn tin cho User B đang kết nối tới Server 2 trong cùng phòng chat.'
+    },
+    trade_offs: {
+      when_use: 'Pub/Sub cho live notifications tạm thời, ephemeral typing indicators; Streams cho chat messages, audit trails, event queues cần độ bền vững.',
+      when_not_use: 'Không dùng Pub/Sub cho giao dịch tiền bạc hoặc tin nhắn không được phép mất.',
+      pros: ['Pub/Sub độ trễ cực thấp (sub-millisecond), RAM giải phóng ngay lập tức', 'Streams hỗ trợ ACK và lưu trữ lịch sử tin cậy'],
+      cons: ['Streams tốn dung lượng RAM (cần dùng MAXLEN để cắt tỉa log định kỳ)'],
+      alternatives: ['Apache Kafka (cho hệ thống dữ liệu lớn TBs)', 'RabbitMQ']
+    },
+    follow_ups: [
+      {
+        question: 'Làm thế nào để tránh Redis Streams ngốn cạn RAM của máy chủ theo thời gian?',
+        answer_skeleton: 'Sử dụng cờ MAXLEN xấp xỉ khi XADD: `XADD mystream MAXLEN ~ 10000 * field value` để Redis tự động xóa bỏ các entries cũ khi vượt quá ngưỡng.'
+      },
+      {
+        question: 'Chuyện gì xảy ra với Redis Pub/Sub nếu subscriber xử lý tin nhắn quá chậm?',
+        answer_skeleton: 'Redis sẽ tích lũy tin nhắn vào Output Buffer của client đó. Khi chạm giới hạn `client-output-buffer-limit pubsub`, Redis sẽ chủ động ngắt kết nối subscriber đó để bảo vệ server.'
+      }
+    ],
+    common_traps: [
+      'Dùng Redis Pub/Sub cho hệ thống thông báo quan trọng rồi thắc mắc tại sao user bị miss thông báo khi điện thoại tắt màn hình.',
+      'Dùng Redis Streams mà quên gọi `XACK` khiến Pending Entries List (PEL) phình to vô hạn làm tràn bộ nhớ.'
+    ],
+    active_recall: [
+      'Tại sao Redis Pub/Sub không thể hỗ trợ tính năng "đọc bù tin nhắn khi reconnect"?',
+      'Trong Redis Streams, danh sách PEL (Pending Entries List) dùng để theo dõi điều gì?'
+    ],
+    layers: {
+      l1_junior: 'Redis Pub/Sub giúp gửi tin nhắn từ người gửi tới nhiều người nhận.',
+      l2_middle: 'Sử dụng Redis Pub/Sub làm Adapter để kết nối nhiều server WebSocket chạy song song.',
+      l3_senior: 'Ở mức 3 YoE, phân biệt rạch ròi Pub/Sub ephemeral vs Streams persistent, cấu hình PEL và XCLAIM cho worker failover, và kiểm soát MAXLEN capping tránh tràn RAM.'
+    },
+    why_ladder: [
+      { question: 'Tại sao 1 server WebSocket không đủ?', answer: 'Vì giới hạn số lượng kết nối đồng thời (file descriptor) và CPU trên một máy chủ.' },
+      { question: 'Khi có 2 server thì sao?', answer: 'Client A ở server 1 không thể gửi socket trực tiếp cho Client B ở server 2 nếu thiếu message broker trung gian.' },
+      { question: 'Tại sao Pub/Sub đôi khi không đủ?', answer: 'Vì nó không có khả năng lưu trữ, client mất mạng là mất dữ liệu vĩnh viễn.' }
+    ],
+    code_reaction: {
+      code: `// Worker đọc Redis Stream nhưng quên ACK:
+const entries = await redis.xreadgroup(
+  'GROUP', 'mygroup', 'consumer-1', 
+  'COUNT', '10', 'STREAMS', 'order_stream', '>'
+);
+for (const entry of entries[0].messages) {
+  await processOrder(entry.message);
+  // Thiếu dòng XACK ở đây!
+}`,
+      question: 'Hậu quả nguy hiểm nào xảy ra sau vài tuần vận hành đoạn code trên?',
+      explanation: 'Mỗi tin nhắn chưa ACK sẽ bị giữ vĩnh viễn trong RAM của Redis dưới cấu trúc PEL (Pending Entries List). Sau vài tuần với hàng triệu đơn hàng, Redis sẽ bị cạn kiệt RAM và sập máy chủ (OOM crash).',
+      fix: 'Luôn gọi `await redis.xack(\'order_stream\', \'mygroup\', entry.id);` sau khi xử lý thành công.'
+    },
+    cross_link_node_id: 'node-cache-redis'
+  },
+  // ==========================================
+  // DOMAIN 11: NESTJS ARCHITECTURE (REQUEST SCOPES)
+  // ==========================================
+  {
+    id: 'topic-nestjs-request-scopes',
+    domain_id: 'domain-11-nestjs',
+    domain_title: 'Domain 11 — NestJS Architecture',
+    title: 'Dependency Injection Scopes (DEFAULT vs REQUEST vs TRANSIENT) & Performance Pitfalls',
+    target_intent: 'Đánh giá khả năng hiểu sâu kiến trúc IoC Container của NestJS, vòng đời provider và nguy cơ thắt cổ chai hiệu năng (Performance Bottleneck) khi dùng sai Request Scope.',
+    trigger_keywords: ['NestJS IoC', 'Scope.DEFAULT (Singleton)', 'Scope.REQUEST', 'Scope.TRANSIENT', 'Scope Bubble Up', 'AsyncLocalStorage'],
+    recall_5s: 'Scope.DEFAULT là Singleton (1 instance duy nhất, khởi tạo lúc boot, siêu nhanh). Scope.REQUEST tạo mới instance cho mỗi HTTP request và lan truyền (bubble up) lên toàn bộ dependency chain khiến server bị đơ Garbage Collector under high load. Dùng AsyncLocalStorage thay vì Request Scope.',
+    interview_answer: 'Trong NestJS, mọi Provider mặc định đều là `Scope.DEFAULT` (Singleton) - được khởi tạo duy nhất một lần khi ứng dụng khởi động và tái sử dụng cho mọi request, giúp tối ưu hiệu năng và tiết kiệm RAM tối đa. Khi một service cần dữ liệu riêng của request (như User Tenant ID hoặc Request Header), nhiều lập trình viên vội vã đánh dấu `@Injectable({ scope: Scope.REQUEST })`. Đây là một bẫy hiệu năng nghiêm trọng: Hiệu ứng "Scope Bubble Up" sẽ biến mọi Controller, Service, Repository nào inject service đó trở thành Request-scoped. Khi có 10,000 request/giây, NestJS phải tạo mới hàng chục ngàn instances và tiêu diệt chúng, khiến V8 Garbage Collector hoạt động liên tục làm sụt giảm throughput tới 4–10 lần. Trong hệ thống production (~3 YoE), giải pháp chuẩn mực để lưu giữ ngữ cảnh request là dùng Node.js `AsyncLocalStorage` trong một Middleware.',
+    deep_dive: 'Cơ chế AsyncLocalStorage (ALS): ALS là tính năng native của Node.js dựa trên `async_hooks`. Nó cho phép truyền dữ liệu xuyên suốt chuỗi hàm bất đồng bộ mà không cần truyền tham số qua từng hàm và KHÔNG làm thay đổi vòng đời Singleton của các service trong NestJS. Đây là cách triển khai Multi-Tenancy và Correlation ID chuẩn xác nhất trong môi trường chịu tải cao.',
+    practical_example: {
+      title: 'Truyền Request Context an toàn bằng AsyncLocalStorage thay vì Request Scope',
+      code: `import { Injectable, NestMiddleware } from '@nestjs/common';
+import { AsyncLocalStorage } from 'async_hooks';
+
+export const requestContext = new AsyncLocalStorage<{ tenantId: string; correlationId: string }>();
+
+// 1. Middleware thiết lập ngữ cảnh cho từng request
+@Injectable()
+export class ContextMiddleware implements NestMiddleware {
+  use(req: any, res: any, next: () => void) {
+    const store = {
+      tenantId: req.headers['x-tenant-id'] || 'default',
+      correlationId: req.headers['x-correlation-id'] || crypto.randomUUID()
+    };
+    // Mọi logic chạy trong callback này đều đọc được store mà không đổi DI Scope
+    requestContext.run(store, () => next());
+  }
+}
+
+// 2. Service vẫn giữ nguyên Scope.DEFAULT (Singleton) siêu nhanh!
+@Injectable()
+export class OrderService {
+  async createOrder() {
+    const ctx = requestContext.getStore(); // Đọc tenant an toàn tuyệt đối
+    console.log('Tạo đơn cho tenant:', ctx?.tenantId);
+  }
+}`,
+      scenario: 'Hệ thống Multi-tenant chịu tải 15,000 RPS mượt mà mà không tạo rác trong bộ nhớ.'
+    },
+    trade_offs: {
+      when_use: 'Luôn giữ Scope.DEFAULT cho 99% trường hợp. Dùng AsyncLocalStorage khi cần request-level context (tenancy, tracing).',
+      when_not_use: 'Tránh tối đa Scope.REQUEST trong các hot-path endpoints chịu tải cao.',
+      pros: ['Giữ nguyên hiệu năng cao nhất cho NestJS DI Container', 'Tránh rò rỉ bộ nhớ do Bubble Up'],
+      cons: ['AsyncLocalStorage cần hiểu rõ mô hình bất đồng bộ của Node.js để tránh mất context khi dùng callback cũ'],
+      alternatives: ['Scope.REQUEST (chỉ chấp nhận khi ứng dụng nội bộ tải cực thấp)']
+    },
+    follow_ups: [
+      {
+        question: 'Hiện tượng "Scope Bubble Up" trong NestJS xảy ra như thế nào?',
+        answer_skeleton: 'Nếu Service C có Scope.REQUEST, thì Service B inject C cũng bị ép thành Request Scope, và Controller A inject B cũng trở thành Request Scope. Toàn bộ cây phụ thuộc đều bị biến thành request-scoped.'
+      },
+      {
+        question: 'Khi nào Scope.TRANSIENT được sử dụng?',
+        answer_skeleton: 'Scope.TRANSIENT tạo một instance mới cho mỗi nơi inject nó (nhưng không phụ thuộc vào request). Thường dùng cho các Dedicated Logger hoặc Worker Instance riêng biệt.'
+      }
+    ],
+    common_traps: [
+      'Inject REQUEST vào AuthGuard hoặc DatabaseService khiến toàn bộ ứng dụng bị giật lag khi có tải lớn.',
+      'Nghĩ rằng mỗi request trong NestJS chạy trên một process riêng biệt (nó chia sẻ chung 1 Node.js event loop!).'
+    ],
+    active_recall: [
+      'Ba mức Scope trong NestJS là gì và mức nào là mặc định?',
+      'Tại sao AsyncLocalStorage lại vượt trội hơn Scope.REQUEST trong các ứng dụng Multi-Tenancy?'
+    ],
+    layers: {
+      l1_junior: 'NestJS dùng Dependency Injection để tự động khởi tạo và tiêm service vào controller.',
+      l2_middle: 'Mặc định service là Singleton. Scope.REQUEST tạo mới service mỗi khi có request tới.',
+      l3_senior: 'Ở mức 3 YoE, phải giải thích được tác hại của Scope Bubble Up đối với Garbage Collection và thông thạo kỹ thuật AsyncLocalStorage để thay thế an toàn.'
+    },
+    why_ladder: [
+      { question: 'Tại sao NestJS mặc định dùng Singleton?', answer: 'Để tiết kiệm RAM và CPU, khởi tạo 1 lần và dùng chung cho hàng triệu request.' },
+      { question: 'Tại sao lập trình viên lại muốn dùng Request Scope?', answer: 'Vì muốn lấy trực tiếp req.user hoặc req.headers mà không muốn truyền qua tham số hàm.' },
+      { question: 'Cái giá phải trả là gì?', answer: 'GC thrashing: Node.js phải liên tục dọn rác hàng chục nghìn object mỗi giây làm nghẽn CPU.' }
+    ],
+    code_reaction: {
+      code: `// OrderService.ts
+@Injectable({ scope: Scope.REQUEST }) // <-- HIỂM HỌA HIỆU NĂNG
+export class OrderService {
+  constructor(@Inject(REQUEST) private readonly request: Request) {}
+
+  async calculateTotal() {
+    return this.request.body.items.reduce((sum, i) => sum + i.price, 0);
+  }
+}`,
+      question: 'Khi ứng dụng chạy chiến dịch Flash Sale với 50,000 requests/phút, service trên sẽ gây ra hiện tượng gì?',
+      explanation: '50,000 instances của OrderService (kèm toàn bộ controller inject nó) được tạo ra và hủy đi trong 1 phút. RAM và CPU sẽ tăng vọt do V8 Engine phải liên tục dừng thế giới (Stop-The-World) để Garbage Collect, khiến API bị timeout 504.',
+      fix: 'Bỏ `{ scope: Scope.REQUEST }` và truyền dữ liệu qua tham số hàm: `calculateTotal(items: Item[])`.'
+    },
+    cross_link_node_id: 'node-backend-service'
   }
 ];
+

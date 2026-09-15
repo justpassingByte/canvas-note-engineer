@@ -529,6 +529,38 @@ export class SQLiteKnowledgeClient {
     this.db.prepare('DELETE FROM interview_user_progress WHERE topic_id = ?').run(id);
   }
 
+  public cleanBoilerplateTopics(): number {
+    const tx = this.db.transaction(() => {
+      // Tìm các topic sinh từ template rỗng
+      const badRows = this.db.prepare(`
+        SELECT id FROM interview_topics
+        WHERE recall_5s LIKE '%không nằm ở cú pháp sáo rỗng%'
+           OR practical_example LIKE '%handleProductionWorkload%'
+      `).all() as Array<{ id: string }>;
+
+      const badIds = badRows.map(r => r.id);
+      if (badIds.length > 0) {
+        const deleteProgress = this.db.prepare('DELETE FROM interview_user_progress WHERE topic_id = ?');
+        const deleteTopic = this.db.prepare('DELETE FROM interview_topics WHERE id = ?');
+        for (const id of badIds) {
+          deleteProgress.run(id);
+          deleteTopic.run(id);
+        }
+      }
+
+      // Dọn sạch bản ghi tiến trình mồ côi
+      this.db.prepare(`
+        DELETE FROM interview_user_progress
+        WHERE topic_id NOT IN (SELECT id FROM interview_topics)
+      `).run();
+
+      return badIds.length;
+    });
+
+    return tx();
+  }
+
+
   public updateUserTopicProgress(progress: {
     topic_id: string;
     gap_status?: GapStatus;
