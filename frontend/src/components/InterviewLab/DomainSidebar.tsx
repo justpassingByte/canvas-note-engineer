@@ -83,6 +83,7 @@ export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCl
     searchQuery,
     setSearchQuery,
     toggleGenerateModal,
+    allTopics,
     topics,
     selectedTopicId,
     selectTopic
@@ -261,15 +262,19 @@ export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCl
               )}
 
               {/* Show Nested Topics when Selected */}
-              {isSelected && topics.length > 0 && (
-                <div style={{ marginTop: '8px', marginLeft: '16px', borderLeft: '2px solid #C7D2FE', paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  {topics.map((t) => {
-                    const isTopicSelected = selectedTopicId === t.id;
-                    const status = t.progress?.gap_status || 'MUST_LEARN';
-                    const dot =
-                      status === 'READY' ? '🟢' :
-                      status === 'KNOW' ? '🟡' :
-                      status === 'WEAK' ? '🟠' : '🔴';
+              {(() => {
+                const domainTopics = allTopics.length > 0 ? allTopics.filter(t => t.domain_id === d.id) : (isSelected ? topics : []);
+                if (!isSelected || domainTopics.length === 0) return null;
+
+                return (
+                  <div style={{ marginTop: '8px', marginLeft: '16px', borderLeft: '2px solid #C7D2FE', paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    {domainTopics.map((t) => {
+                      const isTopicSelected = selectedTopicId === t.id;
+                      const status = t.progress?.gap_status || 'MUST_LEARN';
+                      const dot =
+                        status === 'READY' ? '🟢' :
+                        status === 'KNOW' ? '🟡' :
+                        status === 'WEAK' ? '🟠' : '🔴';
 
                     return (
                       <div
@@ -328,8 +333,9 @@ export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCl
                       </div>
                     );
                   })}
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </div>
           );
         })}

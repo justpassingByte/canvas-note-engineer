@@ -32,8 +32,10 @@ interface CheatsheetReaderProps {
 
 export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomains }) => {
   const {
+    allTopics,
     topics,
     selectedTopicId,
+    isLoading,
     updateTopicProgress,
     timerDuration,
     timeLeft,
@@ -51,7 +53,10 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
   const [showCodeFix, setShowCodeFix] = useState(false);
   const [openFollowUpIdx, setOpenFollowUpIdx] = useState<number | null>(null);
 
-  const topic = topics.find((t) => t.id === selectedTopicId) || topics[0];
+  // Exact topic matching without fallback to stale previous domain topics
+  const topic = selectedTopicId
+    ? (topics.find((t) => t.id === selectedTopicId) || allTopics.find((t) => t.id === selectedTopicId) || null)
+    : (topics[0] || allTopics[0] || null);
 
   // Timer interval
   useEffect(() => {
@@ -67,6 +72,31 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
   }, [isTimerRunning, tickTimer]);
 
   if (!topic) {
+    if (isLoading) {
+      return (
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#6B7280',
+          padding: '32px'
+        }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: '3px solid #EEF2FF',
+            borderTopColor: '#4F46E5',
+            animation: 'spin 0.8s linear infinite',
+            marginBottom: '16px'
+          }} />
+          <p style={{ fontSize: '13px', color: '#4B5563', fontWeight: 600 }}>Đang nạp dữ liệu phản xạ...</p>
+        </div>
+      );
+    }
+
     return (
       <div style={{
         flex: 1,
@@ -93,14 +123,18 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
   };
 
   return (
-    <div className="cheatsheet-reader" style={{
-      flex: 1,
-      overflowY: 'auto',
-      padding: '24px 36px',
-      background: '#FFFFFF',
-      color: '#1F2937',
-      lineHeight: 1.6
-    }}>
+    <div
+      key={topic.id}
+      className="cheatsheet-reader fade-in-topic"
+      style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '24px 36px',
+        background: '#FFFFFF',
+        color: '#1F2937',
+        lineHeight: 1.6
+      }}
+    >
       {/* 1. Header Area: 2-Row Layout (Meta Row + Title & Status Row) */}
       <div className="cheatsheet-hero-header">
         {/* Row 1: Domain Meta & Canvas Cross-Link */}

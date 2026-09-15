@@ -10,6 +10,7 @@ interface InterviewState {
   activeTab: 'reader' | 'drill' | 'gap_map';
   domains: DomainMeta[];
   selectedDomainId: string | null;
+  allTopics: InterviewTopicEntity[];
   topics: InterviewTopicEntity[];
   selectedTopicId: string | null;
   gapMapSummary: GapMapSummary | null;
@@ -38,6 +39,7 @@ interface InterviewState {
   fetchGapMap: () => Promise<void>;
   selectDomain: (domainId: string | null) => void;
   selectTopic: (topicId: string | null) => void;
+  selectDomainAndTopic: (domainId: string | null, topicId: string | null, tab?: 'reader' | 'drill' | 'gap_map') => void;
   setSearchQuery: (query: string) => void;
   updateTopicProgress: (topicId: string, status: GapStatus, notes?: string) => Promise<void>;
   generateTopic: (topicPrompt: string, domainId?: string) => Promise<InterviewTopicEntity | null>;
@@ -65,6 +67,7 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   activeTab: 'reader',
   domains: [],
   selectedDomainId: null,
+  allTopics: [],
   topics: [],
   selectedTopicId: null,
   gapMapSummary: null,
@@ -103,16 +106,49 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   },
 
   fetchTopics: async (domainId) => {
+    // If allTopics already loaded in memory, filter instantly
+    const targetDomainId = domainId !== undefined ? domainId : get().selectedDomainId;
+    const currentAll = get().allTopics;
+
+    if (currentAll.length > 0) {
+      const filtered = targetDomainId
+        ? currentAll.filter((t) => t.domain_id === targetDomainId)
+        : currentAll;
+      const currentSelected = get().selectedTopicId;
+      const validSelected = filtered.some((t) => t.id === currentSelected)
+        ? currentSelected
+        : filtered[0]?.id || null;
+
+      set({
+        topics: filtered,
+        selectedDomainId: targetDomainId || null,
+        selectedTopicId: validSelected
+      });
+      return;
+    }
+
     set({ isLoading: true });
     try {
-      const url = domainId ? `${API_BASE}/topics?domain_id=${domainId}` : `${API_BASE}/topics`;
-      const res = await fetch(url);
+      // Fetch ALL topics once into memory cache
+      const res = await fetch(`${API_BASE}/topics`);
       if (res.ok) {
-        const data = await res.json();
-        set({ topics: data });
-        if (data.length > 0 && !get().selectedTopicId) {
-          set({ selectedTopicId: data[0].id });
-        }
+        const allData: InterviewTopicEntity[] = await res.json();
+        const effectiveDomainId = targetDomainId || (get().domains.length > 0 ? get().domains[0].id : null);
+        const filtered = effectiveDomainId
+          ? allData.filter((t) => t.domain_id === effectiveDomainId)
+          : allData;
+
+        const currentSelected = get().selectedTopicId;
+        const validSelected = filtered.some((t) => t.id === currentSelected)
+          ? currentSelected
+          : filtered[0]?.id || null;
+
+        set({
+          allTopics: allData,
+          topics: filtered,
+          selectedDomainId: effectiveDomainId,
+          selectedTopicId: validSelected
+        });
       }
     } catch (err) {
       console.error('Lỗi tải danh sách topics:', err);
@@ -134,12 +170,52 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
   },
 
   selectDomain: (domainId) => {
-    set({ selectedDomainId: domainId, selectedTopicId: null, drillIndex: 0, isCardFlipped: false });
-    get().fetchTopics(domainId || undefined);
+    const all = get().allTopics;
+    const filtered = domainId ? all.filter((t) => t.domain_id === domainId) : all;
+    set({
+      selectedDomainId: domainId,
+      topics: filtered,
+      selectedTopicId: filtered[0]?.id || null,
+      drillIndex: 0,
+      isCardFlipped: false
+    });
+    get().resetTimer();
   },
 
   selectTopic: (topicId) => {
-    set({ selectedTopicId: topicId, isCardFlipped: false });
+    if (!topicId) {
+      set({ selectedTopicId: null, isCardFlipped: false });
+      return;
+    }
+    const all = get().allTopics;
+    const targetTopic = all.find((t) => t.id === topicId);
+    const domainId = targetTopic?.domain_id || get().selectedDomainId;
+    const filtered = domainId ? all.filter((t) => t.domain_id === domainId) : all;
+
+    set({
+      selectedDomainId: domainId,
+      topics: filtered.length > 0 ? filtered : all,
+      selectedTopicId: topicId,
+      isCardFlipped: false
+    });
+    get().resetTimer();
+  },
+
+  selectDomainAndTopic: (domainId, topicId, tab) => {
+    const all = get().allTopics;
+    const targetTopic = topicId ? all.find((t) => t.id === topicId) : null;
+    const effectiveDomainId = domainId || targetTopic?.domain_id || get().selectedDomainId;
+    const filtered = effectiveDomainId ? all.filter((t) => t.domain_id === effectiveDomainId) : all;
+    const effectiveTopicId = topicId || targetTopic?.id || filtered[0]?.id || null;
+
+    set({
+      ...(tab ? { activeTab: tab } : {}),
+      selectedDomainId: effectiveDomainId,
+      topics: filtered.length > 0 ? filtered : all,
+      selectedTopicId: effectiveTopicId,
+      drillIndex: 0,
+      isCardFlipped: false
+    });
     get().resetTimer();
   },
 
@@ -153,26 +229,28 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         body: JSON.stringify({ topic_id: topicId, gap_status: status, notes })
       });
       if (res.ok) {
-        set((state) => ({
-          topics: state.topics.map((t) =>
-            t.id === topicId
-              ? {
-                  ...t,
-                  progress: {
-                    ...(t.progress || {
-                      topic_id: topicId,
-                      gap_status: status,
-                      reviewed_count: 0,
-                      last_reviewed_at: null
-                    }),
+        const updater = (t: InterviewTopicEntity) =>
+          t.id === topicId
+            ? {
+                ...t,
+                progress: {
+                  ...(t.progress || {
+                    topic_id: topicId,
                     gap_status: status,
-                    reviewed_count: (t.progress?.reviewed_count || 0) + 1,
-                    last_reviewed_at: new Date().toISOString(),
-                    notes: notes !== undefined ? notes : t.progress?.notes
-                  }
+                    reviewed_count: 0,
+                    last_reviewed_at: null
+                  }),
+                  gap_status: status,
+                  reviewed_count: (t.progress?.reviewed_count || 0) + 1,
+                  last_reviewed_at: new Date().toISOString(),
+                  notes: notes !== undefined ? notes : t.progress?.notes
                 }
-              : t
-          )
+              }
+            : t;
+
+        set((state) => ({
+          allTopics: state.allTopics.map(updater),
+          topics: state.topics.map(updater)
         }));
         get().fetchDomains();
         get().fetchGapMap();
@@ -195,10 +273,21 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         throw new Error(data.error || 'Lỗi khi sinh topic');
       }
 
-      await get().fetchTopics(get().selectedDomainId || undefined);
+      set((state) => {
+        const newAll = [data.topic, ...state.allTopics.filter((t) => t.id !== data.topic.id)];
+        const effectiveDomain = domainId || state.selectedDomainId;
+        const newFiltered = effectiveDomain ? newAll.filter((t) => t.domain_id === effectiveDomain) : newAll;
+        return {
+          allTopics: newAll,
+          topics: newFiltered,
+          selectedDomainId: effectiveDomain,
+          selectedTopicId: data.topic.id,
+          isGenerateModalOpen: false
+        };
+      });
+
       await get().fetchDomains();
       await get().fetchGapMap();
-      set({ selectedTopicId: data.topic.id, isGenerateModalOpen: false });
       return data.topic;
     } catch (err: any) {
       alert(`Không thể sinh topic: ${err.message}`);
@@ -221,6 +310,8 @@ export const useInterviewStore = create<InterviewState>((set, get) => ({
         throw new Error(data.error || 'Lỗi khi sinh domain');
       }
 
+      // Re-fetch all to synchronize
+      set({ allTopics: [] });
       await get().fetchTopics(domainId);
       await get().fetchDomains();
       await get().fetchGapMap();

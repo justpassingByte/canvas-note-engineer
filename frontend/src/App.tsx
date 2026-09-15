@@ -79,15 +79,7 @@ export const App: React.FC = () => {
       const { topicId, domainId, tab } = e.detail || {};
       import('./store/useInterviewStore.js').then(({ useInterviewStore }) => {
         const interviewStore = useInterviewStore.getState();
-        if (tab) {
-          interviewStore.setActiveTab(tab);
-        }
-        if (domainId) {
-          interviewStore.selectDomain(domainId);
-        }
-        if (topicId) {
-          interviewStore.selectTopic(topicId);
-        }
+        interviewStore.selectDomainAndTopic(domainId || null, topicId || null, tab);
       });
     };
     window.addEventListener('switch-to-interview', handleSwitchToInterview);

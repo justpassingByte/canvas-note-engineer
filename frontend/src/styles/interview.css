@@ -120,6 +120,22 @@
 }
 
 /* 3. Cheatsheet Reader */
+@keyframes topicFadeIn {
+  from {
+    opacity: 0.35;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-topic {
+  animation: topicFadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: opacity, transform;
+}
+
 .cheatsheet-reader {
   flex: 1;
   overflow-y: auto;
