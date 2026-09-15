@@ -3,7 +3,7 @@ import path from 'path';
 
 const ARTIFACT_DIR = 'C:/Users/MSI/.gemini/antigravity-ide/brain/9feb4c66-831e-4ddc-9b28-3cb00ec0c9d6';
 
-test('Verify Bidirectional Linking between Canvas and Interview Lab (99 Topics & 14 Architecture Nodes)', async ({ page }) => {
+test('Verify Bidirectional Linking between Canvas and Interview Lab (36 Topics & 14 Architecture Nodes)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
   // 1. Vào trang Canvas và kiểm tra 14 node kiến trúc

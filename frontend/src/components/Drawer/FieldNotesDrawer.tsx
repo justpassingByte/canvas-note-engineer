@@ -470,7 +470,7 @@ export const FieldNotesDrawer: React.FC = () => {
                 color: '#64748B',
                 textAlign: 'center'
               }}>
-                <p style={{ margin: '0 0 6px 0' }}>Khám phá kho 99+ chủ đề phỏng vấn 3 YoE theo 29 domain chuyên sâu.</p>
+                <p style={{ margin: '0 0 6px 0' }}>Khám phá kho chủ đề phỏng vấn 3 YoE theo 29 domain chuyên sâu.</p>
                 <button
                   onClick={() => jumpToInterviewLab()}
                   style={{
@@ -488,7 +488,7 @@ export const FieldNotesDrawer: React.FC = () => {
                   }}
                 >
                   <Brain size={12} />
-                  <span>Vào Interview Lab (99 Đề tài)</span>
+                  <span>Vào Interview Lab</span>
                 </button>
               </div>
             )}

@@ -112,11 +112,10 @@ export const App: React.FC = () => {
         <button
           onClick={() => setAppMode('interview_lab')}
           className="nut-chuyen-interview-lab"
-          title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Fullstack 3 YoE - 99 Đề tài / 29 Domain)"
+          title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Interview Lab)"
         >
           <GraduationCap size={16} />
-          <span className="nhan-nut-chuyen">Luyện Phỏng Vấn (Interview Lab)</span>
-          <span className="badge-nut-chuyen">99 đề tài</span>
+          <span className="nhan-nut-chuyen">Interview Lab</span>
         </button>
       </div>
 
