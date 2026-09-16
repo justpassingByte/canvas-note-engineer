@@ -30,7 +30,6 @@ import {
   Users,
   Calendar,
   Search,
-  PlusCircle,
   BookOpen,
   X
 } from 'lucide-react';
@@ -82,7 +81,6 @@ export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCl
     selectDomain,
     searchQuery,
     setSearchQuery,
-    toggleGenerateModal,
     allTopics,
     topics,
     selectedTopicId,
@@ -113,27 +111,6 @@ export const DomainSidebar: React.FC<DomainSidebarProps> = ({ isMobileOpen, onCl
               <span>29 DOMAINS PHỎNG VẤN</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <button
-                onClick={() => toggleGenerateModal(true)}
-                style={{
-                  background: '#EEF2FF',
-                  color: '#4F46E5',
-                  border: '1px solid #C7D2FE',
-                  borderRadius: '5px',
-                  padding: '3px 8px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-                title="Sinh thêm Topic hoặc sinh trọn gói Domain bằng AI"
-              >
-                <PlusCircle size={12} />
-                <span>Sinh AI</span>
-              </button>
-
               {onCloseMobile && (
                 <button
                   className="nut-dong-sidebar-mobile"

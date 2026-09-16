@@ -143,15 +143,6 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
             <span className="cheatsheet-domain-tag">
               {topic.domain_title}
             </span>
-            {onOpenDomains && (
-              <button
-                className="nut-doi-domain-mini"
-                onClick={onOpenDomains}
-                title="Mở danh sách 29 Domain để đổi chủ đề"
-              >
-                <span>Đổi Domain ▾</span>
-              </button>
-            )}
           </div>
 
           {(() => {

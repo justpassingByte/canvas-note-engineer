@@ -94,19 +94,8 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
               <GraduationCap size={15} />
             </div>
             <div>
-              <span className="tieu-de-interview-full" style={{ fontSize: '13px', fontWeight: 800, color: '#111827' }}>
+              <span className="tieu-de-interview-full" style={{ fontSize: '13.5px', fontWeight: 800, color: '#111827' }}>
                 Phòng Luyện Phản Xạ Phỏng Vấn
-              </span>
-              <span className="badge-fullstack" style={{
-                marginLeft: '8px',
-                background: '#EEF2FF',
-                color: '#4F46E5',
-                fontSize: '10px',
-                fontWeight: 800,
-                padding: '1px 6px',
-                borderRadius: '10px'
-              }}>
-                Fullstack 3 YoE
               </span>
             </div>
           </div>
