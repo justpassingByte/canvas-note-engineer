@@ -59,6 +59,9 @@ export const ExpandNodeAiModal: React.FC = () => {
         padding: '20px'
       }}
       onClick={toggleExpandWithAiModal}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div
         style={{
@@ -71,6 +74,9 @@ export const ExpandNodeAiModal: React.FC = () => {
           fontFamily: 'Inter, -apple-system, sans-serif'
         }}
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div

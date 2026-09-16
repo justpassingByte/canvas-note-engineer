@@ -25,8 +25,14 @@ interface GraphState {
   isProviderConfigOpen: boolean;
   isNewGraphModalOpen: boolean;
   isExpandWithAiOpen: boolean;
+  isRagModalOpen: boolean;
   isAiGenerating: boolean;
   aiStatusMessage: string | null;
+
+  // Actions
+  toggleRagModal: () => void;
+  openRagModal: () => void;
+  closeRagModal: () => void;
 
   // Actions
   setGraph: (graph: GraphData) => void;
@@ -91,6 +97,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   isProviderConfigOpen: false,
   isNewGraphModalOpen: false,
   isExpandWithAiOpen: false,
+  isRagModalOpen: false,
   isAiGenerating: false,
   aiStatusMessage: null,
 
@@ -440,6 +447,9 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   toggleProviderConfigModal: () => set((s) => ({ isProviderConfigOpen: !s.isProviderConfigOpen })),
   toggleNewGraphModal: () => set((s) => ({ isNewGraphModalOpen: !s.isNewGraphModalOpen })),
   toggleExpandWithAiModal: () => set((s) => ({ isExpandWithAiOpen: !s.isExpandWithAiOpen })),
+  toggleRagModal: () => set((s) => ({ isRagModalOpen: !s.isRagModalOpen })),
+  openRagModal: () => set({ isRagModalOpen: true }),
+  closeRagModal: () => set({ isRagModalOpen: false }),
 
   fetchProviderConfig: async () => {
     try {

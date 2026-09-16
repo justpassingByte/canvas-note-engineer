@@ -10,12 +10,17 @@ interface RagDoc {
 }
 
 interface BrainstormRagModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, onClose }) => {
-  const { setGraph } = useGraphStore();
+export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({
+  isOpen: propIsOpen,
+  onClose: propOnClose
+}) => {
+  const { setGraph, isRagModalOpen, closeRagModal } = useGraphStore();
+  const isOpen = propIsOpen !== undefined ? propIsOpen : isRagModalOpen;
+  const onClose = propOnClose || closeRagModal;
   const [activeTab, setActiveTab] = useState<'files' | 'upload' | 'paste'>('files');
   const [documents, setDocuments] = useState<RagDoc[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<string>('');
@@ -195,6 +200,9 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
         backdropFilter: 'blur(3px)'
       }}
       onClick={onClose}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
     >
       <div
         style={{
@@ -211,6 +219,9 @@ export const BrainstormRagModal: React.FC<BrainstormRagModalProps> = ({ isOpen, 
           fontFamily: 'JetBrains Mono, monospace'
         }}
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div

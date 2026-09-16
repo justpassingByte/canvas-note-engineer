@@ -10,10 +10,10 @@ import { FieldNotesDrawer } from './components/Drawer/FieldNotesDrawer.js';
 import { ProviderConfigModal } from './components/Settings/ProviderConfigModal.js';
 import { NewGraphAiModal } from './components/Modals/NewGraphAiModal.js';
 import { ExpandNodeAiModal } from './components/Modals/ExpandNodeAiModal.js';
+import { BrainstormRagModal } from './components/RAG/BrainstormRagModal.js';
 import { InterviewLabView } from './components/InterviewLab/InterviewLabView.js';
 import { useGraphStore } from './store/useGraphStore.js';
 import { setDynamicDictionary } from './dictionary/technicalDictionary.js';
-import { GraduationCap } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [appMode, setAppMode] = useState<'canvas' | 'interview_lab'>('canvas');
@@ -91,31 +91,18 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const isDrawerOpen = useGraphStore(state => state.isDrawerOpen);
-
   if (appMode === 'interview_lab') {
     return <InterviewLabView onBackToCanvas={() => setAppMode('canvas')} />;
   }
 
   return (
     <main className="khong-gian-lam-viec" style={{ position: 'relative' }}>
-      {/* Floating Button chuyển sang Phòng Luyện Phỏng Vấn (Tự động dịch sang trái hoặc ẩn trên mobile khi Drawer mở) */}
-      <div className={`nut-chuyen-interview-lab-wrap ${isDrawerOpen ? 'drawer-mo' : ''}`}>
-        <button
-          onClick={() => setAppMode('interview_lab')}
-          className="nut-chuyen-interview-lab"
-          title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Interview Lab)"
-        >
-          <GraduationCap size={16} />
-          <span className="nhan-nut-chuyen">Interview Lab</span>
-        </button>
-      </div>
-
       <SvgGridCanvas />
       <FieldNotesDrawer />
       <ProviderConfigModal />
       <NewGraphAiModal />
       <ExpandNodeAiModal />
+      <BrainstormRagModal />
     </main>
   );
 };

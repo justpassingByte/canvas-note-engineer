@@ -18,7 +18,6 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { useGraphStore } from '../../store/useGraphStore.js';
-import { BrainstormRagModal } from '../RAG/BrainstormRagModal.js';
 
 export const FloatingToolbar: React.FC = () => {
   const {
@@ -37,11 +36,11 @@ export const FloatingToolbar: React.FC = () => {
     activeProvider,
     toggleProviderConfigModal,
     toggleNewGraphModal,
-    toggleExpandWithAiModal
+    toggleExpandWithAiModal,
+    openRagModal
   } = useGraphStore();
 
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-  const [isRagModalOpen, setIsRagModalOpen] = useState(false);
 
   const visibleNodes = graph?.nodes.filter(n => !n.is_collapsed || n.parent_id === undefined) || [];
   const nodeKhien = graph?.nodes.find(n => n.id === 'node-khien-khoa');
@@ -205,7 +204,7 @@ export const FloatingToolbar: React.FC = () => {
       {/* Nút RAG Brainstorm Doc Ingestion */}
       <button
         className="nut-thao-tac-noi nut-rag-brainstorm"
-        onClick={() => setIsRagModalOpen(true)}
+        onClick={openRagModal}
         title="Nạp & Tự động sinh Cụm Kiến trúc từ tài liệu Brainstorm / RFC"
         style={{
           background: '#EEF2FF',
@@ -370,9 +369,6 @@ export const FloatingToolbar: React.FC = () => {
       >
         <RotateCcw className="lucide-icon-sm" />
       </button>
-
-      {/* Modal Import Brainstorm Doc / RAG */}
-      <BrainstormRagModal isOpen={isRagModalOpen} onClose={() => setIsRagModalOpen(false)} />
     </nav>
   );
 };

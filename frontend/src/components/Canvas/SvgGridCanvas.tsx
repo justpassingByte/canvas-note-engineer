@@ -41,7 +41,11 @@ export const SvgGridCanvas: React.FC = () => {
     spawnClusterWithAI,
     spawnConceptWithAI,
     toggleExpandWithAiModal,
-    toggleNewGraphModal
+    toggleNewGraphModal,
+    isRagModalOpen,
+    isProviderConfigOpen,
+    isNewGraphModalOpen,
+    isExpandWithAiOpen
   } = useGraphStore();
 
   const canvasRef = useRef<HTMLElement>(null);
@@ -767,6 +771,11 @@ export const SvgGridCanvas: React.FC = () => {
 
   // Xử lý lăn chuột Zoom mượt mà theo tâm con trỏ chuột
   const handleWheel = (e: React.WheelEvent) => {
+    // Defense-in-Depth: Nếu có bất kỳ Modal nào đang mở, khóa hoàn toàn sự kiện zoom/pan của canvas
+    if (isRagModalOpen || isProviderConfigOpen || isNewGraphModalOpen || isExpandWithAiOpen) {
+      return;
+    }
+
     e.preventDefault();
     const factor = e.deltaY < 0 ? 1.08 : 0.92;
     const nextZoom = Math.min(Math.max(zoom * factor, 0.25), 2.5);
