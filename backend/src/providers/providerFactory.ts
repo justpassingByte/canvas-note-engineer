@@ -20,13 +20,7 @@ export class ProviderFactory {
         return new AnthropicProvider(resolvedConfig);
       case 'gemini':
         return new GeminiProvider(resolvedConfig);
-      case 'openai':
-      case 'deepseek':
-      case 'groq':
-      case 'ollama':
-      case 'openrouter':
       case 'openai-compatible':
-      case 'custom':
       default:
         return new OpenAICompatibleProvider(resolvedConfig);
     }
@@ -36,40 +30,29 @@ export class ProviderFactory {
     let activeConfig = sqliteClient.getActiveProviderConfig();
     if (!activeConfig) {
       // Tự động kiểm tra xem trong .env có cấu hình nào sẵn không
-      const customUrl = process.env.CUSTOM_BASE_URL || process.env.AI_BASE_URL;
-      const deepseekKey = process.env.DEEPSEEK_API_KEY;
-      const openaiKey = process.env.OPENAI_API_KEY;
+      const aiBaseUrl = process.env.AI_BASE_URL || process.env.OPENAI_BASE_URL || process.env.CUSTOM_BASE_URL;
+      const aiApiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY || process.env.DEEPSEEK_API_KEY;
+      const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 
-      if (customUrl) {
+      if (aiBaseUrl || aiApiKey) {
         activeConfig = {
-          id: 'env-custom',
-          provider_type: 'custom',
-          name: 'Custom Provider (from .env)',
-          base_url: customUrl,
-          api_key: process.env.CUSTOM_API_KEY || process.env.AI_API_KEY || '',
-          model: process.env.CUSTOM_MODEL || process.env.AI_MODEL || 'llama3.2',
+          id: 'env-ai',
+          provider_type: 'openai-compatible',
+          name: 'OpenAI-Compatible (from .env)',
+          base_url: aiBaseUrl || 'https://api.openai.com/v1',
+          api_key: aiApiKey || '',
+          model: process.env.AI_MODEL || process.env.OPENAI_MODEL || process.env.DEEPSEEK_MODEL || 'gpt-4o',
           temperature: 0.3,
           is_active: true
         };
-      } else if (deepseekKey) {
+      } else if (anthropicApiKey) {
         activeConfig = {
-          id: 'env-deepseek',
-          provider_type: 'deepseek',
-          name: 'DeepSeek AI (from .env)',
-          base_url: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1',
-          api_key: deepseekKey,
-          model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-          temperature: 0.3,
-          is_active: true
-        };
-      } else if (openaiKey) {
-        activeConfig = {
-          id: 'env-openai',
-          provider_type: 'openai',
-          name: 'OpenAI (from .env)',
-          base_url: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-          api_key: openaiKey,
-          model: process.env.OPENAI_MODEL || 'gpt-4o',
+          id: 'env-anthropic',
+          provider_type: 'anthropic',
+          name: 'Anthropic Claude (from .env)',
+          base_url: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1',
+          api_key: anthropicApiKey,
+          model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
           temperature: 0.3,
           is_active: true
         };

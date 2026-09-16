@@ -22,7 +22,6 @@ export const ProviderConfigModal: React.FC = () => {
   const {
     activeProvider,
     allProviders,
-    providerPresets,
     isProviderConfigOpen,
     toggleProviderConfigModal,
     saveProviderConfig,
@@ -31,12 +30,11 @@ export const ProviderConfigModal: React.FC = () => {
     deleteProvider
   } = useGraphStore();
 
-  const [selectedPreset, setSelectedPreset] = useState<string>('deepseek');
   const [providerType, setProviderType] = useState<ProviderType>('openai-compatible');
-  const [name, setName] = useState<string>('DeepSeek AI');
-  const [baseUrl, setBaseUrl] = useState<string>('https://api.deepseek.com/v1');
+  const [name, setName] = useState<string>('OpenAI-Compatible AI');
+  const [baseUrl, setBaseUrl] = useState<string>('https://api.openai.com/v1');
   const [apiKey, setApiKey] = useState<string>('');
-  const [model, setModel] = useState<string>('deepseek-chat');
+  const [model, setModel] = useState<string>('gpt-4o');
   const [temperature, setTemperature] = useState<number>(0.3);
   const [showApiKey, setShowApiKey] = useState<boolean>(false);
 
@@ -68,17 +66,31 @@ export const ProviderConfigModal: React.FC = () => {
 
   if (!isProviderConfigOpen) return null;
 
-  const handleApplyPreset = (presetKey: string) => {
-    setSelectedPreset(presetKey);
-    const preset = providerPresets[presetKey];
-    if (preset) {
-      setName(preset.name || presetKey.toUpperCase());
-      setProviderType((preset.provider_type as ProviderType) || (presetKey as ProviderType));
-      setBaseUrl(preset.base_url || '');
-      setModel(preset.model || '');
-      setTemperature(preset.temperature ?? 0.3);
-      setTestResult(null);
-      setAvailableModels([]);
+  const handleProtocolChange = (newType: ProviderType) => {
+    setProviderType(newType);
+    setTestResult(null);
+    setAvailableModels([]);
+
+    if (newType === 'anthropic') {
+      if (!name || name === 'OpenAI-Compatible AI' || name === 'DeepSeek AI') {
+        setName('Anthropic Claude');
+      }
+      if (!baseUrl || baseUrl.includes('openai') || baseUrl.includes('deepseek')) {
+        setBaseUrl('https://api.anthropic.com/v1');
+      }
+      if (!model || model === 'gpt-4o' || model === 'deepseek-chat') {
+        setModel('claude-3-5-sonnet-20241022');
+      }
+    } else {
+      if (!name || name === 'Anthropic Claude') {
+        setName('OpenAI-Compatible AI');
+      }
+      if (!baseUrl || baseUrl.includes('anthropic')) {
+        setBaseUrl('https://api.openai.com/v1');
+      }
+      if (!model || model.includes('claude')) {
+        setModel('gpt-4o');
+      }
     }
   };
 
@@ -230,7 +242,7 @@ export const ProviderConfigModal: React.FC = () => {
                 Cấu hình AI Provider (Lưu vào .env)
               </h2>
               <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
-                🌿 Tự động lưu Base URL, API Key & Model trực tiếp vào file <code>.env</code>
+                🌿 Hỗ trợ mọi dịch vụ chuẩn OpenAI REST & Anthropic Messages API
               </p>
             </div>
           </div>
@@ -252,43 +264,6 @@ export const ProviderConfigModal: React.FC = () => {
 
         {/* Content Body */}
         <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Quick Presets */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '8px' }}>
-              CHỌN NHANH PROVIDER PRESET
-            </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-              {[
-                { id: 'deepseek', label: 'DeepSeek AI' },
-                { id: 'openai', label: 'OpenAI (GPT-4o)' },
-                { id: 'groq', label: 'Groq (Fast)' },
-                { id: 'ollama', label: 'Ollama (Local)' },
-                { id: 'openrouter', label: 'OpenRouter' },
-                { id: 'anthropic', label: 'Claude Anthropic' },
-                { id: 'gemini', label: 'Google Gemini' },
-                { id: 'custom', label: 'Tùy Chỉnh (Custom URL)' }
-              ].map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => handleApplyPreset(p.id)}
-                  style={{
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    border: selectedPreset === p.id ? '2px solid #4F46E5' : '1px solid #E2E8F0',
-                    background: selectedPreset === p.id ? '#EEF2FF' : '#FFFFFF',
-                    color: selectedPreset === p.id ? '#4338CA' : '#334155'
-                  }}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Form Fields */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div>
@@ -300,7 +275,11 @@ export const ProviderConfigModal: React.FC = () => {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Ví dụ: DeepSeek Production"
+                  placeholder={
+                    providerType === 'anthropic'
+                      ? 'Ví dụ: Anthropic Claude 3.5'
+                      : 'Ví dụ: OpenAI / DeepSeek Production'
+                  }
                   style={{
                     width: '100%',
                     padding: '8px 12px',
@@ -319,8 +298,8 @@ export const ProviderConfigModal: React.FC = () => {
                 Kiểu Tương Thích (Protocol)
               </label>
               <select
-                value={providerType}
-                onChange={(e) => setProviderType(e.target.value as ProviderType)}
+                value={providerType === 'anthropic' ? 'anthropic' : 'openai-compatible'}
+                onChange={(e) => handleProtocolChange(e.target.value as ProviderType)}
                 style={{
                   width: '100%',
                   padding: '8px 12px',
@@ -328,18 +307,12 @@ export const ProviderConfigModal: React.FC = () => {
                   borderRadius: '6px',
                   border: '1px solid #CBD5E1',
                   outline: 'none',
-                  background: '#FFFFFF'
+                  background: '#FFFFFF',
+                  fontWeight: 500
                 }}
               >
-                <option value="groq">Groq (gsk_... Siêu Tốc)</option>
-                <option value="deepseek">DeepSeek AI</option>
-                <option value="openai">OpenAI (GPT-4o, o1, o3)</option>
-                <option value="openai-compatible">OpenAI-Compatible (Chung)</option>
-                <option value="ollama">Ollama (Local LLM)</option>
-                <option value="openrouter">OpenRouter</option>
-                <option value="anthropic">Anthropic Messages API (Claude)</option>
-                <option value="gemini">Google Gemini API</option>
-                <option value="custom">Tùy Chỉnh (Custom Proxy/vLLM)</option>
+                <option value="openai-compatible">OpenAI-Compatible (OpenAI, DeepSeek, Groq, Ollama, vLLM, OpenRouter...)</option>
+                <option value="anthropic">Anthropic Messages API (Claude / Reverse Proxy Anthropic)</option>
               </select>
             </div>
           </div>
@@ -355,7 +328,11 @@ export const ProviderConfigModal: React.FC = () => {
                 type="text"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.deepseek.com/v1 hoặc https://api.groq.com/openai/v1"
+                placeholder={
+                  providerType === 'anthropic'
+                    ? 'https://api.anthropic.com/v1 hoặc endpoint proxy Claude'
+                    : 'https://api.openai.com/v1 hoặc https://api.deepseek.com/v1'
+                }
                 style={{
                   flex: 1,
                   padding: '8px 12px',
@@ -368,7 +345,9 @@ export const ProviderConfigModal: React.FC = () => {
               />
             </div>
             <p style={{ margin: '4px 0 0 24px', fontSize: '11px', color: '#64748B' }}>
-              Hệ thống sẽ tự động gọi endpoint <code>/chat/completions</code> hoặc endpoint tương ứng.
+              {providerType === 'anthropic'
+                ? 'Hệ thống sẽ gọi endpoint /v1/messages theo chuẩn Anthropic Claude.'
+                : 'Hệ thống sẽ tự động gọi endpoint /chat/completions theo chuẩn REST của OpenAI.'}
             </p>
           </div>
 
@@ -459,7 +438,11 @@ export const ProviderConfigModal: React.FC = () => {
                   type="text"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder="deepseek-chat, qwen/qwen3.8-27b, gpt-4o..."
+                  placeholder={
+                    providerType === 'anthropic'
+                      ? 'claude-3-5-sonnet-20241022, claude-3-5-haiku-20241022...'
+                      : 'gpt-4o, deepseek-chat, qwen/qwen3.8-27b, llama3.2...'
+                  }
                   style={{
                     flex: 1,
                     padding: '8px 12px',

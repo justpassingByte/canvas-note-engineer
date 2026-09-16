@@ -28,6 +28,39 @@ export class AnthropicProvider implements ILLMProvider {
     };
   }
 
+  public async fetchModels(): Promise<string[]> {
+    let url = (this.config.base_url || 'https://api.anthropic.com/v1').trim();
+    if (url.endsWith('/')) url = url.slice(0, -1);
+    let modelsEndpoint = `${url}/models`;
+    if (url.endsWith('/messages')) {
+      modelsEndpoint = url.replace(/\/messages$/, '/models');
+    } else if (!url.endsWith('/v1')) {
+      modelsEndpoint = `${url}/v1/models`;
+    }
+
+    try {
+      const response = await fetch(modelsEndpoint, {
+        headers: this.getHeaders(),
+        signal: AbortSignal.timeout(8000)
+      });
+      if (response.ok) {
+        const data: any = await response.json();
+        if (Array.isArray(data.data)) {
+          return data.data.map((m: any) => m.id).filter(Boolean);
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    return [
+      'claude-3-5-sonnet-20241022',
+      'claude-3-5-haiku-20241022',
+      'claude-3-opus-20240229',
+      'claude-3-haiku-20240307'
+    ];
+  }
+
   public async testConnection(): Promise<ConnectionTestResult> {
     const startTime = Date.now();
     const endpoint = this.getEndpoint();

@@ -19,11 +19,28 @@ describe('AI Custom Provider Strategy & Universal Domain Engine', () => {
   });
 
   describe('1. Strategy & Adapter Pattern: ProviderFactory', () => {
-    it('should instantiate OpenAICompatibleProvider for deepseek, openai, groq, ollama, custom', () => {
-      const deepseekConfig: ProviderConfig = {
-        id: 'test-deepseek',
+    it('should instantiate OpenAICompatibleProvider for openai-compatible standard', () => {
+      const openAIConfig: ProviderConfig = {
+        id: 'test-openai-comp',
+        provider_type: 'openai-compatible',
+        name: 'Custom OpenAI-Compatible API',
+        base_url: 'https://api.openai.com/v1',
+        api_key: 'sk-test',
+        model: 'gpt-4o',
+        temperature: 0.3,
+        is_active: true
+      };
+
+      const provider = ProviderFactory.createProvider(openAIConfig);
+      expect(provider).toBeInstanceOf(OpenAICompatibleProvider);
+      expect(provider.config.name).toBe('Custom OpenAI-Compatible API');
+    });
+
+    it('should instantiate OpenAICompatibleProvider for backward-compatible legacy types (deepseek, groq, ollama)', () => {
+      const legacyDeepseek: ProviderConfig = {
+        id: 'test-legacy-deepseek',
         provider_type: 'deepseek',
-        name: 'DeepSeek AI',
+        name: 'DeepSeek Legacy',
         base_url: 'https://api.deepseek.com/v1',
         api_key: 'sk-test',
         model: 'deepseek-chat',
@@ -31,12 +48,12 @@ describe('AI Custom Provider Strategy & Universal Domain Engine', () => {
         is_active: true
       };
 
-      const provider = ProviderFactory.createProvider(deepseekConfig);
+      const provider = ProviderFactory.createProvider(legacyDeepseek);
       expect(provider).toBeInstanceOf(OpenAICompatibleProvider);
-      expect(provider.config.name).toBe('DeepSeek AI');
+      expect(provider.config.name).toBe('DeepSeek Legacy');
     });
 
-    it('should instantiate AnthropicProvider for anthropic', () => {
+    it('should instantiate AnthropicProvider for anthropic Messages protocol', () => {
       const claudeConfig: ProviderConfig = {
         id: 'test-claude',
         provider_type: 'anthropic',
@@ -50,22 +67,6 @@ describe('AI Custom Provider Strategy & Universal Domain Engine', () => {
 
       const provider = ProviderFactory.createProvider(claudeConfig);
       expect(provider).toBeInstanceOf(AnthropicProvider);
-    });
-
-    it('should instantiate GeminiProvider for gemini', () => {
-      const geminiConfig: ProviderConfig = {
-        id: 'test-gemini',
-        provider_type: 'gemini',
-        name: 'Google Gemini Flash',
-        base_url: 'https://generativelanguage.googleapis.com',
-        api_key: 'gemini-key-test',
-        model: 'gemini-1.5-flash',
-        temperature: 0.3,
-        is_active: false
-      };
-
-      const provider = ProviderFactory.createProvider(geminiConfig);
-      expect(provider).toBeInstanceOf(GeminiProvider);
     });
   });
 

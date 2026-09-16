@@ -1,13 +1,14 @@
 export type ProviderType =
   | 'openai-compatible'
+  | 'anthropic'
   | 'deepseek'
   | 'openai'
-  | 'anthropic'
   | 'gemini'
   | 'groq'
   | 'ollama'
   | 'openrouter'
-  | 'custom';
+  | 'custom'
+  | string;
 
 export interface ProviderConfig {
   id: string;

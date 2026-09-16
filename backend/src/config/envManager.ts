@@ -75,26 +75,10 @@ export class EnvManager {
   }
 
   public static getPrefixForProvider(providerType: ProviderType): string {
-    switch (providerType) {
-      case 'deepseek':
-        return 'DEEPSEEK';
-      case 'openai':
-        return 'OPENAI';
-      case 'anthropic':
-        return 'ANTHROPIC';
-      case 'gemini':
-        return 'GEMINI';
-      case 'groq':
-        return 'GROQ';
-      case 'openrouter':
-        return 'OPENROUTER';
-      case 'ollama':
-        return 'CUSTOM';
-      case 'custom':
-      case 'openai-compatible':
-      default:
-        return 'CUSTOM';
+    if (providerType === 'anthropic') {
+      return 'ANTHROPIC';
     }
+    return 'AI';
   }
 
   /**
@@ -115,14 +99,22 @@ export class EnvManager {
   }
 
   /**
-   * Giải quyết Base URL: ưu tiên input -> sau đó lấy từ env riêng -> sau đó generic AI_BASE_URL
+   * Giải quyết Base URL: ưu tiên input -> sau đó lấy từ env riêng -> sau đó generic fallback
    */
   public static resolveBaseUrl(providerType: ProviderType, inputUrl?: string): string {
     const trimmed = (inputUrl || '').trim();
     if (trimmed) return trimmed;
 
-    const prefix = this.getPrefixForProvider(providerType);
-    const envUrl = process.env[`${prefix}_BASE_URL`] || process.env.AI_BASE_URL || process.env.CUSTOM_BASE_URL;
+    if (providerType === 'anthropic') {
+      return (process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1').trim();
+    }
+
+    const envUrl =
+      process.env.AI_BASE_URL ||
+      process.env.OPENAI_BASE_URL ||
+      process.env.DEEPSEEK_BASE_URL ||
+      process.env.CUSTOM_BASE_URL ||
+      process.env.GROQ_BASE_URL;
     return (envUrl || '').trim();
   }
 
@@ -137,8 +129,17 @@ export class EnvManager {
       return trimmed;
     }
 
-    const prefix = this.getPrefixForProvider(providerType);
-    const envVal = process.env[`${prefix}_API_KEY`] || process.env.CUSTOM_API_KEY || process.env.AI_API_KEY || '';
+    if (providerType === 'anthropic') {
+      return (process.env.ANTHROPIC_API_KEY || '').trim();
+    }
+
+    const envVal =
+      process.env.AI_API_KEY ||
+      process.env.OPENAI_API_KEY ||
+      process.env.DEEPSEEK_API_KEY ||
+      process.env.GROQ_API_KEY ||
+      process.env.CUSTOM_API_KEY ||
+      '';
     return envVal.trim();
   }
 
@@ -149,8 +150,15 @@ export class EnvManager {
     const trimmed = (inputModel || '').trim();
     if (trimmed) return trimmed;
 
-    const prefix = this.getPrefixForProvider(providerType);
-    const envModel = process.env[`${prefix}_MODEL`] || process.env.AI_MODEL || process.env.CUSTOM_MODEL;
+    if (providerType === 'anthropic') {
+      return (process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022').trim();
+    }
+
+    const envModel =
+      process.env.AI_MODEL ||
+      process.env.OPENAI_MODEL ||
+      process.env.DEEPSEEK_MODEL ||
+      process.env.CUSTOM_MODEL;
     return (envModel || '').trim();
   }
 
