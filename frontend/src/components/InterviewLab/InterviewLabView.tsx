@@ -162,10 +162,10 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
               gap: '5px',
               boxShadow: '0 2px 6px rgba(79, 70, 229, 0.25)'
             }}
-            title="Sinh câu hỏi và cheatsheet bằng AI"
+            title="Tạo thêm câu hỏi và cheatsheet bằng AI"
           >
             <Sparkles size={13} />
-            <span>Sinh AI</span>
+            <span>Tạo bằng AI</span>
           </button>
         </div>
       </header>

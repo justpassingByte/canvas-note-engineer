@@ -109,7 +109,7 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
       }}>
         <Brain size={48} color="#9CA3AF" style={{ marginBottom: '16px' }} />
         <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#374151' }}>Chưa chọn chủ đề phản xạ nào</h3>
-        <p style={{ fontSize: '13px', marginTop: '4px' }}>Vui lòng chọn một domain và topic ở sidebar bên trái hoặc bấm "Sinh AI".</p>
+        <p style={{ fontSize: '13px', marginTop: '4px' }}>Vui lòng chọn một domain và topic ở sidebar bên trái hoặc bấm "Tạo bằng AI".</p>
       </div>
     );
   }

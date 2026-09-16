@@ -37,7 +37,7 @@ export const GenerateTopicModal: React.FC = () => {
       await generateTopic(topicPrompt.trim(), targetDomainId);
     } else {
       if (!targetDomainId) {
-        alert('Vui lòng chọn domain cần sinh!');
+        alert('Vui lòng chọn domain cần tạo!');
         return;
       }
       await generateDomain(targetDomainId);
@@ -45,35 +45,48 @@ export const GenerateTopicModal: React.FC = () => {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      background: 'rgba(15, 23, 42, 0.65)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 99999
-    }}>
-      <div style={{
-        background: '#FFFFFF',
-        borderRadius: '12px',
-        width: '520px',
-        maxWidth: '90vw',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
-        border: '1px solid #E2E8F0',
-        overflow: 'hidden'
-      }}>
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999
+      }}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '12px',
+          width: '560px',
+          maxWidth: '92vw',
+          maxHeight: '90vh',
+          overflow: 'hidden',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
         {/* Modal Header */}
         <div style={{
           padding: '16px 20px',
-          borderBottom: '1px solid #E2E8F0',
+          borderBottom: '1px solid #F1F5F9',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: '#FAF5FF'
+          background: 'linear-gradient(to right, #FAF5FF, #F3E8FF)'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               background: '#9333EA',
               color: '#FFFFFF',
@@ -91,7 +104,7 @@ export const GenerateTopicModal: React.FC = () => {
                 AI Interview Cheatsheet Generator
               </h3>
               <p style={{ fontSize: '11px', color: '#7E22CE', margin: 0 }}>
-                Sinh phản xạ phỏng vấn chuẩn 3 YoE từ LLM Provider đã cấu hình
+                Tạo phản xạ phỏng vấn từ LLM Provider đã cấu hình
               </p>
             </div>
           </div>
@@ -110,7 +123,7 @@ export const GenerateTopicModal: React.FC = () => {
         </div>
 
         {/* Modal Body */}
-        <div style={{ padding: '20px' }}>
+        <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
           {/* Mode Switcher */}
           <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', background: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
             <button
@@ -129,7 +142,7 @@ export const GenerateTopicModal: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              Sinh 1 Topic Tùy Biến
+              Tạo 1 Topic Tùy Biến
             </button>
             <button
               onClick={() => setMode('domain')}
@@ -147,7 +160,7 @@ export const GenerateTopicModal: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              Sinh Trọn Gói Domain
+              Tạo Trọn Gói Domain
             </button>
           </div>
 
@@ -214,7 +227,7 @@ export const GenerateTopicModal: React.FC = () => {
               color: '#1E40AF',
               marginBottom: '14px'
             }}>
-              <strong>Cơ chế sinh Domain:</strong> AI sẽ tự động phân tích Domain đã chọn, trích xuất 3–5 chủ đề quan trọng nhất hay xuất hiện trong phỏng vấn Middle ~3 YoE, và tạo đầy đủ cấu trúc L1-L3, Why-Ladder, Code Reaction vào SQLite.
+              <strong>Cơ chế tạo Domain:</strong> AI sẽ tự động phân tích Domain đã chọn, trích xuất 3–5 chủ đề quan trọng nhất hay xuất hiện trong phỏng vấn, và tạo đầy đủ cấu trúc L1-L3, Why-Ladder, Code Reaction vào SQLite.
             </div>
           )}
 
@@ -289,7 +302,7 @@ export const GenerateTopicModal: React.FC = () => {
             ) : (
               <>
                 <Sparkles size={14} />
-                <span>Bắt đầu sinh</span>
+                <span>Bắt đầu tạo</span>
               </>
             )}
           </button>
