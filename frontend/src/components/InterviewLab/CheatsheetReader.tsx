@@ -32,6 +32,8 @@ interface CheatsheetReaderProps {
 
 export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomains }) => {
   const {
+    domains,
+    selectDomain,
     allTopics,
     topics,
     selectedTopicId,
@@ -205,6 +207,98 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
           </div>
         </div>
       </div>
+
+      {/* 1.5. Ngữ Cảnh Hệ Thống & Tiền Đề Kiến Trúc (Cái gì liên quan cái gì) */}
+      {(() => {
+        const currentDomain = domains.find(d => d.id === topic.domain_id);
+        if (!currentDomain) return null;
+
+        const trackName =
+          currentDomain.track === 'frontend' ? '🌐 Frontend Specialist' :
+          currentDomain.track === 'backend' ? '⚙️ Backend Specialist' :
+          currentDomain.track === 'devops_cloud' ? '☁️ Cloud & DevOps' :
+          currentDomain.track === 'architecture' ? '🏛️ System Architect' : '⚡ Interview Drills';
+
+        return (
+          <div style={{
+            margin: '0 0 16px 0',
+            padding: '10px 14px',
+            borderRadius: '8px',
+            background: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            display: 'flex',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '12px',
+            fontSize: '11.5px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontWeight: 800, color: '#475569', textTransform: 'uppercase', fontSize: '10px' }}>
+                HỌC PHẦN:
+              </span>
+              <span style={{
+                background: '#EEF2FF',
+                color: '#4F46E5',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontWeight: 700,
+                fontSize: '10.5px'
+              }}>
+                {trackName}
+              </span>
+            </div>
+
+            <span style={{ color: '#CBD5E1' }}>|</span>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontWeight: 700, color: '#64748B' }}>Tiền đề nên biết:</span>
+              {currentDomain.prerequisites && currentDomain.prerequisites.length > 0 ? (
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  {currentDomain.prerequisites.map((pre, i) => (
+                    <span key={i} style={{
+                      background: '#F1F5F9',
+                      color: '#334155',
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '10.5px',
+                      fontWeight: 600,
+                      border: '1px solid #E2E8F0'
+                    }}>
+                      {pre}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span style={{ color: '#94A3B8', fontStyle: 'italic', fontSize: '10.5px' }}>Nền tảng khởi đầu</span>
+              )}
+            </div>
+
+            {currentDomain.downstream && currentDomain.downstream.length > 0 && (
+              <>
+                <span style={{ color: '#CBD5E1' }}>→</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ fontWeight: 700, color: '#64748B' }}>Tiếp nối:</span>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                    {currentDomain.downstream.map((down, i) => (
+                      <span key={i} style={{
+                        background: '#ECFDF5',
+                        color: '#065F46',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        fontSize: '10.5px',
+                        fontWeight: 600,
+                        border: '1px solid #A7F3D0'
+                      }}>
+                        {down}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 2. Bento Grid: Intent + Trigger Keywords (Col 1) & 5-Second Recall (Col 2) */}
       <div className="bento-intro-grid">
@@ -393,7 +487,7 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
               cursor: 'pointer'
             }}
           >
-            L3 — 3 YoE Interview (Trade-offs & Production Implication)
+            L3 — Production & Trade-offs (Trade-offs & Production Implication)
           </button>
         </div>
 
@@ -409,7 +503,7 @@ export const CheatsheetReader: React.FC<CheatsheetReaderProps> = ({ onOpenDomain
         }}>
           {activeLayer === 'l1' && <div><strong>Tầng Junior:</strong> {topic.layers.l1_junior}</div>}
           {activeLayer === 'l2' && <div><strong>Tầng Middle:</strong> {topic.layers.l2_middle}</div>}
-          {activeLayer === 'l3' && <div><strong>Tầng 3 YoE Thực Chiến:</strong> {topic.layers.l3_senior}</div>}
+          {activeLayer === 'l3' && <div><strong>Tầng Production & Trade-offs:</strong> {topic.layers.l3_senior}</div>}
         </div>
       </div>
 

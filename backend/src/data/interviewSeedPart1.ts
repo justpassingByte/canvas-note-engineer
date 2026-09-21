@@ -54,7 +54,7 @@ console.log('5');
     layers: {
       l1_junior: 'Event Loop giúp JavaScript chạy bất đồng bộ dù chỉ có một luồng thực thi duy nhất.',
       l2_middle: 'Call Stack rỗng -> Xử lý hết Microtask Queue (Promise) -> Xử lý 1 Macrotask (setTimeout) -> Render UI -> Lặp lại.',
-      l3_senior: 'Ở mức 3 YoE, cần kiểm soát microtask starvation, tối ưu hóa starvation trong batching của React 18, và biết khi nào nên điều phối qua postMessage, MessageChannel hay requestIdleCallback.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần kiểm soát microtask starvation, tối ưu hóa starvation trong batching của React 18, và biết khi nào nên điều phối qua postMessage, MessageChannel hay requestIdleCallback.'
     },
     why_ladder: [
       { question: 'Tại sao JS cần Event Loop?', answer: 'Vì JS đơn luồng, nếu tác vụ I/O chạy đồng bộ sẽ làm đóng băng toàn bộ ứng dụng.' },
@@ -120,7 +120,7 @@ console.log('D');`,
     layers: {
       l1_junior: 'Closure là hàm có thể truy cập biến của hàm cha bên ngoài nó.',
       l2_middle: 'Hàm con giữ một con trỏ tới Lexical Environment của cha, ngăn Garbage Collector dọn dẹp biến đó.',
-      l3_senior: 'Ở mức 3 YoE, cần kiểm soát retention path trong V8 heap snapshot, tối ưu allocation scope context và xử lý stale closure trong functional programming.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần kiểm soát retention path trong V8 heap snapshot, tối ưu allocation scope context và xử lý stale closure trong functional programming.'
     },
     why_ladder: [
       { question: 'Tại sao JS có Closure?', answer: 'Vì JS hỗ trợ First-Class Functions (hàm có thể truyền đi như một giá trị).' },
@@ -189,7 +189,7 @@ console.log('D');`,
     layers: {
       l1_junior: 'Trình duyệt đọc HTML và CSS rồi vẽ lên màn hình theo các bước DOM -> CSSOM -> Render.',
       l2_middle: 'Reflow tính toán lại vị trí và kích thước; Repaint vẽ lại màu sắc. Reflow luôn kéo theo Repaint.',
-      l3_senior: 'Ở mức 3 YoE, cần kiểm soát Layout Thrashing, tận dụng FastDOM hoặc requestAnimationFrame để batch DOM reads/writes, và tối ưu hóa Layer Promotion trên GPU.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần kiểm soát Layout Thrashing, tận dụng FastDOM hoặc requestAnimationFrame để batch DOM reads/writes, và tối ưu hóa Layer Promotion trên GPU.'
     },
     why_ladder: [
       { question: 'Tại sao trang web bị giật lag (Jank)?', answer: 'Vì một frame mất hơn 16.6ms để tính toán, làm rớt khung hình.' },
@@ -255,7 +255,7 @@ for (let i = 0; i < items.length; i++) {
     layers: {
       l1_junior: 'React dùng Virtual DOM để so sánh điểm khác biệt và chỉ cập nhật những gì thay đổi lên web.',
       l2_middle: 'Diffing O(N) dựa trên element type và key. Fiber chia nhỏ công việc thành các unit of work.',
-      l3_senior: 'Ở mức 3 YoE, phải hiểu Double Buffering (current fiber vs workInProgress fiber), cơ chế time-slicing của Scheduler, và tại sao Render phase phải pure không được có side-effect.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải hiểu Double Buffering (current fiber vs workInProgress fiber), cơ chế time-slicing của Scheduler, và tại sao Render phase phải pure không được có side-effect.'
     },
     why_ladder: [
       { question: 'Tại sao React tạo ra Fiber?', answer: 'Kiến trúc Stack Reconciler cũ chạy đồng bộ đệ quy làm lag trình duyệt khi cây component quá lớn.' },
@@ -342,7 +342,7 @@ for (let i = 0; i < items.length; i++) {
     layers: {
       l1_junior: 'Suspense hiện màn hình chờ (fallback) khi component con đang tải dữ liệu hoặc tải code.',
       l2_middle: 'useTransition cho phép hạ độ ưu tiên của một state update nặng để ưu tiên gõ phím trước.',
-      l3_senior: 'Ở mức 3 YoE, cần nắm rõ Scheduler lane priorities, cơ chế throw Promise của Suspense, và streaming SSR kết hợp selective hydration trong Next.js.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần nắm rõ Scheduler lane priorities, cơ chế throw Promise của Suspense, và streaming SSR kết hợp selective hydration trong Next.js.'
     },
     why_ladder: [
       { question: 'Tại sao cần useTransition thay vì chỉ debounce?', answer: 'Debounce chỉ trì hoãn thời điểm bắt đầu; khi bắt đầu chạy nó vẫn block giao diện. useTransition cho phép ngắt ngang giữa chừng.' },
@@ -429,7 +429,7 @@ const likeMutation = useMutation({
     layers: {
       l1_junior: 'Client State là state giao diện, Server State là dữ liệu gọi từ API.',
       l2_middle: 'Dùng React Query quản lý Server State với cơ chế stale-while-revalidate thay vì lưu trong Redux.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo Optimistic Mutations có rollback, query cancellation bằng AbortSignal, và chiến lược Invalidation theo phân cấp Query Key.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo Optimistic Mutations có rollback, query cancellation bằng AbortSignal, và chiến lược Invalidation theo phân cấp Query Key.'
     },
     why_ladder: [
       { question: 'Tại sao không lưu API response vào Redux?', answer: 'Vì Redux không tự quản lý được việc hết hạn (stale), refetch khi focus tab, hay retry khi mạng chập chờn.' },
@@ -503,7 +503,7 @@ async function yieldToMain() {
     layers: {
       l1_junior: 'Web chậm do ảnh nặng, tải nhiều file JavaScript, hoặc code tính toán lâu.',
       l2_middle: 'Đo lường 3 chỉ số Core Web Vitals: LCP (tải trang), INP (tương tác), CLS (ổn định giao diện).',
-      l3_senior: 'Ở mức 3 YoE, thành thạo quy trình đọc flame graph trong Performance Tab, phát hiện layout thrashing, xử lý Long Tasks bằng web workers hoặc scheduler.yield().'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo quy trình đọc flame graph trong Performance Tab, phát hiện layout thrashing, xử lý Long Tasks bằng web workers hoặc scheduler.yield().'
     },
     why_ladder: [
       { question: 'Tại sao Google thay thế FID bằng INP?', answer: 'FID chỉ đo tương tác đầu tiên, còn INP đo độ mượt của toàn bộ các tương tác trong suốt phiên truy cập.' },
@@ -588,7 +588,7 @@ function handlePayment(rawJson: unknown) {
     layers: {
       l1_junior: 'TypeScript giúp code có kiểu dữ liệu rõ ràng, báo lỗi trước khi chạy.',
       l2_middle: 'Sử dụng Discriminated Union và Type Guards để narrowing kiểu dữ liệu một cách an toàn.',
-      l3_senior: 'Ở mức 3 YoE, phải hiểu Type Erasure, Structural Typing (Duck Typing), Conditional Types (`T extends U ? X : Y`), và bảo vệ Network Boundary bằng Zod.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải hiểu Type Erasure, Structural Typing (Duck Typing), Conditional Types (`T extends U ? X : Y`), và bảo vệ Network Boundary bằng Zod.'
     },
     why_ladder: [
       { question: 'Tại sao cần TypeScript?', answer: 'Để phát hiện 80% lỗi logic ngay khi gõ code trong IDE.' },
@@ -670,7 +670,7 @@ app.use(cors({
     layers: {
       l1_junior: 'CORS là lỗi trình duyệt báo khi frontend ở localhost gọi API ở một domain khác.',
       l2_middle: 'Browser áp dụng Same-Origin Policy. Khi gọi cross-origin, nó gửi OPTIONS Preflight để xác minh quyền truy cập.',
-      l3_senior: 'Ở mức 3 YoE, cần kiểm soát Access-Control-Max-Age giảm round-trips, hiểu rủi ro CSRF của Simple Request, cơ chế cookie SameSite=Lax/Strict, và cách cấu hình Content-Security-Policy (CSP) với cryptographic nonce chống XSS.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần kiểm soát Access-Control-Max-Age giảm round-trips, hiểu rủi ro CSRF của Simple Request, cơ chế cookie SameSite=Lax/Strict, và cách cấu hình Content-Security-Policy (CSP) với cryptographic nonce chống XSS.'
     },
     why_ladder: [
       { question: 'Tại sao browser lại chặn cross-origin?', answer: 'Để ngăn chặn website độc hại gửi request ngầm đọc trộm tài khoản ngân hàng của bạn.' },
@@ -765,7 +765,7 @@ export function ProfileForm({ currentName }: { currentName: string }) {
     layers: {
       l1_junior: 'React 19 cho phép viết form action dễ dàng hơn và có hook useActionState thay cho useState loading.',
       l2_middle: 'useActionState kết hợp useOptimistic giúp quản lý vòng đời mutation, optimistic updates và rollback tự động.',
-      l3_senior: 'Ở mức 3 YoE, phải nắm rõ cách React Compiler thay đổi kiến trúc tối ưu hóa memoization, ranh giới serialize của Server Actions, và giải pháp bảo mật CSRF/Auth cho các action endpoints.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải nắm rõ cách React Compiler thay đổi kiến trúc tối ưu hóa memoization, ranh giới serialize của Server Actions, và giải pháp bảo mật CSRF/Auth cho các action endpoints.'
     },
     why_ladder: [
       { question: 'Tại sao React tạo ra useActionState?', answer: 'Để chấm dứt thảm họa viết useState(loading), useState(error), useState(data) lặp lại ở mọi form.' },
@@ -860,7 +860,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     layers: {
       l1_junior: 'SSG tạo HTML khi build, SSR tạo HTML khi người dùng request, CSR chạy code ở browser.',
       l2_middle: 'ISR cho phép tạo lại trang tĩnh ngầm mà không cần build lại toàn bộ website. Next.js 15 chuyển đổi params/headers sang async.',
-      l3_senior: 'Ở mức 3 YoE, cần làm chủ chiến lược Cache Tags (revalidateTag), kiến trúc Partial Prerendering (PPR) với streaming chunks, và cấu hình Edge CDN stale-while-revalidate headers.'
+      l3_senior: 'Ở cấp độ Production & Senior, cần làm chủ chiến lược Cache Tags (revalidateTag), kiến trúc Partial Prerendering (PPR) với streaming chunks, và cấu hình Edge CDN stale-while-revalidate headers.'
     },
     why_ladder: [
       { question: 'Tại sao không render toàn bộ ở Client (CSR)?', answer: 'Vì SEO kém, TTFB lâu và thiết bị cấu hình yếu sẽ bị giật lag khi parse JS bundle lớn.' },

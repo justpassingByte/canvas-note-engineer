@@ -6,7 +6,8 @@ const ARTIFACT_DIR = 'C:/Users/MSI/.gemini/antigravity-ide/brain/9feb4c66-831e-4
 test('Verify Bidirectional Linking between Canvas and Interview Lab (36 Topics & 14 Architecture Nodes)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  // 1. Vào trang Canvas và kiểm tra 14 node kiến trúc
+  // 1. Reset đồ thị về sơ đồ kiến trúc chuẩn (14 nodes) và vào trang Canvas
+  await page.request.post('http://localhost:3001/api/graph/reset');
   await page.goto('http://localhost:3001');
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1000);
@@ -29,8 +30,8 @@ test('Verify Bidirectional Linking between Canvas and Interview Lab (36 Topics &
   const drawer = page.locator('#panel-chi-tiet:not(.dong)');
   await expect(drawer).toBeVisible();
 
-  // Xác minh khối "ĐỀ TÀI PHỎNG VẤN THỰC CHIẾN (~3 YoE)" xuất hiện trong Drawer
-  const interviewSection = drawer.locator('text=Đề Tài Phỏng Vấn Thực Chiến (~3 YoE)');
+  // Xác minh khối "ĐỀ TÀI PHỎNG VẤN THỰC CHIẾN PRODUCTION" xuất hiện trong Drawer
+  const interviewSection = drawer.locator('text=Đề Tài Phỏng Vấn Thực Chiến Production');
   await expect(interviewSection).toBeVisible();
 
   // Chụp ảnh: Field Notes Drawer với card liên kết Interview Lab
@@ -71,13 +72,13 @@ test('Verify Bidirectional Linking between Canvas and Interview Lab (36 Topics &
   await expect(page.locator('#panel-chi-tiet')).toHaveClass(/dong/);
 
   // 7. Thử nghiệm nhảy từ Flashcard Drill sang Canvas
-  await page.locator('button:has-text("Luyện Phỏng Vấn")').click();
+  await page.locator('.nut-toolbar-interview, button:has-text("Interview Lab"), button:has-text("Luyện Phỏng Vấn")').first().click();
   await page.waitForTimeout(500);
 
-  await page.locator('button:has-text("Flashcard & Luyện Phản Xạ")').click();
+  await page.locator('button:has-text("Flashcard & Luyện Phản Xạ"), button:has-text("Flashcard")').first().click();
   await page.waitForTimeout(500);
 
-  const flashcardJumpBtn = page.locator('button:has-text("Chưa hiểu? Xem Sơ đồ")').first();
+  const flashcardJumpBtn = page.locator('button:has-text("Xem Sơ đồ"), button[title*="Chuyển sang Canvas"]').first();
   await expect(flashcardJumpBtn).toBeVisible();
   await flashcardJumpBtn.click();
   await page.waitForTimeout(800);

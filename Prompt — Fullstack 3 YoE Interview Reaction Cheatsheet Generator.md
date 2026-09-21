@@ -8,7 +8,7 @@ Nhiệm vụ của bạn là tạo một **bộ Fullstack Interview Reaction Che
 
 Tôi đang hướng tới vị trí:
 
-> **Fullstack Engineer ~3 YoE / Middle-level**
+> **Fullstack Engineer Senior / Production**
 
 Stack chính:
 
@@ -159,7 +159,7 @@ Tôi phải biết nó là gì.
 
 Tôi phải giải thích tại sao nó hoạt động như vậy.
 
-### L3 — 3 YoE Interview
+### L3 — Production & Trade-offs
 
 Tôi phải biết:
 
@@ -1055,7 +1055,7 @@ Also include architecture questions:
 
 Target:
 
-> **3 YoE Middle Fullstack**
+> **Senior / Production Fullstack**
 
 Do NOT train me like a Staff Engineer.
 
@@ -1427,7 +1427,7 @@ Create:
 
 100 questions.
 
-### 3 YoE / Middle
+### Production / Senior
 
 100 questions.
 
@@ -1644,7 +1644,7 @@ Create the final result as a **well-structured Markdown cheatsheet**.
 Structure:
 
 ```text
-# Fullstack 3 YoE Interview Reaction Cheatsheet
+# Fullstack Senior Interview Reaction Cheatsheet
 
 ## 0. How to Use This
 ## 1. Interview Mental Models
@@ -1709,7 +1709,7 @@ Structure:
 
 At the end create:
 
-# My 3 YoE Fullstack Gap Map
+# My Fullstack Production Gap Map
 
 Classify every topic:
 

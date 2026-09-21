@@ -55,7 +55,7 @@ async function compressHugeFile(source: string, destination: string) {
     layers: {
       l1_junior: 'Node.js dùng JavaScript ở backend, xử lý nhiều kết nối cùng lúc mà không tốn nhiều luồng.',
       l2_middle: 'libuv kết hợp Event Loop với Thread Pool để xử lý non-blocking I/O. Streams giúp đọc file lớn theo từng chunk.',
-      l3_senior: 'Ở mức 3 YoE, phải thành thạo cơ chế Backpressure, quản trị Graceful Shutdown (SIGTERM/SIGINT), và debug Memory Leak bằng clinic.js hoặc heapdump.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải thành thạo cơ chế Backpressure, quản trị Graceful Shutdown (SIGTERM/SIGINT), và debug Memory Leak bằng clinic.js hoặc heapdump.'
     },
     why_ladder: [
       { question: 'Tại sao Node.js xử lý I/O tốt hơn đa số framework truyền thống?', answer: 'Vì nó không tốn 1 thread hệ điều hành cho mỗi socket, mà dùng epoll/kqueue gom hàng ngàn socket.' },
@@ -128,7 +128,7 @@ export class OrderController {
     layers: {
       l1_junior: 'NestJS là framework Node.js theo phong cách Angular, chia thành Module, Controller, Service.',
       l2_middle: 'Nắm vững thứ tự Lifecycle: Middleware -> Guard -> Interceptor -> Pipe -> Controller -> Filter.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo Dynamic Modules (`register`, `forRoot`), Custom Providers (`useFactory`), ExecutionContext reflection, và microservice transports.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo Dynamic Modules (`register`, `forRoot`), Custom Providers (`useFactory`), ExecutionContext reflection, và microservice transports.'
     },
     why_ladder: [
       { question: 'Tại sao NestJS phân chia nhiều layer như vậy?', answer: 'Để áp dụng Aspect-Oriented Programming (AOP), tách các vấn đề xuyên suốt (cross-cutting concerns) ra khỏi code nghiệp vụ.' },
@@ -217,7 +217,7 @@ export class AdminCheckPipe implements PipeTransform {
     layers: {
       l1_junior: 'JWT gồm Header, Payload, Signature; dùng để xác định danh tính người dùng sau khi đăng nhập.',
       l2_middle: 'Access Token thời hạn ngắn kết hợp Refresh Token trong HttpOnly Cookie để cân bằng giữa bảo mật và trải nghiệm.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo Refresh Token Rotation với Reuse Detection, Token Revocation List trên Redis, chống CSRF bằng Double Submit Cookie hoặc SameSite, và chuẩn OAuth2 PKCE.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo Refresh Token Rotation với Reuse Detection, Token Revocation List trên Redis, chống CSRF bằng Double Submit Cookie hoặc SameSite, và chuẩn OAuth2 PKCE.'
     },
     why_ladder: [
       { question: 'Tại sao không để JWT sống lâu 30 ngày?', answer: 'Vì JWT là stateless, nếu bị lộ thì hacker có quyền truy cập suốt 30 ngày mà không cách nào chặn kịp.' },
@@ -302,7 +302,7 @@ app.post('/api/refresh', async (req, res) => {
     layers: {
       l1_junior: 'Message Queue giúp tách rời các dịch vụ và xử lý công việc nặng trong background.',
       l2_middle: 'Sử dụng DLQ để chứa các message bị lỗi sau khi retry. Áp dụng Exponential Backoff.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo Transactional Outbox Pattern, CDC (Change Data Capture) với Debezium, xử lý Poison Pills và kiến trúc Idempotent Consumer.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo Transactional Outbox Pattern, CDC (Change Data Capture) với Debezium, xử lý Poison Pills và kiến trúc Idempotent Consumer.'
     },
     why_ladder: [
       { question: 'Tại sao không gọi API gửi email trực tiếp khi thanh toán xong?', answer: 'Nếu bên thứ 3 gửi email bị chậm 5s hoặc sập, request thanh toán của khách hàng sẽ bị quay đơ hoặc báo lỗi giả.' },
@@ -386,7 +386,7 @@ io.on('connection', (socket) => {
     layers: {
       l1_junior: 'WebSocket tạo kênh kết nối liên tục 2 chiều giữa trình duyệt và server.',
       l2_middle: 'Sử dụng Heartbeat để phát hiện đứt kết nối ngầm. Reconnect với exponential backoff.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo scaling ngang với Redis Adapter, quản lý Linux ulimit file descriptors, Load Balancer TCP termination và giải pháp SSE thay thế.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo scaling ngang với Redis Adapter, quản lý Linux ulimit file descriptors, Load Balancer TCP termination và giải pháp SSE thay thế.'
     },
     why_ladder: [
       { question: 'Tại sao không dùng HTTP polling liên tục?', answer: 'Mỗi request polling đều phải bắt tay TCP, gửi kèm cookie/header gây tốn băng thông và CPU.' },
@@ -476,7 +476,7 @@ app.post('/api/uploads/presigned-url', async (req, res) => {
     layers: {
       l1_junior: 'S3 là dịch vụ lưu trữ file trên đám mây của AWS, lưu được ảnh, video, tài liệu.',
       l2_middle: 'Sử dụng Presigned URL để trình duyệt upload thẳng lên S3 mà không đi qua server.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo S3 Multipart Upload song song, kiểm tra Magic Bytes chống mã độc, tích hợp CloudFront OAC (Origin Access Control), và lifecycle policy tự động đẩy sang Glacier.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo S3 Multipart Upload song song, kiểm tra Magic Bytes chống mã độc, tích hợp CloudFront OAC (Origin Access Control), và lifecycle policy tự động đẩy sang Glacier.'
     },
     why_ladder: [
       { question: 'Tại sao không upload qua backend?', answer: 'File 100MB qua backend sẽ chiếm 100MB RAM và 100MB băng thông vào + 100MB băng thông ra, làm nghẽn toàn bộ server.' },
@@ -556,7 +556,7 @@ test('Luồng thanh toán giỏ hàng hoàn chỉnh', async ({ page }) => {
     layers: {
       l1_junior: 'Unit test kiểm tra hàm, E2E test kiểm tra cả trang web từ giao diện người dùng.',
       l2_middle: 'Sử dụng Playwright với auto-waiting để chống flaky tests. Viết integration tests tương tác với database thật.',
-      l3_senior: 'Ở mức 3 YoE, thành thạo Test Isolation bằng Database Transaction Rollback, thiết lập Testcontainers trong Docker CI/CD, và chiến lược Contract Testing với Pact.'
+      l3_senior: 'Ở cấp độ Production & Senior, thành thạo Test Isolation bằng Database Transaction Rollback, thiết lập Testcontainers trong Docker CI/CD, và chiến lược Contract Testing với Pact.'
     },
     why_ladder: [
       { question: 'Tại sao không viết 100% E2E test cho an tâm?', answer: 'Vì E2E test chạy rất chậm (vài phút/test), tốn tài nguyên máy chủ CI, và rất dễ bị chập chờn khi giao diện đổi.' },
@@ -644,7 +644,7 @@ async function fetchAndProcessNextJob(workerId: string) {
     layers: {
       l1_junior: 'Transaction đảm bảo nguyên tắc ACID: tất cả thành công hoặc tất cả thất bại.',
       l2_middle: 'Postgres dùng MVCC snapshot. Mức cô lập Read Committed cho phép đọc bản ghi đã commit, Repeatable Read giữ nguyên snapshot.',
-      l3_senior: 'Ở mức 3 YoE, phải xử lý Write Skew bằng SSI (Serializable), dùng SKIP LOCKED cho high-throughput worker queues, và cấu hình autovacuum bảo vệ bảng khỏi bloat.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải xử lý Write Skew bằng SSI (Serializable), dùng SKIP LOCKED cho high-throughput worker queues, và cấu hình autovacuum bảo vệ bảng khỏi bloat.'
     },
     why_ladder: [
       { question: 'Tại sao database cần MVCC?', answer: 'Để các truy vấn SELECT đọc dữ liệu không bao giờ bị chặn bởi các lệnh UPDATE/INSERT ghi dữ liệu.' },
@@ -731,7 +731,7 @@ await sub.subscribe('room:*', (message, channel) => {
     layers: {
       l1_junior: 'Redis Pub/Sub giúp gửi tin nhắn từ người gửi tới nhiều người nhận.',
       l2_middle: 'Sử dụng Redis Pub/Sub làm Adapter để kết nối nhiều server WebSocket chạy song song.',
-      l3_senior: 'Ở mức 3 YoE, phân biệt rạch ròi Pub/Sub ephemeral vs Streams persistent, cấu hình PEL và XCLAIM cho worker failover, và kiểm soát MAXLEN capping tránh tràn RAM.'
+      l3_senior: 'Ở cấp độ Production & Senior, phân biệt rạch ròi Pub/Sub ephemeral vs Streams persistent, cấu hình PEL và XCLAIM cho worker failover, và kiểm soát MAXLEN capping tránh tràn RAM.'
     },
     why_ladder: [
       { question: 'Tại sao 1 server WebSocket không đủ?', answer: 'Vì giới hạn số lượng kết nối đồng thời (file descriptor) và CPU trên một máy chủ.' },
@@ -765,7 +765,7 @@ for (const entry of entries[0].messages) {
     target_intent: 'Đánh giá khả năng hiểu sâu kiến trúc IoC Container của NestJS, vòng đời provider và nguy cơ thắt cổ chai hiệu năng (Performance Bottleneck) khi dùng sai Request Scope.',
     trigger_keywords: ['NestJS IoC', 'Scope.DEFAULT (Singleton)', 'Scope.REQUEST', 'Scope.TRANSIENT', 'Scope Bubble Up', 'AsyncLocalStorage'],
     recall_5s: 'Scope.DEFAULT là Singleton (1 instance duy nhất, khởi tạo lúc boot, siêu nhanh). Scope.REQUEST tạo mới instance cho mỗi HTTP request và lan truyền (bubble up) lên toàn bộ dependency chain khiến server bị đơ Garbage Collector under high load. Dùng AsyncLocalStorage thay vì Request Scope.',
-    interview_answer: 'Trong NestJS, mọi Provider mặc định đều là `Scope.DEFAULT` (Singleton) - được khởi tạo duy nhất một lần khi ứng dụng khởi động và tái sử dụng cho mọi request, giúp tối ưu hiệu năng và tiết kiệm RAM tối đa. Khi một service cần dữ liệu riêng của request (như User Tenant ID hoặc Request Header), nhiều lập trình viên vội vã đánh dấu `@Injectable({ scope: Scope.REQUEST })`. Đây là một bẫy hiệu năng nghiêm trọng: Hiệu ứng "Scope Bubble Up" sẽ biến mọi Controller, Service, Repository nào inject service đó trở thành Request-scoped. Khi có 10,000 request/giây, NestJS phải tạo mới hàng chục ngàn instances và tiêu diệt chúng, khiến V8 Garbage Collector hoạt động liên tục làm sụt giảm throughput tới 4–10 lần. Trong hệ thống production (~3 YoE), giải pháp chuẩn mực để lưu giữ ngữ cảnh request là dùng Node.js `AsyncLocalStorage` trong một Middleware.',
+    interview_answer: 'Trong NestJS, mọi Provider mặc định đều là `Scope.DEFAULT` (Singleton) - được khởi tạo duy nhất một lần khi ứng dụng khởi động và tái sử dụng cho mọi request, giúp tối ưu hiệu năng và tiết kiệm RAM tối đa. Khi một service cần dữ liệu riêng của request (như User Tenant ID hoặc Request Header), nhiều lập trình viên vội vã đánh dấu `@Injectable({ scope: Scope.REQUEST })`. Đây là một bẫy hiệu năng nghiêm trọng: Hiệu ứng "Scope Bubble Up" sẽ biến mọi Controller, Service, Repository nào inject service đó trở thành Request-scoped. Khi có 10,000 request/giây, NestJS phải tạo mới hàng chục ngàn instances và tiêu diệt chúng, khiến V8 Garbage Collector hoạt động liên tục làm sụt giảm throughput tới 4–10 lần. Trong hệ thống production chuẩn mực, giải pháp chuẩn mực để lưu giữ ngữ cảnh request là dùng Node.js `AsyncLocalStorage` trong một Middleware.',
     deep_dive: 'Cơ chế AsyncLocalStorage (ALS): ALS là tính năng native của Node.js dựa trên `async_hooks`. Nó cho phép truyền dữ liệu xuyên suốt chuỗi hàm bất đồng bộ mà không cần truyền tham số qua từng hàm và KHÔNG làm thay đổi vòng đời Singleton của các service trong NestJS. Đây là cách triển khai Multi-Tenancy và Correlation ID chuẩn xác nhất trong môi trường chịu tải cao.',
     practical_example: {
       title: 'Truyền Request Context an toàn bằng AsyncLocalStorage thay vì Request Scope',
@@ -825,7 +825,7 @@ export class OrderService {
     layers: {
       l1_junior: 'NestJS dùng Dependency Injection để tự động khởi tạo và tiêm service vào controller.',
       l2_middle: 'Mặc định service là Singleton. Scope.REQUEST tạo mới service mỗi khi có request tới.',
-      l3_senior: 'Ở mức 3 YoE, phải giải thích được tác hại của Scope Bubble Up đối với Garbage Collection và thông thạo kỹ thuật AsyncLocalStorage để thay thế an toàn.'
+      l3_senior: 'Ở cấp độ Production & Senior, phải giải thích được tác hại của Scope Bubble Up đối với Garbage Collection và thông thạo kỹ thuật AsyncLocalStorage để thay thế an toàn.'
     },
     why_ladder: [
       { question: 'Tại sao NestJS mặc định dùng Singleton?', answer: 'Để tiết kiệm RAM và CPU, khởi tạo 1 lần và dùng chung cho hàng triệu request.' },

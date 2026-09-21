@@ -335,7 +335,7 @@ export const FieldNotesDrawer: React.FC = () => {
             </div>
           </div>
 
-          {/* Khối: Đề tài phỏng vấn 3 YoE liên kết với node */}
+          {/* Khối: Đề tài phỏng vấn Production liên kết với node */}
           <div className="khoi-noi-dung" style={{
             background: 'linear-gradient(180deg, #F8FAFC 0%, #EEF2FF 100%)',
             border: '1px solid #C7D2FE',
@@ -346,7 +346,7 @@ export const FieldNotesDrawer: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: 800, fontSize: '11.5px', color: '#3730A3', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 <GraduationCap size={16} color="#4F46E5" />
-                <span>Đề Tài Phỏng Vấn Thực Chiến (~3 YoE)</span>
+                <span>Đề Tài Phỏng Vấn Thực Chiến Production</span>
               </div>
               <span style={{
                 background: '#E0E7FF',
@@ -470,7 +470,7 @@ export const FieldNotesDrawer: React.FC = () => {
                 color: '#64748B',
                 textAlign: 'center'
               }}>
-                <p style={{ margin: '0 0 6px 0' }}>Khám phá kho chủ đề phỏng vấn 3 YoE theo 29 domain chuyên sâu.</p>
+                <p style={{ margin: '0 0 6px 0' }}>Khám phá kho chủ đề phỏng vấn thực chiến chuyên sâu chuẩn Senior / Production.</p>
                 <button
                   onClick={() => jumpToInterviewLab()}
                   style={{

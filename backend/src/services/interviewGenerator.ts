@@ -24,14 +24,14 @@ export function resolveTopicCrossLinkNodeId(domainId: string, title: string): st
 }
 
 const SYSTEM_PROMPT = `
-Bạn là một Senior Fullstack Engineer + Technical Interview Coach chuyên đào tạo ứng viên Middle (~3 YoE) phỏng vấn vào các công ty Product/Global hàng đầu.
+Bạn là một Senior Fullstack Engineer + Technical Interview Coach chuyên đào tạo ứng viên cấp độ Senior / Production phỏng vấn vào các công ty Product/Global hàng đầu.
 Nhiệm vụ của bạn là tạo một BỘ PHẢN XẠ PHỎNG VẤN (Interview Reaction Cheatsheet) cho một topic kỹ thuật cụ thể.
 
 Mục tiêu cốt lõi:
 - Không viết giáo trình dài dòng.
 - Tạo cấu trúc trigger memory phản xạ trong 5-15 giây và trả lời trôi chảy trong 20-40 giây.
 - Luôn giải thích BẢN CHẤT và TRADE-OFFS (được gì, mất gì, khi nào KHÔNG nên dùng).
-- Có 3 tầng nhận thức: L1 (Junior: là gì), L2 (Middle: cơ chế hoạt động), L3 (3 YoE: trade-offs, production failure, scale, debugging).
+- Có 3 tầng nhận thức: L1 (Junior: là gì), L2 (Middle: cơ chế hoạt động), L3 (Senior/Production: trade-offs, production failure, scale, debugging).
 
 Bạn PHẢI trả về duy nhất một JSON object hợp lệ (không kèm markdown \`\`\`json ở ngoài) theo schema sau:
 {
@@ -68,13 +68,13 @@ Bạn PHẢI trả về duy nhất một JSON object hợp lệ (không kèm mar
   "layers": {
     "l1_junior": "Tôi phải biết nó là gì (định nghĩa)",
     "l2_middle": "Tôi phải giải thích tại sao nó hoạt động như vậy (cơ chế nội tại)",
-    "l3_senior": "Tôi phải biết trade-off, production failure case, debugging và scale (3 YoE)"
+    "l3_senior": "Tôi phải biết trade-off, production failure case, debugging và scale (Senior/Production Level)"
   },
   "why_ladder": [
     { "question": "Tại sao dùng X?", "answer": "Để giải quyết vấn đề A" },
     { "question": "Tại sao vấn đề A lại quan trọng?", "answer": "Vì ảnh hưởng tới B" },
     { "question": "Tại sao B lại quan trọng?", "answer": "Vì ảnh hưởng tới C" },
-    { "question": "Khi nào thì KHÔNG dùng?", answer: "Khi D xảy ra" }
+    { "question": "Khi nào thì KHÔNG dùng?", "answer": "Khi D xảy ra" }
   ],
   "code_reaction": {
     "code": "Đoạn code ngắn chứa bug hoặc tình huống cần phán đoán",
@@ -102,20 +102,20 @@ export class InterviewGenerator {
 
     const provider = ProviderFactory.getActiveProvider();
     if (!provider) {
-      // Tự sinh nội dung chuẩn 3 YoE trực tiếp (Offline Autonomous Mode) không cần provider bên ngoài
+      // Tự sinh nội dung chuẩn Senior/Production trực tiếp (Offline Autonomous Mode) không cần provider bên ngoài
       return this.generateOfflineTopic(topicPrompt, targetDomain);
     }
 
     try {
       const userPrompt = `
-Hãy tạo bản cheatsheet phản xạ kỹ sư 3 YoE cho chủ đề sau:
+Hãy tạo bản cheatsheet phản xạ kỹ sư chuyên sâu chuẩn Senior / Production cho chủ đề sau:
 - Chủ đề: "${topicPrompt}"
 - Thuộc lĩnh vực: "${targetDomain.title}" (${targetDomain.description})
 
 Lưu ý:
 - Trả về DUY NHẤT một JSON hợp lệ.
 - Ngôn ngữ: Tiếng Việt kết hợp thuật ngữ kỹ thuật tiếng Anh chuẩn xác.
-- Đáp ứng chuẩn mực 3 YoE: nói về concurrency, trade-offs, failure modes, không giải thích như cho fresher.
+- Đáp ứng chuẩn mực Senior / Production: nói về concurrency, trade-offs, failure modes, không giải thích như cho fresher.
 `;
 
       const rawResponse = await provider.generateCompletion({
@@ -170,7 +170,7 @@ Lưu ý:
       sqliteClient.saveInterviewTopic(topicEntity);
       return topicEntity;
     } catch (err: any) {
-      console.warn(`[InterviewGenerator] External provider call failed (${err.message}). Tự động sinh nội dung 3 YoE bằng Autonomous Offline Engine.`);
+      console.warn(`[InterviewGenerator] External provider call failed (${err.message}). Tự động sinh nội dung Senior / Production bằng Autonomous Offline Engine.`);
       return this.generateOfflineTopic(topicPrompt, targetDomain);
     }
   }
@@ -181,39 +181,7 @@ Lưu ý:
       throw new Error(`Không tìm thấy domain với ID: ${domainId}`);
     }
 
-    const domainDefaults: Record<string, string[]> = {
-      'domain-01-js-fundamentals': ['Event Loop & Microtask Queue', 'Closures & Lexical Environment', 'Promise.all vs Promise.allSettled Error Handling'],
-      'domain-02-browser-platform': ['Critical Rendering Path & Reflow/Repaint', 'Event Delegation & Propagation', 'CORS Preflight & Cookies SameSite'],
-      'domain-03-react-fundamentals': ['Fiber Architecture & Reconciliation', 'Controlled vs Uncontrolled Components', 'Key Identity & State Preservation'],
-      'domain-04-react-hooks': ['useCallback vs useMemo Referential Equality', 'useEffect Lifecycle & Cleanup Race Conditions', 'useRef Mutable Container vs State'],
-      'domain-05-react-advanced': ['React Suspense & Streaming SSR', 'React.memo & Memoization Optimization', 'Error Boundaries & Fallback UI'],
-      'domain-06-nextjs': ['Server Components vs Client Components', 'SSR vs CSR vs SSG vs ISR Matrix', 'Server Actions & Form Mutations'],
-      'domain-07-frontend-state': ['Client State vs Server State', 'TanStack Query Cache & Invalidation', 'Optimistic Updates & Rollback'],
-      'domain-08-frontend-perf': ['Core Web Vitals (LCP, CLS, INP)', 'Virtualization for Large Data Sets', 'Code Splitting & Dynamic Imports'],
-      'domain-09-typescript': ['type vs interface & Declaration Merging', 'Discriminated Unions & Type Guards', 'Generics & Conditional Types with infer'],
-      'domain-10-nodejs': ['libuv & Node.js Event Loop 6 Phases', 'Streams & Backpressure Handling', 'Memory Leak Profiling in Node.js'],
-      'domain-11-nestjs': ['Middleware vs Guard vs Interceptor vs Pipe vs Filter', 'Dependency Injection & Request Scopes', 'Custom Decorators & Metadata Reflection'],
-      'domain-12-api-design': ['Idempotency Keys in REST APIs', 'Cursor Pagination vs Offset Pagination', 'Rate Limiting & Token Bucket Algorithm'],
-      'domain-13-auth-security': ['JWT vs State-backed Sessions', 'Refresh Token Rotation & Revocation Family', 'CSRF & XSS Protection with HttpOnly Cookies'],
-      'domain-14-postgresql': ['B-Tree Index Selectivity & EXPLAIN ANALYZE', 'ACID Transactions & MVCC Isolation Levels', 'Preventing N+1 Queries & CTE Usage'],
-      'domain-15-redis': ['Cache-Aside Pattern & Cache Stampede Defense', 'Distributed Locks with Redlock & Lua Scripts', 'Redis Fallback & Graceful Degradation'],
-      'domain-16-queues-async': ['Producer-Consumer & Dead Letter Queue (DLQ)', 'Exponential Backoff & Jitter', 'Idempotent Message Consumer Pattern'],
-      'domain-17-websocket': ['WebSocket Handshake & Heartbeat Ping-Pong', 'Horizontal Scaling with Redis Pub/Sub Adapter', 'Handling Offline Clients & Message Reconnect'],
-      'domain-18-file-upload': ['Direct-to-S3 Upload with Presigned URLs', 'Multipart Chunk Uploads for Large Files', 'MIME Sniffing Validation & Antivirus Pipeline'],
-      'domain-19-testing': ['Testing Pyramid & Test Isolation', 'Playwright E2E UI Integration Testing', 'Mocking External APIs & Network Boundaries'],
-      'domain-20-docker-linux': ['Multi-Stage Dockerfile for Next.js/NestJS', 'Docker Image Layer Caching Optimization', 'Linux Process Signals (SIGTERM vs SIGKILL)'],
-      'domain-21-cicd': ['GitHub Actions CI/CD Pipeline Best Practices', 'Blue-Green vs Canary Deployments', 'Safe Database Migrations in CI/CD'],
-      'domain-22-aws-cloud': ['VPC Architecture: Public vs Private Subnets & NAT', 'Application Load Balancer (ALB) & ECS Fargate', 'RDS Multi-AZ Failover & Read Replicas'],
-      'domain-23-system-design': ['High-Concurrency Flash Sale / Inventory Reservation', 'URL Shortener with Distributed ID Generator', 'Realtime Chat System Architecture'],
-      'domain-24-observability': ['OpenTelemetry Distributed Tracing & Correlation IDs', 'The 4 Golden Signals: Latency, Traffic, Errors, Saturation', 'P99 Latency Spike Root-Cause Investigation'],
-      'domain-25-debugging': ['Debugging Flow: Reproduce → Observe → Hypothesis → Fix', 'Investigating Intermittent 502 Bad Gateway', 'Memory Leak Hunting with Heap Snapshots'],
-      'domain-26-rapid-fire': ['Rapid Reflex: Closures in 15 Seconds', 'Rapid Reflex: What Causes React Re-render?', 'Rapid Reflex: Optimistic vs Pessimistic Locking'],
-      'domain-27-scenario-questions': ['Production Scenario: Payment Succeeded but Email Failed', 'Production Scenario: Database Max Connection Exhaustion', 'Production Scenario: Cache Invalidation Storm'],
-      'domain-28-mixed-mock': ['Mixed Interview: Event Loop + SQL Deadlock + Redis', 'Mixed Interview: JWT Security + Next.js Hydration', 'Mixed Interview: AWS VPC + Docker Container Crash'],
-      'domain-29-spaced-repetition': ['Spaced Repetition: Day 1 Immediate Recall', 'Spaced Repetition: Day 7 Scenario Drill', 'Spaced Repetition: Day 30 Mixed System Challenge']
-    };
-
-    const defaults = domainDefaults[domain.id] || [
+    const defaults = DOMAIN_DEFAULTS[domain.id] || [
       `${domain.title} Core Mechanics`,
       `${domain.title} Production Architecture`,
       `${domain.title} Troubleshooting & Failure Modes`
@@ -227,7 +195,7 @@ Lưu ý:
 
     const outlinePrompt = `
 Dựa vào Domain kỹ thuật: "${domain.title}" (Mô tả: ${domain.description}),
-hãy liệt kê đúng 3 chủ đề (topics) quan trọng và hay bị phỏng vấn nhất đối với vị trí Fullstack Engineer ~3 YoE.
+hãy liệt kê đúng 3 chủ đề (topics) quan trọng và hay bị phỏng vấn nhất đối với vị trí Senior Fullstack Engineer.
 
 
 Trả về duy nhất một JSON array chứa 3 string tên topic, ví dụ:

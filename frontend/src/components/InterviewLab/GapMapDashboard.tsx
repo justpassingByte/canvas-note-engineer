@@ -60,7 +60,7 @@ export const GapMapDashboard: React.FC = () => {
       {/* 1. Header & Summary Stats */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontSize: '11px', fontWeight: 800, color: '#4F46E5', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-          ĐÁNH GIÁ NĂNG LỰC & ĐỘ SẴN SÀNG PHỎNG VẤN 3 YOE
+          ĐÁNH GIÁ NĂNG LỰC THỰC CHIẾN & PRODUCTION READINESS
         </div>
         <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0F172A', margin: '4px 0 16px 0' }}>
           Personal Gap Map & 30-Day Active Recall Program
@@ -167,7 +167,7 @@ export const GapMapDashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <Layers size={18} color="#4F46E5" />
             <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0F172A', margin: 0 }}>
-              MA TRẬN NĂNG LỰC 29 DOMAIN KỸ SƯ
+              MA TRẬN NĂNG LỰC KỸ SƯ THEO DOMAIN
             </h2>
           </div>
           <span style={{ fontSize: '12px', color: '#64748B' }}>Bấm vào domain để xem chi tiết các topic</span>

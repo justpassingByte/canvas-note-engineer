@@ -449,7 +449,7 @@ export const DELTA_NODES_QUEUE_CACHE: { nodes: NodeEntity[]; edges: any[] } = {
 
 export const MASTER_FULLSTACK_GRAPH: GraphData = {
   id: 'graph-interactive-workspace',
-  topic: 'Fullstack 3 YoE Production Architecture (Client, Gateway, Compute, Storage, Observability)',
+  topic: 'Fullstack Production Architecture (Client, Gateway, Compute, Storage, Observability)',
   nodes: [
     {
       id: 'node-ui-view',

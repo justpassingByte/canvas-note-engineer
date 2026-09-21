@@ -69,12 +69,18 @@ export interface InterviewTopicEntity {
   progress?: UserTopicProgress;
 }
 
+export type RoleTrack = 'all' | 'frontend' | 'backend' | 'devops_cloud' | 'architecture' | 'drills';
+
 export interface DomainMeta {
   id: string;
   number: number;
   title: string;
   description: string;
   icon?: string;
+  track?: RoleTrack;
+  prerequisites?: string[];
+  downstream?: string[];
+  related_domains?: string[];
   total_topics: number;
   ready_count: number;
   weak_count: number;

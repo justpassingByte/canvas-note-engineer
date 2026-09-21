@@ -220,7 +220,7 @@ export const FloatingToolbar: React.FC = () => {
       <button
         className="nut-thao-tac-noi nut-toolbar-interview"
         onClick={() => window.dispatchEvent(new CustomEvent('switch-to-interview', { detail: {} }))}
-        title="Mở Phòng Luyện Phản Xạ Phỏng Vấn (Interview Lab)"
+        title="Interview Lab"
         style={{
           background: 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)',
           color: '#FFFFFF',

@@ -1485,6 +1485,6 @@ export const toolHandlers = {
   async resetToRoot(): Promise<{ graph: GraphData; message: string }> {
     const cleanGraph = createCleanGraph();
     sqliteClient.saveGraph(cleanGraph);
-    return { graph: cleanGraph, message: 'Đã khôi phục đồ thị về sơ đồ kiến trúc Fullstack 3 YoE chuẩn (10 nodes).' };
+    return { graph: cleanGraph, message: 'Đã khôi phục đồ thị về sơ đồ kiến trúc Fullstack Production chuẩn (10 nodes).' };
   }
 };

@@ -82,7 +82,7 @@ const OrderList = ({ orders }: { orders: Order[] }) => {
         layers: {
           l1_junior: 'useCallback là một hook dùng để ghi nhớ (cache) định nghĩa của một hàm giữa các lần re-render.',
           l2_middle: 'Nó giữ nguyên tính đồng nhất tham chiếu (referential equality) của hàm, tránh việc hàm con bọc React.memo bị re-render do nhận prop mới.',
-          l3_senior: 'Ở góc độ 3 YoE, cần nhận thức rõ: Với React 19 và React Compiler (Forget), compiler tự động memoize Virtual DOM và props tại build-time, loại bỏ nhu cầu viết useCallback/useMemo thủ công. Nhưng trong các dự án chưa bật Compiler hoặc thư viện ngoài, lạm dụng useCallback bừa bãi gây hại hiệu năng do overhead tạo closure và so sánh dependency array. Chỉ dùng khi truyền hàm xuống component con bọc bởi React.memo hoặc làm dependency cho hook khác.'
+          l3_senior: 'Ở mức độ Production & Senior, cần nhận thức rõ: Với React 19 và React Compiler (Forget), compiler tự động memoize Virtual DOM và props tại build-time, loại bỏ nhu cầu viết useCallback/useMemo thủ công. Nhưng trong các dự án chưa bật Compiler hoặc thư viện ngoài, lạm dụng useCallback bừa bãi gây hại hiệu năng do overhead tạo closure và so sánh dependency array. Chỉ dùng khi truyền hàm xuống component con bọc bởi React.memo hoặc làm dependency cho hook khác.'
         },
         why_ladder: [
           { question: 'Tại sao cần useCallback?', answer: 'Để ổn định tham chiếu của hàm (stable function reference).' },
@@ -163,7 +163,7 @@ export default async function UserProfile({ userId }: { userId: string }) {
         layers: {
           l1_junior: 'Server Component chạy trên server, Client Component thêm directive "use client" để dùng state và click handler.',
           l2_middle: 'Server Component sinh ra RSC Payload không chứa JS bundle của dependencies. Client Component vẫn được SSR trên server rồi mới hydrate ở browser.',
-          l3_senior: 'Ở mức 3 YoE, cần nắm rõ Network Boundary, Serialization, Suspense Streaming, và cách giải quyết bài toán Waterfall request bằng component composition & Parallel Routes.'
+          l3_senior: 'Ở mức độ Production & Senior, cần nắm rõ Network Boundary, Serialization, Suspense Streaming, và cách giải quyết bài toán Waterfall request bằng component composition & Parallel Routes.'
         },
         why_ladder: [
           { question: 'Tại sao React tạo ra Server Components?', answer: 'Để giải quyết vấn đề bundle size quá lớn của các thư viện và giảm waterfall fetch từ client.' },
@@ -238,7 +238,7 @@ CREATE INDEX idx_orders_status_created ON orders (status, created_at) INCLUDE (t
         layers: {
           l1_junior: 'Index là một bảng mục lục giúp tìm kiếm bản ghi nhanh hơn mà không cần duyệt toàn bộ bảng.',
           l2_middle: 'Postgres dùng B-Tree index O(log N). Sử dụng EXPLAIN ANALYZE để đo lường cost, actual time và phát hiện Seq Scan.',
-          l3_senior: 'Ở mức 3 YoE, cần thành thạo Covering Index (INCLUDE), Partial Index để tiết kiệm dung lượng, hiểu tác động của autovacuum và visibility map lên Index Only Scan, và cách thiết kế composite index tránh deadlock.'
+          l3_senior: 'Ở mức độ Production & Senior, cần thành thạo Covering Index (INCLUDE), Partial Index để tiết kiệm dung lượng, hiểu tác động của autovacuum và visibility map lên Index Only Scan, và cách thiết kế composite index tránh deadlock.'
         },
         why_ladder: [
           { question: 'Tại sao SQL chậm khi dữ liệu tăng lên 10 triệu dòng?', answer: 'Vì không có index, database phải quét tuần tự (Sequential Scan) đọc toàn bộ block đĩa.' },
@@ -334,7 +334,7 @@ WHERE created_at + INTERVAL '1 day' > NOW();`,
         layers: {
           l1_junior: 'Redis là cơ sở dữ liệu in-memory tốc độ cao, thường dùng làm bộ nhớ đệm (cache).',
           l2_middle: 'Sử dụng Redis cache-aside để giảm tải DB. Cần xử lý TTL và tránh Cache Stampede khi hot key hết hạn.',
-          l3_senior: 'Ở mức 3 YoE, phải giải thích được Distributed Lock với Redlock/Lua script, tính nhất quán cuối cùng (eventual consistency), kịch bản Redis failover, và cơ chế Probabilistic Early Refresh.'
+          l3_senior: 'Ở mức độ Production & Senior, phải giải thích được Distributed Lock với Redlock/Lua script, tính nhất quán cuối cùng (eventual consistency), kịch bản Redis failover, và cơ chế Probabilistic Early Refresh.'
         },
         why_ladder: [
           { question: 'Tại sao cần Cache?', answer: 'Để giảm tải cho Database và phục vụ response dưới 5ms.' },
@@ -430,7 +430,7 @@ if (isLocked) {
         layers: {
           l1_junior: 'Idempotency nghĩa là gọi một API nhiều lần với cùng tham số thì kết quả hệ thống không thay đổi so với gọi một lần.',
           l2_middle: 'Sử dụng header Idempotency-Key và bảng lưu trạng thái để phát hiện duplicate request từ client khi retry.',
-          l3_senior: 'Ở mức 3 YoE, phải xử lý được Race condition bằng Unique Index, xử lý Payload Hash mismatch, và cơ chế xử lý khi request bị timeout giữa chừng ở Gateway ngoài.'
+          l3_senior: 'Ở mức độ Production & Senior, phải xử lý được Race condition bằng Unique Index, xử lý Payload Hash mismatch, và cơ chế xử lý khi request bị timeout giữa chừng ở Gateway ngoài.'
         },
         why_ladder: [
           { question: 'Tại sao cần Idempotency Key cho API Payment?', answer: 'Vì mạng máy tính không tin cậy, client có thể không nhận được response dù server đã trừ tiền.' },
@@ -478,12 +478,9 @@ await db.query('INSERT INTO payments (key) VALUES ($1)', [key]);`,
       }
     }
 
-    const toInsert = allSeeds.filter(s => !existing.some(e => e.id === s.id));
-    if (toInsert.length > 0) {
-      sqliteClient.saveInterviewTopics(toInsert);
-    }
+    // Luôn upsert toàn bộ seed topics để đồng bộ nội dung mới nhất (AWS, Architecture, và chuẩn Senior / Production)
+    sqliteClient.saveInterviewTopics(allSeeds);
   }
-
 
   public getDomains(): DomainMeta[] {
     const allTopics = sqliteClient.getAllInterviewTopics();
@@ -509,6 +506,10 @@ await db.query('INSERT INTO payments (key) VALUES ($1)', [key]);`,
         title: domain.title,
         description: domain.description,
         icon: domain.icon,
+        track: domain.track,
+        prerequisites: domain.prerequisites,
+        downstream: domain.downstream,
+        related_domains: domain.related_domains,
         total_topics: domainTopics.length,
         ready_count: readyCount,
         weak_count: weakCount,

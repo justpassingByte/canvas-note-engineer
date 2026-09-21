@@ -72,10 +72,10 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
             <button
               className="nut-mo-sidebar-mobile"
               onClick={() => setIsMobileSidebarOpen(true)}
-              title="Mở danh sách 29 Domain và các Topic"
+              title="Mở danh mục chủ đề"
             >
               <Menu size={14} />
-              <span>Domains</span>
+              <span>Chủ đề</span>
             </button>
           )}
 
@@ -95,7 +95,7 @@ export const InterviewLabView: React.FC<InterviewLabViewProps> = ({ onBackToCanv
             </div>
             <div>
               <span className="tieu-de-interview-full" style={{ fontSize: '13.5px', fontWeight: 800, color: '#111827' }}>
-                Phòng Luyện Phản Xạ Phỏng Vấn
+                Interview Lab
               </span>
             </div>
           </div>

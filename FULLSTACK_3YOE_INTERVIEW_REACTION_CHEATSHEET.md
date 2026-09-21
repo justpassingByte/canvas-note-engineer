@@ -1,6 +1,6 @@
-# Fullstack 3 YoE Interview Reaction Cheatsheet
+# Fullstack Senior & Production Interview Reaction Cheatsheet
 > **Tác giả / Hệ điều hành phản xạ:** Senior Fullstack Coach & Architecture Engine  
-> **Target Level:** Fullstack Engineer ~3 Years of Experience (Middle-level Product / Global Standard)  
+> **Target Level:** Senior / Production Fullstack Engineer (Product / Global Standard)  
 > **Core Stack:** TypeScript, React, Next.js, Node.js, NestJS, PostgreSQL, Redis, REST/WebSocket, Docker, AWS  
 > **Core Principle:** `Keyword → Trigger Memory → Recall (5s) → Interview Answer (20-40s) → Deep Dive → Trade-offs → Follow-ups → Code Reaction`
 
@@ -8,7 +8,7 @@
 
 ## 0. How to Use This
 
-### 🎯 Bản chất của kỳ phỏng vấn 3 YoE
+### 🎯 Bản chất của kỳ phỏng vấn Senior / Production
 Interviewer không tìm kiếm một cuốn từ điển sống biết thuộc lòng cú pháp. Họ tìm kiếm một kỹ sư:
 1. **Bật ra được framework tư duy trong 5–15 giây** ngay sau khi nghe câu hỏi.
 2. **Hiểu bản chất bên dưới (Under the Hood)**: Tại sao nó hoạt động như vậy, chi phí bộ nhớ/CPU là gì.
@@ -18,7 +18,7 @@ Interviewer không tìm kiếm một cuốn từ điển sống biết thuộc l
 ### ⚡ 3 Tầng nhận thức (Answer in Layers)
 - **L1 — Junior Recall (Định nghĩa)**: Nó là gì? Giải quyết bài toán bề mặt nào?
 - **L2 — Middle Explanation (Cơ chế)**: Tại sao nó hoạt động như vậy? Mô hình bộ nhớ / luồng dữ liệu bên trong.
-- **L3 — 3 YoE Interview (Thực chiến)**: Concurrency, Failure modes, Trade-offs, Scalability, Observability, Debugging.
+- **L3 — Production & Trade-offs (Thực chiến)**: Concurrency, Failure modes, Trade-offs, Scalability, Observability, Debugging.
 
 ---
 
@@ -686,9 +686,9 @@ User
 
 ---
 
-## 23. System Design (3 YoE Caliber)
+## 23. System & Software Architecture (Production Caliber)
 
-### Framework thiết kế 8 bước cho Middle Fullstack:
+### Framework thiết kế 8 bước cho Senior Fullstack:
 ```text
 Requirements (Clarify QPS / Data Size)
   → API Contract
@@ -702,7 +702,7 @@ Requirements (Clarify QPS / Data Size)
 
 ### Thiết kế mẫu: E-Commerce Flash Sale & Inventory Reservation
 - **Bài toán**: 10,000 người cùng bấm "Mua ngay" cho 100 chiếc iPhone trong 1 giây. Không được bán âm kho (Overselling), không được làm nghẽn DB.
-- **Giải pháp chuẩn 3 YoE**:
+- **Giải pháp chuẩn Senior / Production**:
   1. **Tầng Edge / Gateway**: Rate limit theo User IP (Token Bucket qua Redis WAF) để chặn spam bot.
   2. **Tầng Cache / In-Memory Reservation**: Giữ số lượng tồn kho trên Redis (`stock:iphone:101 = 100`). Khi user mua, chạy đoạn **Lua script** nguyên tử:
      ```lua
@@ -827,7 +827,7 @@ The 4 Golden Signals (Latency, Traffic, Errors, Saturation) → Correlation ID (
 ### Kịch bản 1: Payment đã trừ tiền ở Stripe nhưng webhook gửi email xác nhận thất bại
 - **Triệu chứng**: Khách hàng bị trừ $100 trên thẻ tín dụng nhưng không nhận được vé/hóa đơn, khiếu nại CSKH.
 - **Phân tích nguyên nhân**: Kiến trúc ghép chung việc ghi nhận đơn hàng với việc gửi email đồng bộ trong cùng 1 handler. Khi SendGrid gặp sự cố hoặc timeout, toàn bộ handler bị fail hoặc email bị nuốt mất mà không có cơ chế bù trừ.
-- **Giải pháp chuẩn 3 YoE**:
+- **Giải pháp chuẩn Senior / Production**:
   1. Tách rời (Decouple) bằng **Transactional Outbox Pattern**: Trong cùng transaction trừ tiền và tạo đơn hàng ở DB, ghi thêm 1 dòng event vào bảng `outbox_events` (`event_type: 'ORDER_CONFIRMED', payload: {...}`).
   2. Background Worker hoặc CDC (Change Data Capture) đọc bảng outbox và đẩy vào SQS/BullMQ.
   3. Worker gửi email lắng nghe queue, có retry với Exponential Backoff (10s, 30s, 2m, 10m). Nếu quá 5 lần vẫn fail thì đẩy vào Dead Letter Queue (DLQ) để CSKH xử lý thủ công.
@@ -838,7 +838,7 @@ The 4 Golden Signals (Latency, Traffic, Errors, Saturation) → Correlation ID (
   1. Môi trường CI/CD dùng mock database hoặc SQLite in-memory, trong khi Production chạy PostgreSQL thật với Strict SQL Mode.
   2. Biến môi trường (Environment Variables) mới bị thiếu trên Production (chưa add vào AWS Secrets Manager).
   3. Client Component trong Next.js import một dependency Node.js native (`fs` hoặc `crypto`).
-- **Giải pháp chuẩn 3 YoE**:
+- **Giải pháp chuẩn Senior / Production**:
   1. **Rollback tức thì**: Chuyển traffic về phiên bản container cũ (Blue-Green hoặc Rollback commit trước đó) trong vòng 60 giây.
   2. **Kiểm tra Health Check & Smoke Test**: Bổ sung bước Synthetic E2E Test (Playwright) chạy trực tiếp trên URL Staging thật trước khi promote lên Production.
   3. **Runtime Config Validation**: Sử dụng `t3-env` hoặc Zod để validate toàn bộ biến môi trường ngay lúc khởi động (startup time); nếu thiếu biến môi trường, tiến trình crash ngay lập tức kèm thông báo rõ ràng thay vì fail âm thầm ở runtime.
@@ -848,7 +848,7 @@ The 4 Golden Signals (Latency, Traffic, Errors, Saturation) → Correlation ID (
 - **Phân tích nguyên nhân**: Cạn kiệt Connection Pool của PostgreSQL (mặc định `max_connections = 100`). Xảy ra khi:
   1. Serverless Lambda hoặc ECS scale lên 50 tasks, mỗi task mở pool 10 connection → Vượt quá giới hạn của RDS.
   2. Code bị rò rỉ connection: Lấy connection từ pool nhưng trong block `catch` không có `finally { client.release() }`.
-- **Giải pháp chuẩn 3 YoE**:
+- **Giải pháp chuẩn Senior / Production**:
   1. Đặt **AWS RDS Proxy** hoặc **PgBouncer** ở giữa ứng dụng và RDS để tái sử dụng và chia sẻ connection pool (Connection Pooling Layer).
   2. Bắt buộc mọi thao tác query phải dùng ORM/Query Builder có cơ chế tự động giải phóng connection (như Prisma, Drizzle, TypeORM).
 
@@ -900,7 +900,7 @@ The 4 Golden Signals (Latency, Traffic, Errors, Saturation) → Correlation ID (
 39. Multi-stage Dockerfile giúp giảm dung lượng image thế nào?
 40. Kiểm thử tích hợp (Integration Test) khác Unit Test ở điểm mấu chốt nào?
 
-### Tầng 3: 3 YoE / Middle Engineer (Hệ thống, Concurrency & Trade-offs)
+### Tầng 3: Senior / Production Engineer (Hệ thống, Concurrency & Trade-offs)
 41. Trình bày chi tiết cơ chế Server Components (RSC) trong Next.js App Router và sự khác biệt với SSR truyền thống?
 42. Làm thế nào để truyền dữ liệu và tương tác giữa Server Component và Client Component mà không vi phạm quy tắc Serialization?
 43. Trình bày cơ chế hoạt động của Refresh Token Rotation (RTR) và cách phát hiện token bị đánh cắp bằng Token Family?
@@ -945,7 +945,7 @@ Hệ thống ghi nhớ ngắt quãng (Spaced Repetition Schedule) thiết kế r
 
 # FINAL SECTION: PERSONAL GAP MAP
 
-## My 3 YoE Fullstack Gap Map
+## Personal Production Fullstack Gap Map
 
 Hãy tự đánh giá mức độ tự tin của bạn trên 29 lĩnh vực cốt lõi theo 4 mức độ:
 - 🔴 **Must Learn**: Chưa nắm rõ bản chất, dễ bị lúng túng khi interviewer hỏi sâu.
